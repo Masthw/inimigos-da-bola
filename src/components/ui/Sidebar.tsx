@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MaterialIcon } from './MaterialIcon'
-import { NAV_ITEMS, AVATARS } from '../data/mockData'
+import { NAV_ITEMS, AVATARS } from '../../data/mockData'
 
 export function Sidebar() {
   return (

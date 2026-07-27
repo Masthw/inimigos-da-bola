@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MaterialIcon } from './MaterialIcon'
-import { NEXT_MATCH } from '../data/mockData'
+import { NEXT_MATCH } from '../../data/mockData'
 
 export function NextMatch() {
   const [status, setStatus] = useState<'idle' | 'confirming' | 'confirmed'>('idle')

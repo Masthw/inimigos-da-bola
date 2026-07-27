@@ -1,9 +1,9 @@
-import { Sidebar } from '../components/Sidebar'
-import { MobileTopBar } from '../components/MobileTopBar'
-import { MobileBottomNav } from '../components/MobileBottomNav'
-import { NextMatch } from '../components/NextMatch'
-import { Leaderboard } from '../components/Leaderboard'
-import { StatCard } from '../components/StatCard'
+import { Sidebar } from '../components/ui/Sidebar'
+import { MobileTopBar } from '../components/ui/MobileTopBar'
+import { MobileBottomNav } from '../components/ui/MobileBottomNav'
+import { NextMatch } from '../components/ui/NextMatch'
+import { Leaderboard } from '../components/ui/Leaderboard'
+import { StatCard } from '../components/ui/StatCard'
 import { PLAYER_STATS } from '../data/mockData'
 
 export default function Home() {
