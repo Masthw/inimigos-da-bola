@@ -1,10 +1,10 @@
 export const NAV_ITEMS = [
   { icon: 'home', label: 'Home', href: '/', active: true },
-  { icon: 'event_available', label: 'My Matches', href: '/matches' },
-  { icon: 'grid_view', label: 'Tactical Board', href: '/tactics' },
-  { icon: 'military_tech', label: 'League Table', href: '/rankings' },
-  { icon: 'history', label: 'History', href: '/history' },
-  { icon: 'analytics', label: 'Player Stats', href: '/stats' },
+  { icon: 'event_available', label: 'Partidas', href: '/matches' },
+  { icon: 'grid_view', label: 'Escalação', href: '/tactics' },
+  { icon: 'military_tech', label: 'Tabela', href: '/rankings' },
+  { icon: 'history', label: 'Histórico', href: '/history' },
+  { icon: 'analytics', label: 'Perfil', href: '/stats' },
 ]
 
 export const LEADERBOARD = [
@@ -14,9 +14,9 @@ export const LEADERBOARD = [
 ]
 
 export const PLAYER_STATS = [
-  { label: 'My Goals', value: '12', colorClass: 'text-primary', hoverBgClass: 'bg-primary-container', hoverTextClass: 'text-on-primary-container' },
-  { label: 'My Assists', value: '08', colorClass: 'text-secondary', hoverBgClass: 'bg-secondary-container', hoverTextClass: 'text-on-secondary-container' },
-  { label: 'Win Rate', value: '68%', colorClass: 'text-tertiary', hoverBgClass: 'bg-tertiary-container', hoverTextClass: 'text-on-tertiary-container' },
+  { label: 'Gols', value: '12', colorClass: 'text-primary', hoverBgClass: 'bg-primary-container', hoverTextClass: 'text-on-primary-container' },
+  { label: 'Assistências', value: '08', colorClass: 'text-secondary', hoverBgClass: 'bg-secondary-container', hoverTextClass: 'text-on-secondary-container' },
+  { label: 'Taxa de Vitórias', value: '68%', colorClass: 'text-tertiary', hoverBgClass: 'bg-tertiary-container', hoverTextClass: 'text-on-tertiary-container' },
 ]
 
 export const NEXT_MATCH = {
@@ -36,9 +36,10 @@ export const AVATARS = {
 }
 
 export const BOTTOM_NAV_ITEMS = [
-  { icon: 'dashboard', label: 'Dashboard', active: true },
-  { icon: 'sports_soccer', label: 'Matches' },
-  { icon: 'strategy', label: 'Tactics' },
-  { icon: 'leaderboard', label: 'Rankings' },
-  { icon: 'person', label: 'Profile' },
+  { icon: 'dashboard', label: 'Home', active: true },
+  { icon: 'sports_soccer', label: 'Partidas' },
+  { icon: 'strategy', label: 'Escalação' },
+  { icon: 'leaderboard', label: 'Tabela' },
+   { icon: 'history', label: 'Histórico', href: '/history' },
+  { icon: 'person', label: 'Perfil' },
 ]

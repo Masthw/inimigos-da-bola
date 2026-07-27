@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MaterialIcon } from './MaterialIcon'
-import { NAV_ITEMS, AVATARS } from '../data/mockData'
+import { NAV_ITEMS, AVATARS } from '../../data/mockData'
 
 export function Sidebar() {
   return (
@@ -39,7 +39,7 @@ export function Sidebar() {
       <div className="px-4 mt-auto">
         <button className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2">
           <MaterialIcon name="add_circle" />
-          Book a Match
+          Novo Jogo
         </button>
       </div>
     </nav>

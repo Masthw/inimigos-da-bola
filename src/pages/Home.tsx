@@ -1,9 +1,9 @@
-import { Sidebar } from '../components/Sidebar'
-import { MobileTopBar } from '../components/MobileTopBar'
-import { MobileBottomNav } from '../components/MobileBottomNav'
-import { NextMatch } from '../components/NextMatch'
-import { Leaderboard } from '../components/Leaderboard'
-import { StatCard } from '../components/StatCard'
+import { Sidebar } from '../components/ui/Sidebar'
+import { MobileTopBar } from '../components/ui/MobileTopBar'
+import { MobileBottomNav } from '../components/ui/MobileBottomNav'
+import { NextMatch } from '../components/ui/NextMatch'
+import { Leaderboard } from '../components/ui/Leaderboard'
+import { StatCard } from '../components/ui/StatCard'
 import { PLAYER_STATS } from '../data/mockData'
 
 export default function Home() {
@@ -15,7 +15,7 @@ export default function Home() {
       <main className="md:ml-64 p-4 md:p-margin-desktop min-h-screen pb-24 md:pb-margin-desktop">
         <div className="mb-stack-lg flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h2 className="text-[28px] md:text-headline-lg font-display text-primary uppercase leading-tight font-bold">Player Dashboard</h2>
+            <h2 className="text-[28px] md:text-headline-lg font-display text-primary uppercase leading-tight font-bold">Dashboard</h2>
           </div>
         </div>
 

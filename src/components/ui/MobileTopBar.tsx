@@ -1,5 +1,5 @@
 import { MaterialIcon } from './MaterialIcon'
-import { AVATARS } from '../data/mockData'
+import { AVATARS } from '../../data/mockData'
 
 export function MobileTopBar() {
   return (

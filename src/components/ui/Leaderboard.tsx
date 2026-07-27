@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MaterialIcon } from './MaterialIcon'
-import { LEADERBOARD, AVATARS } from '../data/mockData'
+import { LEADERBOARD, AVATARS } from '../../data/mockData'
 
 const BORDER_CLASSES = ['border-tertiary', 'border-outline', 'border-secondary-container']
 const BG_CLASSES = ['bg-surface-container-highest', 'bg-surface-container-low', 'bg-surface-container-low']
