@@ -48,7 +48,7 @@ export function NextMatch() {
                 className="w-full md:w-auto bg-green-800 text-white px-10 py-4 font-mono text-label-bold rounded-none transition-transform flex items-center justify-center gap-3"
               >
                 <MaterialIcon name="verified" fill className="text-white" />
-                VOCÊ ESTÁ DENTRO!
+                PRESENÇA CONFIRMADA!
               </button>
             ) : (
               <button
