@@ -13,7 +13,7 @@ export function NextMatch() {
 
   return (
     <section className="md:col-span-8 group">
-      <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-outline-variant h-full flex flex-col md:flex-row transition-all hover:border-primary/50">
+      <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-outline-variant h-full flex flex-col md:flex-row transition-colors hover:border-primary/50">
         <div className="relative w-full md:w-1/2 h-48 md:h-full min-h-50">
           <img className="w-full h-full object-cover" src={NEXT_MATCH.imageUrl} alt="Quadra de futsal" />
           <div className="absolute inset-0 bg-linear-to-t md:bg-linear-to-r from-surface-container-high via-transparent to-transparent" />
@@ -44,6 +44,7 @@ export function NextMatch() {
           <div className="mt-stack-lg">
             {status === 'confirmed' ? (
               <button
+                type="button"
                 disabled
                 className="w-full md:w-auto bg-green-800 text-white px-10 py-4 font-mono text-label-bold rounded-none transition-transform flex items-center justify-center gap-3"
               >
@@ -52,6 +53,7 @@ export function NextMatch() {
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleConfirm}
                 className="w-full md:w-auto bg-primary text-on-primary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
               >

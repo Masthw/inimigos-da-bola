@@ -37,7 +37,7 @@ export function Sidebar() {
       </div>
 
       <div className="px-4 mt-auto">
-        <button className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2">
+        <button type="button" className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2">
           <MaterialIcon name="add_circle" />
           Novo Jogo
         </button>

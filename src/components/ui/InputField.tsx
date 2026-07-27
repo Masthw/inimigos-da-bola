@@ -21,7 +21,7 @@ export function InputField({ label, type = "text", placeholder, icon, value, onC
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="label-bold text-on-surface-variant uppercase tracking-wider">{label}</label>
+      <label htmlFor={label} className="label-bold text-on-surface-variant uppercase tracking-wider">{label}</label>
       <div
         className={`flex items-center gap-3 px-4 py-3 bg-surface-container-high border transition-all duration-200 ${getBorderColor(focused, error)}`}
       >
