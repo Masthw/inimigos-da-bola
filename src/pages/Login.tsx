@@ -1,14 +1,19 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { InputField } from "../components/ui/InputField";
 import { Button } from "../components/ui/Button";
 import { AuthLayout } from "../components/ui/AuthLayout";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   function validate(): boolean {
     const newErrors: typeof errors = {};
@@ -30,6 +35,23 @@ export default function Login() {
     return Object.keys(newErrors).length === 0;
   }
 
+  async function handleSubmit(e: { preventDefault: () => void }) {
+    e.preventDefault();
+    setApiError("");
+
+    if (!validate()) return;
+
+    setLoading(true);
+    try {
+      await login(email, password);
+      navigate("/");
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : "Erro ao fazer login");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <AuthLayout
       icon="sports_soccer"
@@ -38,16 +60,16 @@ export default function Login() {
       heading="BEM-VINDO DE VOLTA"
       description="Entre na sua conta para acompanhar seus jogos"
     >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!validate()) return;
-          setLoading(true);
-          setTimeout(() => setLoading(false), 2000);
-        }}
-        className="flex flex-col gap-stack-md"
-      >
-        <InputField label="Email" type="email" placeholder="seu@email.com" icon="mail" value={email} onChange={setEmail} error={errors.email} />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-stack-md">
+        <InputField
+          label="Email"
+          type="email"
+          placeholder="seu@email.com"
+          icon="mail"
+          value={email}
+          onChange={setEmail}
+          error={errors.email}
+        />
 
         <InputField
           label="Senha"
@@ -59,8 +81,20 @@ export default function Login() {
           error={errors.password}
         />
 
+        {apiError && (
+          <div className="flex items-center gap-2 p-3 bg-error/10 border border-error/30">
+            <span className="material-symbols-outlined text-error text-[20px]">
+              error
+            </span>
+            <span className="label-sm text-error">{apiError}</span>
+          </div>
+        )}
+
         <div className="flex justify-end">
-          <Link to="/forgot-password" className="label-sm text-primary hover:text-primary-container transition-colors">
+          <Link
+            to="/forgot-password"
+            className="label-sm text-primary hover:text-primary-container transition-colors"
+          >
             Esqueceu a senha?
           </Link>
         </div>
@@ -75,7 +109,9 @@ export default function Login() {
           <div className="w-full border-t border-outline-variant" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-surface-container px-4 label-sm text-on-surface-variant">OU</span>
+          <span className="bg-surface-container px-4 label-sm text-on-surface-variant">
+            OU
+          </span>
         </div>
       </div>
 
