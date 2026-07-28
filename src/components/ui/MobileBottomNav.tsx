@@ -15,7 +15,7 @@ export function MobileBottomNav() {
               : 'text-on-surface-variant hover:bg-surface-variant/50'
           }`}
         >
-          <MaterialIcon name={item.icon} />
+          <MaterialIcon name={item.icon} className="w-5 h-5" />
           <span className="font-mono text-label-sm">{item.label}</span>
         </Link>
       ))}

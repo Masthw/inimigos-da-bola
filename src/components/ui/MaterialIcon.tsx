@@ -1,16 +1,85 @@
+import {
+  Home,
+  CalendarCheck,
+  LayoutGrid,
+  Trophy,
+  History,
+  BarChart3,
+  LayoutDashboard,
+  Volleyball,
+  Swords,
+  Medal,
+  User,
+  PlusCircle,
+  Bell,
+  Calendar,
+  Clock,
+  MapPin,
+  BadgeCheck,
+  Loader2,
+  CircleCheck,
+  MoreHorizontal,
+  ArrowRight,
+  ArrowLeft,
+  Lock,
+  Mail,
+  UserPlus,
+  ClipboardCheck,
+  LogIn,
+  CircleUser,
+  Send,
+  RotateCcw,
+  MailCheck,
+  CircleAlert,
+  Eye,
+  EyeOff,
+  type LucideIcon,
+} from 'lucide-react'
+
+const iconRegistry: Record<string, LucideIcon> = {
+  home: Home,
+  event_available: CalendarCheck,
+  grid_view: LayoutGrid,
+  military_tech: Trophy,
+  history: History,
+  analytics: BarChart3,
+  dashboard: LayoutDashboard,
+  sports_soccer: Volleyball,
+  strategy: Swords,
+  leaderboard: Medal,
+  person: User,
+  add_circle: PlusCircle,
+  notifications: Bell,
+  calendar_today: Calendar,
+  schedule: Clock,
+  location_on: MapPin,
+  verified: BadgeCheck,
+  pending: Loader2,
+  check_circle: CircleCheck,
+  more_horiz: MoreHorizontal,
+  arrow_forward: ArrowRight,
+  arrow_back: ArrowLeft,
+  lock: Lock,
+  mail: Mail,
+  person_add: UserPlus,
+  how_to_reg: ClipboardCheck,
+  login: LogIn,
+  account_circle: CircleUser,
+  send: Send,
+  lock_reset: RotateCcw,
+  mark_email_read: MailCheck,
+  error: CircleAlert,
+  visibility: Eye,
+  visibility_off: EyeOff,
+}
+
 interface MaterialIconProps {
   name: string
-  fill?: boolean
   className?: string
 }
 
-export function MaterialIcon({ name, fill = false, className = '' }: Readonly<MaterialIconProps>) {
-  return (
-    <span
-      className={`material-symbols-outlined ${className}`}
-      style={fill ? { fontVariationSettings: "'FILL' 1" } : undefined}
-    >
-      {name}
-    </span>
-  )
+export function MaterialIcon({ name, className = '' }: Readonly<MaterialIconProps>) {
+  const Icon = iconRegistry[name]
+  if (!Icon) return null
+  return <Icon className={className} />
 }
