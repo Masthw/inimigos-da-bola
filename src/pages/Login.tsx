@@ -9,6 +9,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   function validate(): boolean {
     const newErrors: typeof errors = {};
@@ -47,16 +48,27 @@ export default function Login() {
         }}
         className="flex flex-col gap-stack-md"
       >
-        <InputField label="Email" type="email" placeholder="seu@email.com" icon="mail" value={email} onChange={setEmail} error={errors.email} />
+        <InputField 
+          label="Email" 
+          type="email" 
+          placeholder="seu@email.com" 
+          icon="mail" 
+          value={email} 
+          onChange={setEmail} 
+          error={errors.email} 
+        />
 
         <InputField
           label="Senha"
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="••••••••"
           icon="lock"
           value={password}
           onChange={setPassword}
           error={errors.password}
+          // Passando as props para o ícone de mostrar/ocultar senha
+          rightIcon={showPassword ? "visibility_off" : "visibility"}
+          onRightIconClick={() => setShowPassword(!showPassword)}
         />
 
         <div className="flex justify-end">
@@ -79,7 +91,17 @@ export default function Login() {
         </div>
       </div>
 
-      <div className="mt-stack-md">
+      <div className="mt-stack-md flex flex-col gap-stack-sm">
+        <Button 
+          type="button" 
+          variant="primary" 
+          fullWidth 
+          icon="account_circle" // Ícone provisório (você pode trocar por um SVG do Google depois)
+          onClick={() => console.log('Mock: Entrar com Google clicado')}
+        >
+          ENTRAR COM GOOGLE
+        </Button>
+
         <Link to="/register">
           <Button variant="ghost" fullWidth icon="person_add">
             CRIAR CONTA

@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { MaterialIcon } from "./MaterialIcon";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
@@ -23,7 +24,7 @@ export function Button({ children, variant = "primary", icon, fullWidth = false,
 
   return (
     <button className={`${baseStyles} ${variantStyles[variant]} ${disabledStyles} ${widthStyles} ${className}`} disabled={disabled} {...props}>
-      {icon && <span className="material-symbols-outlined text-[20px]">{icon}</span>}
+      {icon && <MaterialIcon name={icon} className="w-5 h-5" />}
       {children}
     </button>
   );
