@@ -14,7 +14,7 @@ export function Leaderboard() {
       <div className="bg-surface-container rounded-xl border border-outline-variant p-stack-md h-full">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-headline-md font-display text-primary uppercase">Leaderboard</h3>
-          <MaterialIcon name="more_horiz" className="text-on-surface-variant" />
+          <MaterialIcon name="more_horiz" className="w-5 h-5 text-on-surface-variant" />
         </div>
 
         <div className="space-y-4">
@@ -34,7 +34,7 @@ export function Leaderboard() {
 
         <Link to="/rankings" className="w-full mt-6 text-primary font-mono text-label-sm flex items-center justify-center gap-1 hover:underline">
           Ver Ranking Completo
-          <MaterialIcon name="arrow_forward" className="text-[16px]" />
+          <MaterialIcon name="arrow_forward" className="w-4 h-4" />
         </Link>
       </div>
     </section>

@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { InputField } from "../components/ui/InputField";
 import { Button } from "../components/ui/Button";
-import { AuthLayout } from "../components/ui/AuthLayout";
+import { AuthLayout } from "../components/layout/AuthLayout";
+import trophySrc from "../assets/thropy.svg";
+import googleSrc from "../assets/google.svg";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
@@ -10,6 +12,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState("");
 
   const { login } = useAuth();
@@ -54,7 +57,7 @@ export default function Login() {
 
   return (
     <AuthLayout
-      icon="sports_soccer"
+      icon={<img src={trophySrc} className="w-10 h-10" alt="Troféu" />}
       title="INIMIGOS"
       subtitle="DA BOLA"
       heading="BEM-VINDO DE VOLTA"
@@ -73,12 +76,14 @@ export default function Login() {
 
         <InputField
           label="Senha"
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="••••••••"
           icon="lock"
           value={password}
           onChange={setPassword}
           error={errors.password}
+          rightIcon={showPassword ? "visibility_off" : "visibility"}
+          onRightIconClick={() => setShowPassword(!showPassword)}
         />
 
         {apiError && (
@@ -115,7 +120,17 @@ export default function Login() {
         </div>
       </div>
 
-      <div className="mt-stack-md">
+      <div className="mt-stack-md flex flex-col gap-stack-sm">
+        <Button 
+          type="button" 
+          variant="ghost" 
+          fullWidth 
+          icon={<img src={googleSrc} className="w-5 h-5" alt="Google" />}
+          onClick={() => console.log('Mock: Entrar com Google clicado')}
+        >
+          ENTRAR COM GOOGLE
+        </Button>
+
         <Link to="/register">
           <Button variant="ghost" fullWidth icon="person_add">
             CRIAR CONTA

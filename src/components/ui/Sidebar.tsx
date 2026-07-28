@@ -30,7 +30,7 @@ export function Sidebar() {
                 : 'text-on-surface-variant hover:bg-surface-variant'
             }`}
           >
-            <MaterialIcon name={item.icon} />
+            <MaterialIcon name={item.icon} className="w-5 h-5" />
             <span className="font-mono text-label-bold">{item.label}</span>
           </Link>
         ))}
@@ -38,7 +38,7 @@ export function Sidebar() {
 
       <div className="px-4 mt-auto">
         <button type="button" className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2">
-          <MaterialIcon name="add_circle" />
+          <MaterialIcon name="add_circle" className="w-5 h-5" />
           Novo Jogo
         </button>
       </div>

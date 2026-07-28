@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { InputField } from "../components/ui/InputField";
 import { Button } from "../components/ui/Button";
-import { AuthLayout } from "../components/ui/AuthLayout";
+import { AuthLayout } from "../components/layout/AuthLayout";
+import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Register() {
@@ -68,7 +69,7 @@ export default function Register() {
 
   return (
     <AuthLayout
-      icon="person_add"
+      icon={<MaterialIcon name="person_add" className="w-10 h-10" />}
       title="INIMIGOS"
       subtitle="DA BOLA"
       heading="CRIAR CONTA"
