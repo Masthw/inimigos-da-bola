@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
-import { MaterialIcon } from "./MaterialIcon";
 
 interface AuthLayoutProps {
-  icon: string;
+  icon: ReactNode;
   title: string;
   subtitle: string;
   heading: string;
@@ -22,7 +21,7 @@ export function AuthLayout({ icon, title, subtitle, heading, description, childr
       <div className="w-full max-w-md relative z-10">
         <div className="mb-stack-lg text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-container rounded-xl mb-stack-md brutal-shadow">
-            <MaterialIcon name={icon} className="w-10 h-10 text-on-primary-container" />
+            {icon}
           </div>
           <h1 className="display-lg text-primary font-display font-black uppercase tracking-tighter">{title}</h1>
           <h2 className="headline-md text-on-surface-variant font-display font-bold uppercase tracking-wider">{subtitle}</h2>

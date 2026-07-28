@@ -4,7 +4,7 @@ import { MaterialIcon } from "./MaterialIcon";
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: "primary" | "secondary" | "ghost";
-  icon?: string;
+  icon?: string | ReactNode; 
   fullWidth?: boolean;
 }
 
@@ -24,7 +24,11 @@ export function Button({ children, variant = "primary", icon, fullWidth = false,
 
   return (
     <button className={`${baseStyles} ${variantStyles[variant]} ${disabledStyles} ${widthStyles} ${className}`} disabled={disabled} {...props}>
-      {icon && <MaterialIcon name={icon} className="w-5 h-5" />}
+      {typeof icon === "string" ? (
+        <MaterialIcon name={icon} className="w-5 h-5" />
+      ) : (
+        icon
+      )}
       {children}
     </button>
   );

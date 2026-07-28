@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { InputField } from "../components/ui/InputField";
 import { Button } from "../components/ui/Button";
-import { AuthLayout } from "../components/ui/AuthLayout";
+import { AuthLayout } from "../components/layout/AuthLayout";
+import trophySrc from "../assets/thropy.svg";
+import googleSrc from "../assets/google.svg";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -33,7 +35,7 @@ export default function Login() {
 
   return (
     <AuthLayout
-      icon="sports_soccer"
+      icon={<img src={trophySrc} className="w-10 h-10" alt="Troféu" />}
       title="INIMIGOS"
       subtitle="DA BOLA"
       heading="BEM-VINDO DE VOLTA"
@@ -66,7 +68,6 @@ export default function Login() {
           value={password}
           onChange={setPassword}
           error={errors.password}
-          // Passando as props para o ícone de mostrar/ocultar senha
           rightIcon={showPassword ? "visibility_off" : "visibility"}
           onRightIconClick={() => setShowPassword(!showPassword)}
         />
@@ -94,9 +95,9 @@ export default function Login() {
       <div className="mt-stack-md flex flex-col gap-stack-sm">
         <Button 
           type="button" 
-          variant="primary" 
+          variant="ghost" 
           fullWidth 
-          icon="account_circle" // Ícone provisório (você pode trocar por um SVG do Google depois)
+          icon={<img src={googleSrc} className="w-5 h-5" alt="Google" />}
           onClick={() => console.log('Mock: Entrar com Google clicado')}
         >
           ENTRAR COM GOOGLE

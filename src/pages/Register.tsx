@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { InputField } from "../components/ui/InputField";
 import { Button } from "../components/ui/Button";
-import { AuthLayout } from "../components/ui/AuthLayout";
+import { AuthLayout } from "../components/layout/AuthLayout";
 
 export default function Register() {
   const [name, setName] = useState("");
