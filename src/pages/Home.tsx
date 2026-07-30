@@ -1,12 +1,23 @@
+import { useNavigate } from 'react-router-dom'
 import { Sidebar } from '../components/ui/Sidebar'
 import { MobileTopBar } from '../components/ui/MobileTopBar'
 import { MobileBottomNav } from '../components/ui/MobileBottomNav'
 import { NextMatch } from '../components/ui/NextMatch'
 import { Leaderboard } from '../components/ui/Leaderboard'
 import { StatCard } from '../components/ui/StatCard'
+import { MaterialIcon } from '../components/ui/MaterialIcon'
 import { PLAYER_STATS } from '../data/mockData'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Home() {
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate('/login')
+  }
+
   return (
     <div className="bg-background text-on-background">
       <Sidebar />
@@ -17,6 +28,14 @@ export default function Home() {
           <div>
             <h2 className="text-[28px] md:text-headline-lg font-display text-primary uppercase leading-tight font-bold">Dashboard</h2>
           </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-2 font-mono text-label-bold text-on-surface-variant hover:text-error transition-colors"
+          >
+            <MaterialIcon name="logout" className="w-5 h-5" />
+            Sair
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter">
