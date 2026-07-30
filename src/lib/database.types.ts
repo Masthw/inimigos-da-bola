@@ -240,25 +240,37 @@ export type Database = {
       }
       match_players: {
         Row: {
+          assists: number | null
           goals_scored: number | null
+          guest_name: string | null
+          id: string
           match_id: string
-          status: string
+          status: Database["public"]["Enums"]["player_status_enum"]
+          tactical_position: string | null
           team: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
+          assists?: number | null
           goals_scored?: number | null
+          guest_name?: string | null
+          id?: string
           match_id: string
-          status: string
+          status?: Database["public"]["Enums"]["player_status_enum"]
+          tactical_position?: string | null
           team?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
+          assists?: number | null
           goals_scored?: number | null
+          guest_name?: string | null
+          id?: string
           match_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["player_status_enum"]
+          tactical_position?: string | null
           team?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -345,7 +357,11 @@ export type Database = {
           max_players: number
           max_waitlist: number
           organizer_id: string
-          status: string
+          status: Database["public"]["Enums"]["match_status_enum"]
+          team_a_name: string | null
+          team_a_score: number | null
+          team_b_name: string | null
+          team_b_score: number | null
         }
         Insert: {
           created_at?: string
@@ -358,7 +374,11 @@ export type Database = {
           max_players: number
           max_waitlist: number
           organizer_id: string
-          status: string
+          status?: Database["public"]["Enums"]["match_status_enum"]
+          team_a_name?: string | null
+          team_a_score?: number | null
+          team_b_name?: string | null
+          team_b_score?: number | null
         }
         Update: {
           created_at?: string
@@ -371,7 +391,11 @@ export type Database = {
           max_players?: number
           max_waitlist?: number
           organizer_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["match_status_enum"]
+          team_a_name?: string | null
+          team_a_score?: number | null
+          team_b_name?: string | null
+          team_b_score?: number | null
         }
         Relationships: [
           {
@@ -528,7 +552,6 @@ export type Database = {
           email: string
           id: string
           name: string
-          password_hash: string | null
           role: string
         }
         Insert: {
@@ -538,7 +561,6 @@ export type Database = {
           email: string
           id?: string
           name: string
-          password_hash?: string | null
           role?: string
         }
         Update: {
@@ -548,7 +570,6 @@ export type Database = {
           email?: string
           id?: string
           name?: string
-          password_hash?: string | null
           role?: string
         }
         Relationships: []
@@ -558,10 +579,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      match_status_enum: "open" | "in_progress" | "finished" | "cancelled"
+      player_status_enum: "confirmed" | "waitlist" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -688,6 +710,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      match_status_enum: ["open", "in_progress", "finished", "cancelled"],
+      player_status_enum: ["confirmed", "waitlist", "cancelled"],
+    },
   },
 } as const
