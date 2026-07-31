@@ -2,9 +2,17 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 export function ProtectedRoute() {
-  const { token } = useAuth()
+  const { user, loading } = useAuth()
 
-  if (!token) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <p className="text-on-surface label-lg">Carregando...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
     return <Navigate to="/login" replace />
   }
 
