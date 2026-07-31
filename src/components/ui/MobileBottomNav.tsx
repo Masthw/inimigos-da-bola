@@ -4,7 +4,7 @@ import { BOTTOM_NAV_ITEMS } from '../../data/mockData'
 
 export function MobileBottomNav() {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-surface-container-high border-t border-outline-variant/20 rounded-t-xl shadow-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-surface-container-high border-t border-outline-variant/20 shadow-lg">
       {BOTTOM_NAV_ITEMS.map((item) => (
         <Link
           key={item.icon}

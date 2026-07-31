@@ -3,8 +3,6 @@ export const NAV_ITEMS = [
   { icon: 'event_available', label: 'Partidas', href: '/matches' },
   { icon: 'grid_view', label: 'Escalação', href: '/tactics' },
   { icon: 'military_tech', label: 'Tabela', href: '/rankings' },
-  { icon: 'history', label: 'Histórico', href: '/history' },
-  { icon: 'analytics', label: 'Perfil', href: '/stats' },
 ]
 
 export const LEADERBOARD = [
@@ -36,10 +34,8 @@ export const AVATARS = {
 }
 
 export const BOTTOM_NAV_ITEMS = [
-  { icon: 'dashboard', label: 'Home', active: true },
-  { icon: 'sports_soccer', label: 'Partidas' },
-  { icon: 'strategy', label: 'Escalação' },
-  { icon: 'leaderboard', label: 'Tabela' },
-   { icon: 'history', label: 'Histórico', href: '/history' },
-  { icon: 'person', label: 'Perfil' },
+ { icon: 'home', label: 'Home', href: '/', active: true },
+  { icon: 'event_available', label: 'Partidas', href: '/matches' },
+  { icon: 'grid_view', label: 'Escalação', href: '/tactics' },
+  { icon: 'military_tech', label: 'Tabela', href: '/rankings' },
 ]

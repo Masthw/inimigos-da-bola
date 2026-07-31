@@ -1,8 +1,14 @@
 import { Link } from 'react-router-dom'
 import { MaterialIcon } from './MaterialIcon'
-import { NAV_ITEMS, AVATARS } from '../../data/mockData'
+import { Avatar } from './Avatar'
+import { NAV_ITEMS } from '../../data/mockData'
+import { useAuth } from '../../hooks/useAuth'
+import { getAvatarUrl, getDisplayName } from '../../lib/profile'
 
 export function Sidebar() {
+  const { logout, user } = useAuth()
+  const name = getDisplayName(user)
+  const avatarUrl = getAvatarUrl(user)
   return (
     <nav className="hidden md:flex flex-col fixed left-0 top-0 h-full py-stack-lg w-64 bg-surface-container border-r border-outline-variant z-50">
       <div className="px-6 mb-stack-lg">
@@ -10,12 +16,9 @@ export function Sidebar() {
       </div>
 
       <div className="flex items-center gap-3 px-6 py-4 mb-stack-lg">
-        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
-          <img className="w-full h-full object-cover" src={AVATARS.profile} alt="Avatar do jogador" />
-        </div>
-        <div>
-          <p className="text-on-surface font-mono text-label-bold">Player One</p>
-          <p className="text-on-surface-variant font-mono text-label-sm">Pro League</p>
+        <Avatar src={avatarUrl} alt={name} className="w-12 h-12 rounded-full" />
+        <div className="min-w-0">
+          <p className="text-on-surface font-mono text-label-bold truncate">{name}</p>
         </div>
       </div>
 
@@ -36,10 +39,18 @@ export function Sidebar() {
         ))}
       </div>
 
-      <div className="px-4 mt-auto">
+      <div className="px-4 mt-auto space-y-1">
         <button type="button" className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2">
           <MaterialIcon name="add_circle" className="w-5 h-5" />
           Novo Jogo
+        </button>
+        <button
+          type="button"
+          onClick={logout}
+          className="w-full flex items-center justify-center gap-2 py-3 font-mono text-label-bold text-on-surface-variant hover:text-error transition-colors"
+        >
+          <MaterialIcon name="logout" className="w-5 h-5" />
+          Sair
         </button>
       </div>
     </nav>

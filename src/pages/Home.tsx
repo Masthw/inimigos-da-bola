@@ -4,14 +4,10 @@ import { MobileBottomNav } from '../components/ui/MobileBottomNav'
 import { NextMatch } from '../components/ui/NextMatch'
 import { Leaderboard } from '../components/ui/Leaderboard'
 import { StatCard } from '../components/ui/StatCard'
-import { MaterialIcon } from '../components/ui/MaterialIcon'
-import { PLAYER_STATS } from '../data/mockData'
-import { useAuth } from '../hooks/useAuth'
+import { useHomeDashboard } from '../hooks/useHomeDashboard' 
 
 export default function Home() {
- const { logout } = useAuth()
-
- 
+  const { playerStats } = useHomeDashboard()
 
   return (
     <div className="bg-background text-on-background">
@@ -21,16 +17,10 @@ export default function Home() {
       <main className="md:ml-64 p-4 md:p-margin-desktop min-h-screen pb-24 md:pb-margin-desktop">
         <div className="mb-stack-lg flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h2 className="text-[28px] md:text-headline-lg font-display text-primary uppercase leading-tight font-bold">Dashboard</h2>
+            <h2 className="text-[28px] md:text-headline-lg font-display text-primary uppercase leading-tight font-bold">
+              Dashboard
+            </h2>
           </div>
-          <button
-            type="button"
-            onClick={logout}
-            className="flex items-center gap-2 font-mono text-label-bold text-on-surface-variant hover:text-error transition-colors"
-          >
-            <MaterialIcon name="logout" className="w-5 h-5" />
-            Sair
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter">
@@ -39,7 +29,7 @@ export default function Home() {
 
           <section className="md:col-span-12">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
-              {PLAYER_STATS.map((stat) => (
+              {playerStats.map((stat) => (
                 <StatCard key={stat.label} {...stat} />
               ))}
             </div>
