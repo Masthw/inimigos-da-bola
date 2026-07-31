@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { Sidebar } from '../components/ui/Sidebar'
 import { MobileTopBar } from '../components/ui/MobileTopBar'
 import { MobileBottomNav } from '../components/ui/MobileBottomNav'
@@ -10,13 +9,9 @@ import { PLAYER_STATS } from '../data/mockData'
 import { useAuth } from '../hooks/useAuth'
 
 export default function Home() {
-  const { logout } = useAuth()
-  const navigate = useNavigate()
+ const { logout } = useAuth()
 
-  function handleLogout() {
-    logout()
-    navigate('/login')
-  }
+ 
 
   return (
     <div className="bg-background text-on-background">
@@ -30,7 +25,7 @@ export default function Home() {
           </div>
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={logout}
             className="flex items-center gap-2 font-mono text-label-bold text-on-surface-variant hover:text-error transition-colors"
           >
             <MaterialIcon name="logout" className="w-5 h-5" />

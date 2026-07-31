@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Navigate } from "react-router-dom"; // 1. Importa o Navigate
 import { Button } from "../components/ui/Button";
 import { AuthLayout } from "../components/layout/AuthLayout";
 import trophySrc from "../assets/thropy.svg";
@@ -6,14 +6,10 @@ import googleSrc from "../assets/google.svg";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { signInWithGoogle, user } = useAuth();
 
-  async function handleGoogleLogin() {
-    try {
-      await login("ricardo@mail.com", "123456");
-    } catch (err) {
-      console.error("Erro ao fazer login com Google", err);
-    }
+  if (user) {
+    return <Navigate to="/" replace />;
   }
 
   return (
@@ -21,8 +17,8 @@ export default function Login() {
       icon={<img src={trophySrc} className="w-10 h-10" alt="Troféu" />}
       title="INIMIGOS"
       subtitle="DA BOLA"
-      heading="BEM-VINDO DE VOLTA"
-      description="Entre com sua conta Google para continuar"
+      heading="ENTRAR EM CAMPO" 
+      description="Entre ou crie sua conta rapidamente usando o Google"
     >
       <div className="flex flex-col gap-stack-md">
         <Button
@@ -30,16 +26,10 @@ export default function Login() {
           variant="secondary"
           fullWidth
           icon={<img src={googleSrc} className="w-5 h-5" alt="Google" />}
-          onClick={handleGoogleLogin}
+          onClick={signInWithGoogle}
         >
-          ENTRAR COM GOOGLE
+          CONTINUAR COM GOOGLE
         </Button>
-
-        <Link to="/register">
-          <Button variant="ghost" fullWidth icon="person_add">
-            CRIAR CONTA
-          </Button>
-        </Link>
       </div>
     </AuthLayout>
   );
