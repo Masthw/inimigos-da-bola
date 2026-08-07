@@ -3,7 +3,7 @@ import { MaterialIcon } from "./MaterialIcon";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "brand";
   icon?: string | ReactNode;
   fullWidth?: boolean;
 }
@@ -14,6 +14,7 @@ const variantStyles = {
   primary: "bg-primary text-on-primary brutal-shadow brutal-shadow-hover rounded-none",
   secondary: "bg-secondary-container text-on-secondary-container border border-secondary-container hover:bg-secondary/20",
   ghost: "bg-transparent text-on-surface-variant hover:bg-surface-variant border border-transparent",
+  brand: "bg-primary-container text-primary brutal-shadow brutal-shadow-hover rounded-none",
 };
 
 export function Button({ children, variant = "primary", icon, fullWidth = false, className = "", disabled, ...props }: Readonly<ButtonProps>) {

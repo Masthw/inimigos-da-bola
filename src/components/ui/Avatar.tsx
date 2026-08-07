@@ -10,7 +10,7 @@ export function Avatar({ src, alt, className = '' }: Readonly<AvatarProps>) {
   if (!src) {
     return (
       <div className={`flex items-center justify-center bg-surface-variant text-on-surface-variant ${className}`}>
-        <MaterialIcon name="person" className="w-2 h-2" />
+        <MaterialIcon name="person" className="w-1/2 h-1/2" />
       </div>
     )
   }
