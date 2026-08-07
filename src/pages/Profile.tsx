@@ -306,11 +306,11 @@ export default function Profile() {
         <section className="relative rounded-2xl overflow-hidden border border-outline-variant">
           <div className="h-64 w-full relative bg-surface-container-highest">
             <img src={PHOTOS.estadio1} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale" />
-            <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-surface via-surface/40 to-transparent" />
           </div>
 
           <div className="px-margin-mobile md:px-8 pb-8 -mt-16 relative flex flex-col md:flex-row items-end gap-6">
-            <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl border-4 border-surface overflow-hidden bg-surface-bright brutal-shadow shrink-0">
+            <div className="w-30 h-30 rounded-2xl border-4 border-surface overflow-hidden bg-surface-bright brutal-shadow shrink-0">
               <Avatar src={avatarUrl} alt={name ?? 'Jogador'} className="w-full h-full" />
             </div>
 
@@ -319,7 +319,7 @@ export default function Profile() {
                 <h3 className="display-lg font-display text-on-surface uppercase italic truncate">
                   {getFirstName(name ?? 'Jogador')}
                 </h3>
-                {rank && <span className="bg-tertiary text-on-tertiary px-3 py-1 font-mono text-label-bold rounded-sm">RANK #{rank}</span>}
+                {!!(rank) && <span className="bg-tertiary text-on-tertiary px-3 py-1 font-mono text-label-bold rounded-sm">RANK #{rank}</span>}
               </div>
               <p className="text-on-surface font-mono text-label-bold uppercase tracking-widest mt-1">
                 {loading ? 'Carregando...' : 'Temporada Atual'}
@@ -344,7 +344,7 @@ export default function Profile() {
                 {profileStats.map((stat) => (
                   <div key={stat.label} className="bg-surface-container-high rounded-xl border border-outline-variant px-3 py-4 text-center">
                     <p className={`text-headline-md font-display leading-none ${stat.className}`}>{stat.value}</p>
-                    <p className="font-mono text-[10px] leading-tight break-words text-on-surface uppercase mt-2">{stat.label}</p>
+                    <p className="font-mono text-[10px] leading-tight wrap-break-word text-on-surface uppercase mt-2">{stat.label}</p>
                   </div>
                 ))}
               </div>
@@ -372,7 +372,7 @@ export default function Profile() {
                 ))}
               </div>
 
-              <div className="mt-auto pt-6 border-t border-outline-variant/20 mt-6">
+              <div className="mt-auto pt-6 border-t border-outline-variant/20">
                 <p className="font-mono text-label-bold uppercase text-on-surface mb-2">Ranking da Temporada</p>
                 <div className="flex items-end gap-2">
                   <p className="display-lg font-display text-primary leading-none">{rank ? `#${rank}` : '—'}</p>

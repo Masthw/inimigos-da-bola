@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { MaterialIcon } from './MaterialIcon'
 import { Avatar } from './Avatar'
 import { NAV_ITEMS } from '../../navlinks/links'
@@ -14,8 +14,19 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
   const { logout, user } = useAuth()
   const { isAdmin } = useIsAdmin()
+  const { pathname } = useLocation()
   const name = getFirstName(getDisplayName(user))
   const avatarUrl = getAvatarUrl(user)
+
+  const navItems = [
+    ...NAV_ITEMS,
+    { icon: 'person', label: 'Perfil', href: `/profile/${user?.id ?? ''}` },
+  ]
+
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/'
+    return pathname === href || pathname.startsWith(`${href}/`)
+  }
 
   const content = (
     <>
@@ -43,13 +54,13 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
       </Link>
 
       <div className="flex-1 space-y-1">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <Link
             key={item.icon}
             to={item.href}
             onClick={onClose}
             className={`flex items-center gap-3 py-3 px-4 rounded-lg mx-2 transition-all ${
-              item.active
+              isActive(item.href)
                 ? 'bg-primary-container text-on-primary-container translate-x-1'
                 : 'text-on-surface-variant hover:bg-surface-variant'
             }`}
