@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppShell } from '../components/ui/AppShell'
 import { Button } from '../components/ui/Button'
+import { Dropdown } from '../components/ui/Dropdown'
 import { InputField } from '../components/ui/InputField'
 import { MaterialIcon } from '../components/ui/MaterialIcon'
+import { TimePicker } from '../components/ui/TimePicker'
 import { useAuth } from '../hooks/useAuth'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 import { supabase } from '../lib/supabaseClient'
@@ -27,7 +29,9 @@ export default function NewMatch() {
 
   const [gameTypes, setGameTypes] = useState<GameType[]>([])
   const [gameTypeId, setGameTypeId] = useState('')
-  const [dateTime, setDateTime] = useState('')
+  const [date, setDate] = useState('')
+  const [timeHour, setTimeHour] = useState('')
+  const [timeMinute, setTimeMinute] = useState('')
   const [location, setLocation] = useState('')
   const [maxPlayers, setMaxPlayers] = useState('10')
   const [maxWaitlist, setMaxWaitlist] = useState('4')
@@ -75,8 +79,12 @@ export default function NewMatch() {
       setError('Selecione o tipo de jogo')
       return
     }
-    if (!dateTime) {
-      setError('Informe a data e a hora da partida')
+    if (!date) {
+      setError('Informe a data da partida')
+      return
+    }
+    if (!timeHour || !timeMinute) {
+      setError('Informe o horário da partida')
       return
     }
     if (!location.trim()) {
@@ -86,8 +94,14 @@ export default function NewMatch() {
 
     setSubmitting(true)
 
+    const dateTimeLocal = new Date(`${date}T${timeHour}:${timeMinute}`)
+    if (Number.isNaN(dateTimeLocal.getTime())) {
+      setError('Data ou hora inválidas')
+      return
+    }
+
     const { error: insertError } = await supabase.from('matches').insert({
-      date_time: new Date(dateTime).toISOString(),
+      date_time: dateTimeLocal.toISOString(),
       location: location.trim(),
       game_type_id: Number(gameTypeId),
       max_players: Math.max(1, Number(maxPlayers) || 10),
@@ -150,35 +164,44 @@ export default function NewMatch() {
               <label className={labelClass} htmlFor="game-type">
                 Tipo de Jogo
               </label>
-              <div className={inputClass}>
-                <MaterialIcon name="sports_soccer" className="w-5 h-5 text-on-surface-variant" />
-                <select
-                  id="game-type"
-                  value={gameTypeId}
-                  onChange={(event) => handleGameTypeChange(event.target.value)}
-                  className="flex-1 bg-transparent text-on-surface font-body focus:outline-none [&>option]:bg-surface-container-high"
-                >
-                  {gameTypes.map((gameType) => (
-                    <option key={gameType.id} value={gameType.id}>
-                      {gameType.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Dropdown
+                icon="sports_soccer"
+                value={gameTypeId}
+                options={gameTypes.map((gameType) => ({
+                  value: String(gameType.id),
+                  label: gameType.name,
+                }))}
+                onChange={handleGameTypeChange}
+                placeholder="Selecione o tipo de jogo"
+              />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label className={labelClass} htmlFor="date-time">
-                Data e Hora
-              </label>
-              <div className={inputClass}>
-                <MaterialIcon name="calendar_today" className="w-5 h-5 text-on-surface-variant" />
-                <input
-                  id="date-time"
-                  type="datetime-local"
-                  value={dateTime}
-                  onChange={(event) => setDateTime(event.target.value)}
-                  className="flex-1 bg-transparent text-on-surface font-body focus:outline-none [color-scheme:dark]"
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
+              <div className="flex flex-col gap-2 sm:col-span-1">
+                <label className={labelClass} htmlFor="date">
+                  Data
+                </label>
+                <div className={inputClass}>
+                  <MaterialIcon name="calendar_today" className="w-5 h-5 text-on-surface-variant" />
+                  <input
+                    id="date"
+                    type="date"
+                    value={date}
+                    onChange={(event) => setDate(event.target.value)}
+                    className="flex-1 bg-transparent text-on-surface font-body focus:outline-none [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <label className={labelClass} htmlFor="time">
+                  Hora
+                </label>
+                <TimePicker
+                  hour={timeHour}
+                  minute={timeMinute}
+                  onHourChange={setTimeHour}
+                  onMinuteChange={setTimeMinute}
                 />
               </div>
             </div>
@@ -242,7 +265,7 @@ export default function NewMatch() {
                 <InputField
                   label="Time B"
                   icon="sports_soccer"
-                  placeholder="Ex.: Neon Bulls"
+                  placeholder="Ex.: Grêmio"
                   value={teamBName}
                   onChange={setTeamBName}
                 />
@@ -256,7 +279,13 @@ export default function NewMatch() {
               </div>
             )}
 
-            <Button fullWidth icon={submitting ? 'pending' : 'add_circle'} onClick={handleSubmit} disabled={submitting}>
+            <Button
+              variant="brand"
+              fullWidth
+              icon={submitting ? 'pending' : 'add_circle'}
+              onClick={handleSubmit}
+              disabled={submitting}
+            >
               {submitting ? 'Criando...' : 'Criar Partida'}
             </Button>
           </div>
