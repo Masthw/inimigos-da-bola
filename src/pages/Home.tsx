@@ -7,7 +7,7 @@ import { StatCard } from '../components/ui/StatCard'
 import { useHomeDashboard } from '../hooks/useHomeDashboard' 
 
 export default function Home() {
-  const { playerStats } = useHomeDashboard()
+  const { playerStats, matchesPlayed, loading } = useHomeDashboard()
 
   return (
     <div className="bg-background text-on-background">
@@ -28,7 +28,15 @@ export default function Home() {
           <Leaderboard />
 
           <section className="md:col-span-12">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
+              <h3 className="text-headline-md font-display text-on-surface uppercase">Minhas Estatísticas</h3>
+              {!loading && matchesPlayed === 0 && (
+                <p className="font-mono text-label-sm text-on-surface-variant">
+                  Sem partidas finalizadas — estatísticas começam quando a temporada começar
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-gutter">
               {playerStats.map((stat) => (
                 <StatCard key={stat.label} {...stat} />
               ))}

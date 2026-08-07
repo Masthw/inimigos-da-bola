@@ -5,7 +5,6 @@ export function useHomeDashboard() {
   const { user } = useAuth()
   const { stats, loading } = usePlayerStats(user?.id ?? null)
 
-  // 1. Extração do ternário aninhado para uma lógica independente e clara
   let winRateValue = '—'
   
   if (loading) {
@@ -14,7 +13,6 @@ export function useHomeDashboard() {
     winRateValue = `${stats.winRate}%`
   }
 
-  // 2. Montagem dos cards já com os valores tratados
   const playerStats = [
     {
       label: 'Gols',
@@ -31,6 +29,20 @@ export function useHomeDashboard() {
       hoverTextClass: 'text-on-secondary-container',
     },
     {
+      label: 'Partidas',
+      value: loading ? '…' : String(stats?.matchesPlayed ?? 0),
+      colorClass: 'text-primary',
+      hoverBgClass: 'bg-primary-container',
+      hoverTextClass: 'text-on-primary-container',
+    },
+    {
+      label: 'Vitórias',
+      value: loading ? '…' : String(stats?.wins ?? 0),
+      colorClass: 'text-secondary',
+      hoverBgClass: 'bg-secondary-container',
+      hoverTextClass: 'text-on-secondary-container',
+    },
+    {
       label: 'Taxa de Vitórias',
       value: winRateValue,
       colorClass: 'text-tertiary',
@@ -41,7 +53,7 @@ export function useHomeDashboard() {
 
   return {
     playerStats,
+    matchesPlayed: stats?.matchesPlayed ?? 0,
     loading,
-    // Você pode retornar outras coisas aqui no futuro (ex: nextMatchData)
   }
 }

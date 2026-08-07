@@ -17,7 +17,7 @@ export function Avatar({ src, alt, className = '' }: Readonly<AvatarProps>) {
 
   return (
     <div className={`overflow-hidden bg-surface-variant ${className}`}>
-      <img className="w-full h-full object-cover" src={src} alt={alt} />
+      <img className="w-full h-full object-cover" src={src} alt={alt} referrerPolicy="no-referrer" />
     </div>
   )
 }

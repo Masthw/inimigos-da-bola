@@ -3,10 +3,12 @@ import { MaterialIcon } from './MaterialIcon'
 import { Avatar } from './Avatar'
 import { NAV_ITEMS } from '../../data/mockData'
 import { useAuth } from '../../hooks/useAuth'
+import { useIsAdmin } from '../../hooks/useIsAdmin'
 import { getAvatarUrl, getDisplayName } from '../../lib/profile'
 
 export function Sidebar() {
   const { logout, user } = useAuth()
+  const { isAdmin } = useIsAdmin()
   const name = getDisplayName(user)
   const avatarUrl = getAvatarUrl(user)
   return (
@@ -40,10 +42,15 @@ export function Sidebar() {
       </div>
 
       <div className="px-4 mt-auto space-y-1">
-        <button type="button" className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2">
-          <MaterialIcon name="add_circle" className="w-5 h-5" />
-          Novo Jogo
-        </button>
+        {isAdmin && (
+          <Link
+            to="/matches"
+            className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+          >
+            <MaterialIcon name="add_circle" className="w-5 h-5" />
+            Novo Jogo
+          </Link>
+        )}
         <button
           type="button"
           onClick={logout}
