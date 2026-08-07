@@ -33,6 +33,13 @@ import {
   CircleAlert,
   Eye,
   EyeOff,
+  Goal,
+  Star,
+  Zap,
+  Menu,
+  X,
+  ChevronDown,
+  ChevronUp,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -71,6 +78,13 @@ const iconRegistry: Record<string, LucideIcon> = {
   error: CircleAlert,
   visibility: Eye,
   visibility_off: EyeOff,
+  sports_soccer: Goal,
+  star: Star,
+  bolt: Zap,
+  menu: Menu,
+  close: X,
+  expand_more: ChevronDown,
+  expand_less: ChevronUp,
 }
 
 interface MaterialIconProps {
