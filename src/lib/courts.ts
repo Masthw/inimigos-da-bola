@@ -22,9 +22,14 @@ export const ATMOSPHERE_PHOTOS = [
 ] as const
 
 export function getCourtPhotos(sportName: string | null, hour: number): string[] {
-  const isFutsal = (sportName ?? '').toLowerCase().includes('futsal')
-  if (isFutsal) {
-    return hour >= 18 ? [PHOTOS.futsalNight] : [PHOTOS.futsal, PHOTOS.futsal2]
+  const normalized = (sportName ?? '').toLowerCase()
+  const isNight = hour >= 18
+
+  if (normalized.includes('futsal')) {
+    return isNight ? [PHOTOS.futsalNight] : [PHOTOS.futsal, PHOTOS.futsal2]
   }
-  return hour >= 18 ? [PHOTOS.societyNight] : [PHOTOS.societyDay]
+  if (normalized.includes('society')) {
+    return isNight ? [PHOTOS.societyNight] : [PHOTOS.societyDay]
+  }
+  return isNight ? [PHOTOS.societyNight] : [PHOTOS.societyDay]
 }
