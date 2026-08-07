@@ -74,9 +74,9 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
       <div className="px-4 mt-auto space-y-1">
         {isAdmin && (
           <Link
-            to="/matches"
+            to="/matches/new"
             onClick={onClose}
-            className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+            className="w-full bg-primary-container text-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
           >
             <MaterialIcon name="add_circle" className="w-5 h-5" />
             Novo Jogo

@@ -66,7 +66,7 @@ export function Leaderboard() {
                     </Link>
                     <span className="font-body font-bold text-on-surface truncate">{p.name}</span>
                     {isCurrent && (
-                      <span className="ml-1 px-2 py-0.5 bg-primary text-on-primary font-mono text-label-sm uppercase shrink-0">
+                      <span className="ml-1 px-2 py-0.5 bg-primary-container text-primary font-mono text-label-sm uppercase shrink-0">
                         Você
                       </span>
                     )}

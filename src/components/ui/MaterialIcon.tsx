@@ -40,6 +40,12 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Shield,
+  ThumbsDown,
+  Footprints,
+  Egg,
+  Turtle,
+  Ghost,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -85,6 +91,12 @@ const iconRegistry: Record<string, LucideIcon> = {
   close: X,
   expand_more: ChevronDown,
   expand_less: ChevronUp,
+  shield: Shield,
+  thumb_down: ThumbsDown,
+  footprints: Footprints,
+  egg: Egg,
+  turtle: Turtle,
+  ghost: Ghost,
 }
 
 interface MaterialIconProps {

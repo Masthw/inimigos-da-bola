@@ -2,22 +2,25 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { AppShell } from '../components/ui/AppShell'
 import { Avatar } from '../components/ui/Avatar'
+import { ConquistasCarousel } from '../components/ui/ConquistasCarousel'
 import { MaterialIcon } from '../components/ui/MaterialIcon'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { useUserRank } from '../hooks/useUserRank'
+import { usePlayerMatchHistory, type HistoryMatch, type HistoryPlayer } from '../hooks/usePlayerMatchHistory'
 import { getFirstName } from '../lib/profile'
 import { PHOTOS } from '../lib/courts'
 
-const BADGE_CIRCLE_CLASSES: Record<string, string> = {
-  primary: 'bg-primary-container border-primary text-on-primary-container',
-  secondary: 'bg-secondary-container border-secondary text-on-secondary-container',
-  tertiary: 'bg-tertiary-container border-tertiary text-on-tertiary-container',
-}
-
 const BADGES = [
-  { icon: 'sports_soccer', title: 'Goleador', count: 3, color: 'primary' },
-  { icon: 'send', title: 'Garçom', count: 1, color: 'secondary' },
-  { icon: 'verified', title: 'Craque da Partida', count: 5, color: 'tertiary' },
+  { icon: 'sports_soccer', title: 'Goleador', className: 'bg-linear-to-br from-violet-200 via-violet-300 to-violet-500 text-violet-950' },
+  { icon: 'send', title: 'Garçom', className: 'bg-linear-to-br from-purple-200 via-purple-300 to-purple-500 text-purple-950' },
+  { icon: 'verified', title: 'Craque da Partida', className: 'bg-linear-to-br from-yellow-200 via-amber-300 to-amber-500 text-amber-950' },
+  { icon: 'shield', title: 'Muralha', className: 'bg-linear-to-br from-blue-200 via-blue-300 to-blue-500 text-blue-950' },
+  { icon: 'bolt', title: 'Motorzinho', className: 'bg-linear-to-br from-emerald-200 via-emerald-300 to-emerald-500 text-emerald-950' },
+  { icon: 'footprints', title: 'Rei do Drible', className: 'bg-linear-to-br from-cyan-200 via-cyan-300 to-cyan-500 text-cyan-950' },
+  { icon: 'thumb_down', title: 'Perninha da Partida', className: 'bg-linear-to-br from-red-200 via-red-300 to-red-500 text-red-950' },
+  { icon: 'egg', title: 'Frango', className: 'bg-linear-to-br from-orange-200 via-orange-300 to-orange-500 text-orange-950' },
+  { icon: 'turtle', title: 'Tartaruga', className: 'bg-linear-to-br from-lime-200 via-lime-300 to-lime-500 text-lime-950' },
+  { icon: 'ghost', title: 'Fantasma', className: 'bg-linear-to-br from-slate-300 via-slate-400 to-slate-600 text-slate-950' },
 ] as const
 
 const OUTCOME_LABELS: Record<string, string> = {
@@ -32,138 +35,21 @@ const OUTCOME_CLASSES: Record<string, { chip: string; score: string }> = {
   draw: { chip: 'bg-slate-500 text-white', score: 'text-on-surface' },
 }
 
-const AWARD_META: Record<string, { icon: string; chip: string }> = {
-  'Goleador': { icon: 'sports_soccer', chip: 'bg-primary-container text-on-primary-container' },
-  'Garçom': { icon: 'send', chip: 'bg-secondary-container text-on-secondary-container' },
-  'Craque da Partida': { icon: 'verified', chip: 'bg-tertiary-container text-on-tertiary-container' },
+function getAwardMeta(name: string): { icon: string; chip: string; title: string } {
+  const key = name.toLowerCase()
+  if (key.includes('goleador')) {
+    return { icon: 'sports_soccer', chip: 'bg-primary-container text-on-primary-container', title: 'Goleador' }
+  }
+  if (key.includes('garçom') || key.includes('garcom')) {
+    return { icon: 'send', chip: 'bg-secondary-container text-on-secondary-container', title: 'Garçom' }
+  }
+  if (key.includes('craque')) {
+    return { icon: 'verified', chip: 'bg-tertiary-container text-on-tertiary-container', title: 'Craque da Partida' }
+  }
+  return { icon: 'star', chip: 'bg-surface-variant text-on-surface', title: name }
 }
 
-const BASE_POINTS: Record<string, number> = { victory: 3, draw: 1, defeat: 0 }
-
-interface PlayerStats {
-  name: string
-  goals: number
-  assists: number
-  awards: string[]
-}
-
-interface MockMatch {
-  outcome: string
-  modality: string
-  date: string
-  home: string
-  homeScore: number
-  away: string
-  awayScore: number
-  awards: string[]
-  homePlayers: PlayerStats[]
-  awayPlayers: PlayerStats[]
-}
-
-const MOCK_MATCHES: MockMatch[] = [
-  {
-    outcome: 'victory',
-    modality: 'Futsal',
-    date: '06/08',
-    home: 'Inimigos da Bola',
-    homeScore: 4,
-    away: 'Neon Bulls',
-    awayScore: 2,
-    awards: ['Craque da Partida', 'Goleador'],
-    homePlayers: [
-      { name: 'Ricardo', goals: 2, assists: 1, awards: ['Craque da Partida', 'Goleador'] },
-      { name: 'Lucas', goals: 1, assists: 1, awards: ['Garçom'] },
-      { name: 'Rafael', goals: 1, assists: 0, awards: [] },
-      { name: 'André', goals: 0, assists: 0, awards: [] },
-      { name: 'Caio', goals: 0, assists: 0, awards: [] },
-    ],
-    awayPlayers: [
-      { name: 'Bruno', goals: 1, assists: 0, awards: [] },
-      { name: 'Diego', goals: 1, assists: 1, awards: [] },
-      { name: 'Edu', goals: 0, assists: 0, awards: [] },
-      { name: 'Fábio', goals: 0, assists: 0, awards: [] },
-      { name: 'Gustavo', goals: 0, assists: 0, awards: [] },
-    ],
-  },
-  {
-    outcome: 'defeat',
-    modality: 'Society',
-    date: '04/08',
-    home: 'Inimigos da Bola',
-    homeScore: 1,
-    away: 'Cyber Titans',
-    awayScore: 3,
-    awards: [],
-    homePlayers: [
-      { name: 'Ricardo', goals: 0, assists: 0, awards: [] },
-      { name: 'Lucas', goals: 0, assists: 0, awards: [] },
-      { name: 'Rafael', goals: 1, assists: 0, awards: [] },
-      { name: 'André', goals: 0, assists: 0, awards: [] },
-      { name: 'Caio', goals: 0, assists: 0, awards: [] },
-    ],
-    awayPlayers: [
-      { name: 'Breno', goals: 2, assists: 0, awards: ['Goleador'] },
-      { name: 'Caetano', goals: 1, assists: 1, awards: ['Craque da Partida'] },
-      { name: 'Diego', goals: 0, assists: 1, awards: ['Garçom'] },
-      { name: 'Elias', goals: 0, assists: 1, awards: [] },
-      { name: 'Fábio', goals: 0, assists: 0, awards: [] },
-    ],
-  },
-  {
-    outcome: 'draw',
-    modality: 'Futsal',
-    date: '01/08',
-    home: 'Inimigos da Bola',
-    homeScore: 2,
-    away: 'Blitz United',
-    awayScore: 2,
-    awards: [],
-    homePlayers: [
-      { name: 'Ricardo', goals: 1, assists: 0, awards: [] },
-      { name: 'Lucas', goals: 1, assists: 0, awards: [] },
-      { name: 'Rafael', goals: 0, assists: 1, awards: ['Garçom'] },
-      { name: 'André', goals: 0, assists: 1, awards: [] },
-      { name: 'Caio', goals: 0, assists: 0, awards: [] },
-    ],
-    awayPlayers: [
-      { name: 'Hugo', goals: 1, assists: 1, awards: ['Craque da Partida'] },
-      { name: 'Ítalo', goals: 1, assists: 0, awards: [] },
-      { name: 'Júlio', goals: 0, assists: 0, awards: [] },
-      { name: 'Leandro', goals: 0, assists: 0, awards: [] },
-      { name: 'Márcio', goals: 0, assists: 1, awards: [] },
-    ],
-  },
-  {
-    outcome: 'victory',
-    modality: 'Society',
-    date: '28/07',
-    home: 'Inimigos da Bola',
-    homeScore: 5,
-    away: 'Ghost FC',
-    awayScore: 0,
-    awards: ['Craque da Partida', 'Goleador'],
-    homePlayers: [
-      { name: 'Ricardo', goals: 3, assists: 2, awards: ['Craque da Partida', 'Goleador'] },
-      { name: 'Lucas', goals: 1, assists: 1, awards: [] },
-      { name: 'Rafael', goals: 1, assists: 0, awards: [] },
-      { name: 'André', goals: 0, assists: 0, awards: ['Garçom'] },
-      { name: 'Caio', goals: 0, assists: 0, awards: [] },
-    ],
-    awayPlayers: [
-      { name: 'Nando', goals: 0, assists: 0, awards: [] },
-      { name: 'Otávio', goals: 0, assists: 0, awards: [] },
-      { name: 'Paulo', goals: 0, assists: 0, awards: [] },
-      { name: 'Raul', goals: 0, assists: 0, awards: [] },
-      { name: 'Sérgio', goals: 0, assists: 0, awards: [] },
-    ],
-  },
-]
-
-function getMatchPoints(match: MockMatch) {
-  return BASE_POINTS[match.outcome] + (match.awards.includes('Craque da Partida') ? 1 : 0)
-}
-
-function PlayerTable({ title, players }: Readonly<{ title: string; players: PlayerStats[] }>) {
+function PlayerTable({ title, players }: Readonly<{ title: string; players: HistoryPlayer[] }>) {
   return (
     <div>
       <p className="font-mono text-label-sm uppercase text-on-surface mb-2">{title}</p>
@@ -179,20 +65,16 @@ function PlayerTable({ title, players }: Readonly<{ title: string; players: Play
           </thead>
           <tbody>
             {players.map((player) => (
-              <tr key={player.name} className="border-t border-outline-variant/20">
+              <tr key={`${player.name}-${title}`} className="border-t border-outline-variant/20">
                 <td className="px-3 py-2 font-mono text-label-sm text-on-surface whitespace-nowrap">{player.name}</td>
                 <td className="px-2 py-2 text-center font-mono text-label-sm text-on-surface">{player.goals}</td>
                 <td className="px-2 py-2 text-center font-mono text-label-sm text-on-surface">{player.assists}</td>
                 <td className="px-3 py-2">
                   <div className="flex justify-end gap-1">
                     {player.awards.map((award) => {
-                      const meta = AWARD_META[award]
+                      const meta = getAwardMeta(award)
                       return (
-                        <span
-                          key={award}
-                          title={award}
-                          className={`inline-flex items-center justify-center w-6 h-6 rounded-md ${meta.chip}`}
-                        >
+                        <span key={award} title={award} className={`inline-flex items-center justify-center w-6 h-6 rounded-md ${meta.chip}`}>
                           <MaterialIcon name={meta.icon} className="w-3.5 h-3.5" />
                         </span>
                       )
@@ -208,9 +90,8 @@ function PlayerTable({ title, players }: Readonly<{ title: string; players: Play
   )
 }
 
-function MatchCard({ match, expanded, onToggle }: Readonly<{ match: MockMatch; expanded: boolean; onToggle: () => void }>) {
+function MatchCard({ match, expanded, onToggle }: Readonly<{ match: HistoryMatch; expanded: boolean; onToggle: () => void }>) {
   const outcome = OUTCOME_CLASSES[match.outcome]
-  const points = getMatchPoints(match)
 
   return (
     <div className="p-4 bg-surface-container-high rounded-xl border border-outline-variant/30  transition-colors">
@@ -220,9 +101,11 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: MockMatch; e
             <span className={`text-[10px] font-mono text-label-bold uppercase px-2 py-0.5 rounded ${outcome.chip}`}>
               {OUTCOME_LABELS[match.outcome]}
             </span>
-            <span className="text-[10px] font-mono text-label-bold uppercase px-2 py-0.5 rounded bg-surface-container text-on-surface border border-outline-variant/30">
-              {match.modality}
-            </span>
+            {match.modality && (
+              <span className="text-[10px] font-mono text-label-bold uppercase px-2 py-0.5 rounded bg-surface-container text-on-surface border border-outline-variant/30">
+                {match.modality}
+              </span>
+            )}
           </div>
           <span className="text-[10px] font-mono text-label-bold text-on-surface uppercase">{match.date}</span>
         </div>
@@ -236,7 +119,7 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: MockMatch; e
             {match.away}
           </p>
 
-          <span className="font-mono text-label-bold text-tertiary shrink-0">+{points} pts</span>
+          <span className="font-mono text-label-bold text-tertiary shrink-0">+{match.points} pts</span>
 
           <MaterialIcon name={expanded ? 'expand_less' : 'expand_more'} className="w-5 h-5 text-on-surface shrink-0" />
         </div>
@@ -269,31 +152,41 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: MockMatch; e
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>()
   const { name, avatarUrl, loading } = useUserProfile(userId)
-  const { rank, totalPlayers } = useUserRank(userId)
+  const { rank } = useUserRank(userId)
+  const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId)
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null)
 
-  const totalMatches = MOCK_MATCHES.length
-  const totalGoals = MOCK_MATCHES.reduce((sum, match) => sum + match.homePlayers[0].goals, 0)
-  const totalAssists = MOCK_MATCHES.reduce((sum, match) => sum + match.homePlayers[0].assists, 0)
-  const totalPoints = MOCK_MATCHES.reduce((sum, match) => sum + getMatchPoints(match), 0)
-  const wins = MOCK_MATCHES.filter((match) => match.outcome === 'victory').length
+  const totalMatches = matches.length
+  const totalGoals = matches.reduce((sum, match) => sum + match.goals, 0)
+  const totalAssists = matches.reduce((sum, match) => sum + match.assists, 0)
+  const totalPoints = matches.reduce((sum, match) => sum + match.points, 0)
+  const wins = matches.filter((match) => match.outcome === 'victory').length
   let winStreak = 0
-  for (const match of MOCK_MATCHES) {
+  for (const match of matches) {
     if (match.outcome === 'victory') winStreak++
     else break
   }
-  const formatAverage = (value: number) => (value / totalMatches).toFixed(1).replace('.', ',')
-  const winRate = `${Math.round((wins / totalMatches) * 100)}%`
+  const formatAverage = (value: number) => (totalMatches > 0 ? (value / totalMatches).toFixed(1).replace('.', ',') : '0,0')
+  const winRate = totalMatches > 0 ? `${Math.round((wins / totalMatches) * 100)}%` : '—'
 
   const profileStats = [
-    { label: 'Média de Gols', value: formatAverage(totalGoals), className: 'text-primary' },
-    { label: 'Win Rate', value: winRate, className: 'text-secondary' },
-    { label: 'Média de Assist.', value: formatAverage(totalAssists), className: 'text-tertiary' },
-    { label: 'Gols', value: String(totalGoals), className: 'text-primary' },
-    { label: 'Assistências', value: String(totalAssists), className: 'text-secondary' },
-    { label: 'Pontos', value: String(totalPoints), className: 'text-tertiary' },
-    { label: 'Vitórias Seguidas', value: String(winStreak), className: 'text-success' },
+    { label: 'Média de Gols', value: historyLoading ? '…' : formatAverage(totalGoals), className: 'text-primary' },
+    { label: 'Win Rate', value: historyLoading ? '…' : winRate, className: 'text-secondary' },
+    { label: 'Média de Assist.', value: historyLoading ? '…' : formatAverage(totalAssists), className: 'text-tertiary' },
+    { label: 'Gols', value: historyLoading ? '…' : String(totalGoals), className: 'text-primary' },
+    { label: 'Assistências', value: historyLoading ? '…' : String(totalAssists), className: 'text-secondary' },
+    { label: 'Pontos', value: historyLoading ? '…' : String(totalPoints), className: 'text-tertiary' },
+    { label: 'Vitórias Seguidas', value: historyLoading ? '…' : String(winStreak), className: 'text-success' },
   ]
+
+  const normalizedBadgeCounts: Record<string, number> = {}
+  for (const [name, count] of Object.entries(badgeCounts)) {
+    const title = getAwardMeta(name).title
+    normalizedBadgeCounts[title] = (normalizedBadgeCounts[title] ?? 0) + count
+  }
+  const badges = BADGES.map((badge) => ({ ...badge, count: normalizedBadgeCounts[badge.title] ?? 0 })).filter(
+    (badge) => badge.count > 0,
+  )
 
   return (
     <AppShell>
@@ -309,81 +202,65 @@ export default function Profile() {
             <div className="absolute inset-0 bg-linear-to-t from-surface via-surface/40 to-transparent" />
           </div>
 
-          <div className="px-margin-mobile md:px-8 pb-8 -mt-16 relative flex flex-col md:flex-row items-end gap-6">
-            <div className="w-30 h-30 rounded-2xl border-4 border-surface overflow-hidden bg-surface-bright brutal-shadow shrink-0">
-              <Avatar src={avatarUrl} alt={name ?? 'Jogador'} className="w-full h-full" />
+          <div className="px-margin-mobile md:px-8 pb-8 -mt-16 relative">
+            <div className="flex flex-col items-center md:flex-row md:items-end gap-6 text-center md:text-left">
+              <div className="w-30 h-30 rounded-2xl border-4 border-surface overflow-hidden bg-surface-bright brutal-shadow shrink-0">
+                <Avatar src={avatarUrl} alt={name ?? 'Jogador'} className="w-full h-full" />
+              </div>
+
+              <div className="flex-1 pb-2 min-w-0">
+                <div className="flex items-center justify-center md:justify-start gap-3 flex-wrap">
+                  <h3 className="display-lg font-display text-on-surface uppercase italic truncate">
+                    {getFirstName(name ?? 'Jogador')}
+                  </h3>
+                  {!!(rank) && <span className="bg-tertiary text-on-tertiary px-3 py-1 font-mono text-label-bold rounded-sm">RANK #{rank}</span>}
+                </div>
+                <p className="text-on-surface font-mono text-label-bold uppercase tracking-widest mt-1">
+                  {loading ? 'Carregando...' : 'Temporada Atual'}
+                </p>
+              </div>
+
+              <div className="flex gap-4 pb-4">
+                <div className="text-center bg-surface-container px-6 py-4 rounded-xl border border-outline-variant min-w-24">
+                  <p className="display-lg font-display text-secondary leading-none">{historyLoading ? '…' : totalMatches}</p>
+                  <p className="font-mono text-label-sm text-on-surface uppercase mt-2">Partidas</p>
+                </div>
+              </div>
             </div>
 
-            <div className="flex-1 pb-2 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h3 className="display-lg font-display text-on-surface uppercase italic truncate">
-                  {getFirstName(name ?? 'Jogador')}
-                </h3>
-                {!!(rank) && <span className="bg-tertiary text-on-tertiary px-3 py-1 font-mono text-label-bold rounded-sm">RANK #{rank}</span>}
-              </div>
-              <p className="text-on-surface font-mono text-label-bold uppercase tracking-widest mt-1">
-                {loading ? 'Carregando...' : 'Temporada Atual'}
-              </p>
-            </div>
-
-            <div className="flex gap-4 pb-4">
-              <div className="text-center bg-surface-container px-6 py-4 rounded-xl border border-outline-variant min-w-24">
-                <p className="display-lg font-display text-secondary leading-none">{totalMatches}</p>
-                <p className="font-mono text-label-sm text-on-surface uppercase mt-2">Partidas</p>
-              </div>
+            <div className="mt-6 md:mt-8">
+              <p className="font-mono text-label-sm uppercase text-on-surface tracking-widest mb-3">Conquistas</p>
+              {historyLoading ? (
+                <div className="flex gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="h-11 w-40 rounded-full bg-surface-variant animate-pulse" />
+                  ))}
+                </div>
+              ) : badges.length === 0 ? (
+                <p className="font-mono text-label-sm text-on-surface-variant">
+                  Nenhuma conquista ainda — os prêmios aparecem aqui depois das partidas
+                </p>
+              ) : (
+                <ConquistasCarousel badges={badges} />
+              )}
             </div>
           </div>
         </section>
 
-        {/* Stats + Conquistas */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-          <section className="lg:col-span-8">
-            <div className="bg-surface-container rounded-2xl p-6 md:p-8 border border-outline-variant h-full">
-              <h4 className="text-headline-md font-display uppercase text-primary mb-6">Estatísticas</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {profileStats.map((stat) => (
-                  <div key={stat.label} className="bg-surface-container-high rounded-xl border border-outline-variant px-3 py-4 text-center">
-                    <p className={`text-headline-md font-display leading-none ${stat.className}`}>{stat.value}</p>
-                    <p className="font-mono text-[10px] leading-tight wrap-break-word text-on-surface uppercase mt-2">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <aside className="lg:col-span-4">
-            <div className="bg-surface-container rounded-2xl p-6 md:p-8 border border-outline-variant h-full flex flex-col">
-              <h4 className="text-headline-md font-display uppercase text-primary mb-6">Conquistas</h4>
-              <div className="grid grid-cols-3 gap-4">
-                {BADGES.map((badge) => (
-                  <div key={badge.title} className="flex flex-col items-center text-center group">
-                    <div className="relative mb-3">
-                      <div
-                        className={`w-14 h-14 rounded-full flex items-center justify-center border-2 transition-transform group-hover:scale-110 ${BADGE_CIRCLE_CLASSES[badge.color]}`}
-                      >
-                        <MaterialIcon name={badge.icon} className="w-6 h-6" />
-                      </div>
-                      <span className="absolute -top-2 -right-2 bg-primary text-on-primary rounded-full min-w-5 h-5 px-1 flex items-center justify-center font-mono text-label-sm font-bold">
-                        {badge.count}
-                      </span>
-                    </div>
-                    <p className="font-mono text-label-bold text-on-surface text-center">{badge.title}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-auto pt-6 border-t border-outline-variant/20">
-                <p className="font-mono text-label-bold uppercase text-on-surface mb-2">Ranking da Temporada</p>
-                <div className="flex items-end gap-2">
-                  <p className="display-lg font-display text-primary leading-none">{rank ? `#${rank}` : '—'}</p>
-                  <p className="font-mono text-label-sm text-on-surface mb-1">
-                    {totalPlayers > 0 ? `de ${totalPlayers} jogadores` : 'Leaderboard Global'}
-                  </p>
+        {/* Estatísticas */}
+        <section>
+          <div className="bg-surface-container rounded-2xl p-6 md:p-8 border border-outline-variant">
+            <h4 className="text-headline-md font-display uppercase text-primary mb-6">Estatísticas</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {profileStats.map((stat) => (
+                <div key={stat.label} className="bg-surface-container-high rounded-xl border border-outline-variant px-3 py-4 text-center">
+                  <p className={`text-headline-md font-display leading-none ${stat.className}`}>{stat.value}</p>
+                  <p className="font-mono text-[10px] leading-tight break-words text-on-surface uppercase mt-2">{stat.label}</p>
                 </div>
-              </div>
+              ))}
             </div>
-          </aside>
-        </div>
+          </div>
+        </section>
 
         {/* Histórico */}
         <section>
@@ -393,16 +270,32 @@ export default function Profile() {
               <MaterialIcon name="history" className="w-5 h-5 text-primary" />
             </div>
 
-            <div className="space-y-4">
-              {MOCK_MATCHES.map((match, index) => (
-                <MatchCard
-                  key={match.date}
-                  match={match}
-                  expanded={expandedMatch === index}
-                  onToggle={() => setExpandedMatch(expandedMatch === index ? null : index)}
-                />
-              ))}
-            </div>
+            {historyLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-20 bg-surface-variant animate-pulse rounded-xl" />
+                ))}
+              </div>
+            ) : matches.length === 0 ? (
+              <div className="p-8 text-center bg-surface-container-high rounded-xl border border-outline-variant/30">
+                <MaterialIcon name="history" className="w-8 h-8 text-on-surface-variant mx-auto mb-3" />
+                <p className="font-mono text-label-bold text-on-surface">Nenhuma partida finalizada ainda</p>
+                <p className="font-mono text-label-sm text-on-surface-variant mt-1">
+                  O histórico aparece depois que o jogador entrar em campo
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {matches.map((match, index) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    expanded={expandedMatch === index}
+                    onToggle={() => setExpandedMatch(expandedMatch === index ? null : index)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>
