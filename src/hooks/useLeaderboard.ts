@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { getFirstName } from '../lib/profile'
 import { useAuth } from './useAuth'
 
 export interface LeaderboardEntry {
@@ -40,7 +41,7 @@ export function useLeaderboard() {
       setEntries(
         rows.map((row) => ({
           id: row.id,
-          name: row.name,
+          name: getFirstName(row.name ?? 'Jogador'),
           avatarUrl: row.avatar_url,
           points: 0,
           isCurrentUser: row.id === currentUserId,

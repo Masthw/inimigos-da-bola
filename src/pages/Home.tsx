@@ -1,13 +1,17 @@
+import { Link } from 'react-router-dom'
 import { Sidebar } from '../components/ui/Sidebar'
 import { MobileTopBar } from '../components/ui/MobileTopBar'
 import { MobileBottomNav } from '../components/ui/MobileBottomNav'
 import { NextMatch } from '../components/ui/NextMatch'
 import { Leaderboard } from '../components/ui/Leaderboard'
 import { StatCard } from '../components/ui/StatCard'
-import { useHomeDashboard } from '../hooks/useHomeDashboard' 
+import { MaterialIcon } from '../components/ui/MaterialIcon'
+import { useHomeDashboard } from '../hooks/useHomeDashboard'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Home() {
   const { playerStats, matchesPlayed, loading } = useHomeDashboard()
+  const { user } = useAuth()
 
   return (
     <div className="bg-background text-on-background">
@@ -29,7 +33,18 @@ export default function Home() {
 
           <section className="md:col-span-12">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
-              <h3 className="text-headline-md font-display text-on-surface uppercase">Minhas Estatísticas</h3>
+              <Link
+                to={`/profile/${user?.id ?? ''}`}
+                className="inline-flex items-center gap-2 group/statlink hover:text-primary transition-colors"
+              >
+                <h3 className="text-headline-md font-display text-on-surface uppercase group-hover/statlink:text-primary transition-colors">
+                  Minhas Estatísticas
+                </h3>
+                <MaterialIcon
+                  name="arrow_forward"
+                  className="w-5 h-5 text-on-surface-variant group-hover/statlink:text-primary transition-colors"
+                />
+              </Link>
               {!loading && matchesPlayed === 0 && (
                 <p className="font-mono text-label-sm text-on-surface-variant">
                   Sem partidas finalizadas — estatísticas começam quando a temporada começar

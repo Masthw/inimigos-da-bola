@@ -53,15 +53,17 @@ export function Leaderboard() {
                     >
                       {pos}
                     </span>
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant shrink-0">
-                      {p.avatarUrl ? (
-                        <img className="w-full h-full object-cover" src={p.avatarUrl} alt={p.name} referrerPolicy="no-referrer" />
-                      ) : (
-                        <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
-                          <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
-                        </div>
-                      )}
-                    </div>
+                    <Link to={`/profile/${p.id}`} className="shrink-0" aria-label={`Perfil de ${p.name}`}>
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+                        {p.avatarUrl ? (
+                          <img className="w-full h-full object-cover" src={p.avatarUrl} alt={p.name} referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
+                            <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
+                          </div>
+                        )}
+                      </div>
+                    </Link>
                     <span className="font-body font-bold text-on-surface truncate">{p.name}</span>
                     {isCurrent && (
                       <span className="ml-1 px-2 py-0.5 bg-primary text-on-primary font-mono text-label-sm uppercase shrink-0">

@@ -4,12 +4,12 @@ import { Avatar } from './Avatar'
 import { NAV_ITEMS } from '../../navlinks/links' 
 import { useAuth } from '../../hooks/useAuth'
 import { useIsAdmin } from '../../hooks/useIsAdmin'
-import { getAvatarUrl, getDisplayName } from '../../lib/profile'
+import { getAvatarUrl, getDisplayName, getFirstName } from '../../lib/profile'
 
 export function Sidebar() {
   const { logout, user } = useAuth()
   const { isAdmin } = useIsAdmin()
-  const name = getDisplayName(user)
+  const name = getFirstName(getDisplayName(user))
   const avatarUrl = getAvatarUrl(user)
   return (
     <nav className="hidden md:flex flex-col fixed left-0 top-0 h-full py-stack-lg w-64 bg-surface-container border-r border-outline-variant z-50">
@@ -17,12 +17,12 @@ export function Sidebar() {
         <h1 className="text-headline-lg font-display font-black text-primary tracking-tighter">INIMIGOS DA BOLA</h1>
       </div>
 
-      <div className="flex items-center gap-3 px-6 py-4 mb-stack-lg">
+      <Link to={`/profile/${user?.id ?? ''}`} className="flex items-center gap-3 px-6 py-4 mb-stack-lg hover:bg-surface-variant transition-colors rounded-lg mx-2">
         <Avatar src={avatarUrl} alt={name} className="w-12 h-12 rounded-full" />
         <div className="min-w-0">
           <p className="text-on-surface font-mono text-label-bold truncate">{name}</p>
         </div>
-      </div>
+      </Link>
 
       <div className="flex-1 space-y-1">
         {NAV_ITEMS.map((item) => (
