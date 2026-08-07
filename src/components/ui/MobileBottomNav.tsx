@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MaterialIcon } from './MaterialIcon'
-import { BOTTOM_NAV_ITEMS } from '../../data/mockData'
+import { BOTTOM_NAV_ITEMS } from '../../navlinks/links' 
 
 export function MobileBottomNav() {
   return (

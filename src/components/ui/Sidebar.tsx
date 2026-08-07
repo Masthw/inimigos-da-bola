@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { MaterialIcon } from './MaterialIcon'
 import { Avatar } from './Avatar'
-import { NAV_ITEMS } from '../../data/mockData'
+import { NAV_ITEMS } from '../../navlinks/links' 
 import { useAuth } from '../../hooks/useAuth'
 import { useIsAdmin } from '../../hooks/useIsAdmin'
 import { getAvatarUrl, getDisplayName } from '../../lib/profile'
