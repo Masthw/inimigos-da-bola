@@ -28,17 +28,16 @@ export function Leaderboard() {
           </div>
         )}
 
-    
-        <div className="space-y-4 flex-1 overflow-y-auto min-h-0 pr-2">
+        <div className="space-y-4 flex-1 flex flex-col justify-center min-h-0">
           {loading &&
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-14 bg-surface-variant animate-pulse rounded-lg shrink-0" />
+              <div key={i} className="h-14 bg-surface-variant animate-pulse rounded-lg w-full" />
             ))}
 
           {!loading &&
-            entries.map((p, index) => {
+            entries.slice(0, 3).map((p, index) => {
               const pos = index + 1
-              const isTop3 = pos <= 3
+              const isTop3 = pos <= 3 
               const isCurrent = p.isCurrentUser
 
               return (
@@ -46,11 +45,11 @@ export function Leaderboard() {
                   key={p.id}
                   className={`flex items-center justify-between p-3 ${isTop3 ? BG_CLASSES[pos - 1] : 'bg-surface-container-low'} rounded-lg border-l-4 ${
                     isTop3 ? BORDER_CLASSES[pos - 1] : 'border-outline-variant'
-                  } ${isCurrent ? 'ring-1 ring-primary' : ''}`}
+                  } ${isCurrent ? 'ring-1 ring-primary' : ''} w-full`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex flex-1 items-center gap-3 min-w-0 mr-2">
                     <span
-                      className={`font-mono text-label-bold ${isTop3 ? POS_CLASSES[pos - 1] : 'text-on-surface-variant'} w-4`}
+                      className={`font-mono text-label-bold ${isTop3 ? POS_CLASSES[pos - 1] : 'text-on-surface-variant'} w-4 shrink-0`}
                     >
                       {pos}
                     </span>
@@ -70,8 +69,9 @@ export function Leaderboard() {
                       </span>
                     )}
                   </div>
+                  
                   <span
-                    className={`font-mono text-label-bold ${pos === 1 && seasonStarted ? 'text-tertiary' : 'text-on-surface-variant'}`}
+                    className={`font-mono text-label-bold whitespace-nowrap shrink-0 ${pos === 1 && seasonStarted ? 'text-tertiary' : 'text-on-surface-variant'}`}
                   >
                     {p.points} pts
                   </span>
