@@ -5,8 +5,19 @@ import { useAuth } from './useAuth'
 export type PlayerStatus = 'confirmed' | 'waitlist' | 'cancelled'
 
 export interface MatchPlayer {
+  userId: string | null
   name: string
   avatarUrl: string | null
+  team: string | null
+}
+
+export interface MatchPlayerDetail {
+  userId: string
+  name: string
+  team: string
+  goals: number
+  assists: number
+  awards: string[]
 }
 
 export interface MatchWithMeta {
@@ -22,10 +33,13 @@ export interface MatchWithMeta {
   teamBScore: number | null
   sportName: string | null
   gameTypeName: string | null
+  organizerId: string
   confirmedCount: number
   waitlistCount: number
   confirmedPlayers: MatchPlayer[]
   waitlistPlayers: MatchPlayer[]
+  teamAPlayers: MatchPlayerDetail[]
+  teamBPlayers: MatchPlayerDetail[]
 }
 
 export interface MatchGroups {
@@ -45,6 +59,7 @@ interface MatchRow {
   team_b_name: string | null
   team_a_score: number | null
   team_b_score: number | null
+  organizer_id: string
   game_types: { name: string | null; sports: { name: string | null } | null } | null
 }
 
@@ -53,6 +68,7 @@ interface PlayerRow {
   status: PlayerStatus
   user_id: string | null
   guest_name: string | null
+  team: string | null
   users: { name: string | null; avatar_url: string | null } | null
 }
 
@@ -68,12 +84,12 @@ async function fetchMatchesData(userId: string | null) {
     supabase
       .from('matches')
       .select(
-        'id, date_time, location, status, max_players, max_waitlist, team_a_name, team_b_name, team_a_score, team_b_score, game_types(name, sports(name))'
+        'id, date_time, location, status, max_players, max_waitlist, team_a_name, team_b_name, team_a_score, team_b_score, organizer_id, game_types(name, sports(name))'
       )
       .is('deleted_at', null)
       .neq('status', 'cancelled')
       .order('date_time', { ascending: true }),
-    supabase.from('match_players').select('match_id, status, user_id, guest_name, users(name, avatar_url)'),
+    supabase.from('match_players').select('match_id, status, user_id, guest_name, team, users(name, avatar_url)'),
   ])
 
   if (matchesResult.error) throw matchesResult.error
@@ -94,7 +110,7 @@ async function fetchMatchesData(userId: string | null) {
     }
 
     const name = row.users?.name ?? row.guest_name ?? 'Convidado'
-    const player: MatchPlayer = { name, avatarUrl: row.users?.avatar_url ?? null }
+    const player: MatchPlayer = { userId: row.user_id, name, avatarUrl: row.users?.avatar_url ?? null, team: row.team }
     const entry = playersByMatch.get(row.match_id) ?? { confirmed: [], waitlist: [] }
     if (row.status === 'confirmed') {
       entry.confirmed.push(player)
@@ -104,8 +120,57 @@ async function fetchMatchesData(userId: string | null) {
     playersByMatch.set(row.match_id, entry)
   }
 
+  const finishedMatchIds = (matchesResult.data ?? [])
+    .filter((m) => m.status === 'finished')
+    .map((m) => m.id)
+
+  const finishedPlayerDetails = new Map<string, { teamA: MatchPlayerDetail[]; teamB: MatchPlayerDetail[] }>()
+
+  if (finishedMatchIds.length > 0) {
+    const [detailRes, awardsRes] = await Promise.all([
+      supabase
+        .from('match_players')
+        .select('match_id, user_id, guest_name, goals_scored, assists, team, users(name)')
+        .in('match_id', finishedMatchIds)
+        .eq('status', 'confirmed'),
+      supabase
+        .from('match_awards')
+        .select('match_id, user_id, awards(name)')
+        .in('match_id', finishedMatchIds),
+    ])
+
+    const playerAwards = new Map<string, string[]>()
+    for (const row of awardsRes.data ?? []) {
+      const name = row.awards?.name
+      if (!name || !row.user_id) continue
+      const key = `${row.match_id}:${row.user_id}`
+      const list = playerAwards.get(key) ?? []
+      list.push(name)
+      playerAwards.set(key, list)
+    }
+
+    for (const row of detailRes.data ?? []) {
+      const name = row.users?.name ?? row.guest_name ?? 'Convidado'
+      const key = row.user_id ? `${row.match_id}:${row.user_id}` : null
+      const awards = key ? (playerAwards.get(key) ?? []) : []
+      const detail: MatchPlayerDetail = {
+        userId: row.user_id ?? '',
+        name,
+        team: row.team ?? 'A',
+        goals: row.goals_scored ?? 0,
+        assists: row.assists ?? 0,
+        awards,
+      }
+      const entry = finishedPlayerDetails.get(row.match_id) ?? { teamA: [], teamB: [] }
+      if (row.team === 'B') entry.teamB.push(detail)
+      else entry.teamA.push(detail)
+      finishedPlayerDetails.set(row.match_id, entry)
+    }
+  }
+
   const rows: MatchWithMeta[] = (matchesResult.data ?? [] as MatchRow[]).map((match) => {
     const players = playersByMatch.get(match.id) ?? { confirmed: [], waitlist: [] }
+    const finishedDetails = finishedPlayerDetails.get(match.id) ?? { teamA: [], teamB: [] }
     return {
       id: match.id,
       dateTime: match.date_time,
@@ -119,10 +184,13 @@ async function fetchMatchesData(userId: string | null) {
       teamBScore: match.team_b_score,
       sportName: match.game_types?.name ?? match.game_types?.sports?.name ?? null,
       gameTypeName: match.game_types?.name ?? null,
+      organizerId: match.organizer_id,
       confirmedCount: confirmedCounts.get(match.id) ?? 0,
       waitlistCount: waitlistCounts.get(match.id) ?? 0,
       confirmedPlayers: players.confirmed,
       waitlistPlayers: players.waitlist,
+      teamAPlayers: finishedDetails.teamA,
+      teamBPlayers: finishedDetails.teamB,
     }
   })
 
@@ -257,5 +325,5 @@ export function useMatches() {
     [userId, refetch]
   )
 
-  return { ...groups, loading, busyMatchId, myStatus, setAttendance, cancelMatch }
+  return { ...groups, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch }
 }

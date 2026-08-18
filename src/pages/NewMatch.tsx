@@ -33,8 +33,8 @@ export default function NewMatch() {
   const [timeHour, setTimeHour] = useState('')
   const [timeMinute, setTimeMinute] = useState('')
   const [location, setLocation] = useState('')
-  const [maxPlayers, setMaxPlayers] = useState('10')
-  const [maxWaitlist, setMaxWaitlist] = useState('4')
+  const [maxPlayers, setMaxPlayers] = useState('12')
+  const [maxWaitlist, setMaxWaitlist] = useState('2')
   const [teamAName, setTeamAName] = useState('')
   const [teamBName, setTeamBName] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -217,7 +217,7 @@ export default function NewMatch() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
               <div className="flex flex-col gap-2">
                 <label className={labelClass} htmlFor="max-players">
-                  Jogadores por Time
+                  Total de Jogadores
                 </label>
                 <div className={inputClass}>
                   <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
@@ -230,6 +230,9 @@ export default function NewMatch() {
                     className="flex-1 bg-transparent text-on-surface font-body focus:outline-none"
                   />
                 </div>
+                <span className="font-mono text-[10px] text-on-surface-variant">
+                  {Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : ''}
+                </span>
               </div>
 
               <div className="flex flex-col gap-2">

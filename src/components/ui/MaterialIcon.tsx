@@ -46,6 +46,8 @@ import {
   Egg,
   Turtle,
   Ghost,
+  Play,
+  Flag,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -97,6 +99,8 @@ const iconRegistry: Record<string, LucideIcon> = {
   egg: Egg,
   turtle: Turtle,
   ghost: Ghost,
+  play_arrow: Play,
+  flag: Flag,
 }
 
 interface MaterialIconProps {

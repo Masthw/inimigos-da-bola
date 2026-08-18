@@ -1,8 +1,13 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AppShell } from '../components/ui/AppShell'
 import { MaterialIcon } from '../components/ui/MaterialIcon'
 import { Avatar } from '../components/ui/Avatar'
+import { Modal } from '../components/ui/Modal'
+import { LiveMatchView } from '../components/match/LiveMatchView'
+import { FinishedMatchCard } from '../components/match/FinishedMatchCard'
 import { useMatches, type MatchWithMeta, type MatchPlayer, type PlayerStatus } from '../hooks/useMatches'
+import { useLiveMatch } from '../hooks/useLiveMatch'
 import { useIsAdmin } from '../hooks/useIsAdmin'
 import { getCourtPhotos } from '../lib/courts'
 
@@ -12,7 +17,6 @@ const dateFormatter = new Intl.DateTimeFormat(PT_BR, { weekday: 'long', day: 'nu
 const timeFormatter = new Intl.DateTimeFormat(PT_BR, { hour: '2-digit', minute: '2-digit' })
 const dayFormatter = new Intl.DateTimeFormat(PT_BR, { day: '2-digit' })
 const monthFormatter = new Intl.DateTimeFormat(PT_BR, { month: 'short' })
-const shortDateFormatter = new Intl.DateTimeFormat(PT_BR, { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 const STATUS_META: Record<MatchWithMeta['status'], { label: string; className: string }> = {
   open: { label: 'AGENDADA', className: 'bg-secondary-container text-on-secondary-container' },
@@ -165,7 +169,7 @@ function ConfirmedPlayersList({ players, waitlist }: Readonly<{ players: MatchPl
   )
 }
 
-function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onCancel }: Readonly<{
+function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onCancel, onStart, onRefresh }: Readonly<{
   match: MatchWithMeta
   myStatus: PlayerStatus | undefined
   busy: boolean
@@ -173,6 +177,8 @@ function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onC
   onConfirm: () => void
   onDesist: () => void
   onCancel: () => void
+  onStart: () => void
+  onRefresh: () => void
 }>) {
   const hour = new Date(match.dateTime).getHours()
   const photos = getCourtPhotos(match.sportName, hour)
@@ -197,15 +203,28 @@ function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onC
               </span>
             )}
             {isAdmin && match.status !== 'finished' && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onCancel}
-                className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 transition-colors"
-              >
-                <MaterialIcon name="close" className="w-3.5 h-3.5" />
-                Cancelar Partida
-              </button>
+              <div className="ml-auto flex items-center gap-2">
+                {match.status === 'open' && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={onStart}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest text-success bg-success/10 border border-success/40 hover:bg-success/20 transition-colors"
+                  >
+                    <MaterialIcon name="play_arrow" className="w-3.5 h-3.5" />
+                    Iniciar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onCancel}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 transition-colors"
+                >
+                  <MaterialIcon name="close" className="w-3.5 h-3.5" />
+                  Cancelar Partida
+                </button>
+              </div>
             )}
           </div>
 
@@ -342,45 +361,14 @@ function UpcomingRow({ match, myStatus, busy, onConfirm }: Readonly<{
   )
 }
 
-function FinishedRow({ match }: Readonly<{ match: MatchWithMeta }>) {
-  const homeScore = match.teamAScore ?? 0
-  const awayScore = match.teamBScore ?? 0
-  const homeName = match.teamAName ?? 'Time A'
-  const awayName = match.teamBName ?? 'Time B'
-  const homeWon = homeScore > awayScore
-  const awayWon = awayScore > homeScore
-
-  return (
-    <div className="bg-surface-container hover:bg-surface-container-high transition-colors border border-outline-variant rounded-xl p-4 flex items-center gap-4">
-      <div className="w-16 shrink-0 text-center">
-        <span className="font-mono text-label-sm text-on-surface-variant">{shortDateFormatter.format(new Date(match.dateTime))}</span>
-      </div>
-
-      <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2 min-w-0">
-        <span className={`text-right truncate ${homeWon ? 'font-mono text-label-bold text-primary' : 'text-on-surface-variant'}`}>
-          {homeName}
-        </span>
-        <div className="flex items-center gap-3 px-3 py-1.5 bg-surface-variant rounded-lg">
-          <span className="display-lg text-on-surface leading-none">{homeScore}</span>
-          <span className="text-on-surface-variant font-mono text-label-sm">x</span>
-          <span className="display-lg text-on-surface leading-none">{awayScore}</span>
-        </div>
-        <span className={`truncate ${awayWon ? 'font-mono text-label-bold text-primary' : 'text-on-surface-variant'}`}>
-          {awayName}
-        </span>
-      </div>
-
-      <span className="hidden md:block px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest rounded-full bg-surface-variant text-on-surface-variant">
-        {match.gameTypeName ?? 'PELADA'}
-      </span>
-    </div>
-  )
-}
-
 export default function Matches() {
-  const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch } =
+  const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } =
     useMatches()
   const { isAdmin } = useIsAdmin()
+  const { busy: liveBusy, startMatch, addGoal, addOwnGoal, finishMatch } = useLiveMatch()
+  const [cancelModalMatch, setCancelModalMatch] = useState<MatchWithMeta | null>(null)
+  const [startModalMatch, setStartModalMatch] = useState<MatchWithMeta | null>(null)
+  const [expandedFinished, setExpandedFinished] = useState<string | null>(null)
 
   const handleConfirm = (match: MatchWithMeta) => {
     const waiting = match.status === 'in_progress' || match.confirmedCount >= match.maxPlayers
@@ -391,59 +379,104 @@ export default function Matches() {
     setAttendance(match.id, 'cancelled')
   }
 
-  const handleCancel = (match: MatchWithMeta) => {
-    if (window.confirm(`Cancelar a partida "${matchTitle(match)}"?`)) {
-      cancelMatch(match.id)
-    }
+  const handleCancelConfirm = () => {
+    if (!cancelModalMatch) return
+    cancelMatch(cancelModalMatch.id)
+    setCancelModalMatch(null)
+  }
+
+  const handleStartConfirm = async () => {
+    if (!startModalMatch) return
+    await startMatch(startModalMatch.id)
+    setStartModalMatch(null)
+    refetch()
+  }
+
+  const isInProgress = featured?.status === 'in_progress'
+
+  const handleGoalScored = async (scorer: MatchPlayer, assist: MatchPlayer | null) => {
+    if (!featured) return
+    await addGoal(featured.id, scorer.userId ?? '', scorer.team ?? 'A', assist?.userId || null)
+    refetch()
+  }
+
+  const handleOwnGoal = async (teamBenefited: string) => {
+    if (!featured) return
+    await addOwnGoal(featured.id, teamBenefited)
+    refetch()
+  }
+
+  const handleFinishMatch = async (scoreA: number, scoreB: number) => {
+    if (!featured) return
+    await finishMatch(featured.id, scoreA, scoreB)
+    refetch()
   }
 
   return (
     <AppShell>
-      <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 border-b border-outline-variant gap-4">
-        <div className="min-w-0">
-          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">
-            Partidas
-          </h2>
-          <p className="hidden md:block font-mono text-label-sm text-on-surface-variant">
-            Agenda, presença e placares da equipe
-          </p>
-        </div>
-
-        {isAdmin && (
-          <Link
-            to="/matches/new"
-            className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-primary-container text-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
-          >
-            <MaterialIcon name="add_circle" className="w-5 h-5" />
-            Novo Jogo
-          </Link>
-        )}
-      </header>
-
-      <div className="p-4 md:p-margin-desktop space-y-8">
-        {loading ? (
-          <div className="space-y-4">
-            <div className="h-72 md:h-80 bg-surface-container-high border border-outline-variant rounded-xl animate-pulse" />
-            <div className="space-y-3">
-              <div className="h-4 w-40 bg-surface-variant rounded animate-pulse" />
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-20 bg-surface-container rounded-xl animate-pulse" />
-              ))}
+      {isInProgress && featured ? (
+        <LiveMatchView
+          matchId={featured.id}
+          teamAName={featured.teamAName ?? 'Time A'}
+          teamBName={featured.teamBName ?? 'Time B'}
+          teamAScore={featured.teamAScore ?? 0}
+          teamBScore={featured.teamBScore ?? 0}
+          teamAPlayers={featured.confirmedPlayers.filter((p) => p.team === 'A')}
+          teamBPlayers={featured.confirmedPlayers.filter((p) => p.team === 'B')}
+          onGoalScored={handleGoalScored}
+          onOwnGoal={handleOwnGoal}
+          onFinish={handleFinishMatch}
+          busy={liveBusy}
+        />
+      ) : (
+        <>
+          <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 border-b border-outline-variant gap-4">
+            <div className="min-w-0">
+              <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">
+                Partidas
+              </h2>
+              <p className="hidden md:block font-mono text-label-sm text-on-surface-variant">
+                Agenda, presença e placares da equipe
+              </p>
             </div>
-          </div>
-        ) : (
-          <>
-            {featured && (
-              <FeaturedCard
-                match={featured}
-                myStatus={myStatus[featured.id]}
-                busy={busyMatchId === featured.id}
-                isAdmin={isAdmin}
-                onConfirm={() => handleConfirm(featured)}
-                onDesist={() => handleDesist(featured)}
-                onCancel={() => handleCancel(featured)}
-              />
+
+            {isAdmin && (
+              <Link
+                to="/matches/new"
+                className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-primary-container text-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
+              >
+                <MaterialIcon name="add_circle" className="w-5 h-5" />
+                Novo Jogo
+              </Link>
             )}
+          </header>
+
+          <div className="p-4 md:p-margin-desktop space-y-8">
+            {loading ? (
+              <div className="space-y-4">
+                <div className="h-72 md:h-80 bg-surface-container-high border border-outline-variant rounded-xl animate-pulse" />
+                <div className="space-y-3">
+                  <div className="h-4 w-40 bg-surface-variant rounded animate-pulse" />
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-20 bg-surface-container rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                {featured && (
+                  <FeaturedCard
+                    match={featured}
+                    myStatus={myStatus[featured.id]}
+                    busy={busyMatchId === featured.id}
+                    isAdmin={isAdmin}
+                    onConfirm={() => handleConfirm(featured)}
+                    onDesist={() => handleDesist(featured)}
+                    onCancel={() => setCancelModalMatch(featured)}
+                    onStart={() => setStartModalMatch(featured)}
+                    onRefresh={refetch}
+                  />
+                )}
 
             {upcoming.length > 0 && (
               <section>
@@ -480,7 +513,20 @@ export default function Matches() {
                 </div>
                 <div className="space-y-3">
                   {finished.map((match) => (
-                    <FinishedRow key={match.id} match={match} />
+                    <FinishedMatchCard
+                      key={match.id}
+                      matchId={match.id}
+                      dateTime={match.dateTime}
+                      gameTypeName={match.gameTypeName}
+                      teamAName={match.teamAName ?? 'Time A'}
+                      teamBName={match.teamBName ?? 'Time B'}
+                      teamAScore={match.teamAScore ?? 0}
+                      teamBScore={match.teamBScore ?? 0}
+                      teamAPlayers={match.teamAPlayers}
+                      teamBPlayers={match.teamBPlayers}
+                      expanded={expandedFinished === match.id}
+                      onToggle={() => setExpandedFinished(expandedFinished === match.id ? null : match.id)}
+                    />
                   ))}
                 </div>
               </section>
@@ -496,19 +542,98 @@ export default function Matches() {
                   Assim que uma pelada for agendada, ela aparece aqui com status e contagem de presença em tempo real.
                 </p>
                 {isAdmin && (
-                  <Link
-                    to="/matches/new"
-                    className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
-                  >
-                    <MaterialIcon name="add_circle" className="w-5 h-5" />
-                    Criar Primeira Partida
-                  </Link>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Link
+                      to="/matches/new"
+                      className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
+                    >
+                      <MaterialIcon name="add_circle" className="w-5 h-5" />
+                      Criar Primeira Partida
+                    </Link>
+                    <Link
+                      to="/matches/test-live"
+                      className="flex items-center gap-2 px-6 py-3 bg-success/20 text-success font-mono text-label-bold border border-success/40 hover:bg-success/30 transition-colors"
+                    >
+                      <MaterialIcon name="play_arrow" className="w-5 h-5" />
+                      Testar Partida Ao Vivo
+                    </Link>
+                  </div>
                 )}
               </div>
             )}
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      <Modal
+        open={!!cancelModalMatch}
+        onClose={() => setCancelModalMatch(null)}
+        title="Cancelar Partida"
+        icon="close"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setCancelModalMatch(null)}
+              className="px-5 py-2.5 font-mono text-label-bold text-on-surface-variant hover:bg-surface-variant transition-colors"
+            >
+              Voltar
+            </button>
+            <button
+              type="button"
+              disabled={busyMatchId === cancelModalMatch?.id}
+              onClick={handleCancelConfirm}
+              className="px-6 py-2.5 bg-error text-on-error font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
+            >
+              {busyMatchId === cancelModalMatch?.id ? 'Cancelando...' : 'Sim, Cancelar'}
+            </button>
           </>
-        )}
-      </div>
+        }
+      >
+        <p className="font-body text-on-surface-variant">
+          Tem certeza que deseja cancelar a partida{' '}
+          <strong className="text-on-surface">{cancelModalMatch ? matchTitle(cancelModalMatch) : ''}</strong>?
+        </p>
+        <p className="font-mono text-label-sm text-on-surface-variant mt-2">
+          Todos os jogadores confirmados perderão a presença.
+        </p>
+      </Modal>
+
+      <Modal
+        open={!!startModalMatch}
+        onClose={() => setStartModalMatch(null)}
+        title="Iniciar Partida"
+        icon="play_arrow"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setStartModalMatch(null)}
+              className="px-5 py-2.5 font-mono text-label-bold text-on-surface-variant hover:bg-surface-variant transition-colors"
+            >
+              Voltar
+            </button>
+            <button
+              type="button"
+              disabled={liveBusy}
+              onClick={handleStartConfirm}
+              className="px-6 py-2.5 bg-success text-white font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
+            >
+              {liveBusy ? 'Iniciando...' : 'Sim, Iniciar'}
+            </button>
+          </>
+        }
+      >
+        <p className="font-body text-on-surface-variant">
+          Iniciar a partida{' '}
+          <strong className="text-on-surface">{startModalMatch ? matchTitle(startModalMatch) : ''}</strong>?
+        </p>
+        <p className="font-mono text-label-sm text-on-surface-variant mt-2">
+          A partida ficará "Ao Vivo" e o placar começará em 0x0.
+        </p>
+      </Modal>
     </AppShell>
   )
 }

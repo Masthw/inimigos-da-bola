@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -358,8 +358,10 @@ export type Database = {
           max_waitlist: number
           organizer_id: string
           status: Database["public"]["Enums"]["match_status_enum"]
+          team_a_color: string | null
           team_a_name: string | null
           team_a_score: number | null
+          team_b_color: string | null
           team_b_name: string | null
           team_b_score: number | null
         }
@@ -375,8 +377,10 @@ export type Database = {
           max_waitlist: number
           organizer_id: string
           status?: Database["public"]["Enums"]["match_status_enum"]
+          team_a_color?: string | null
           team_a_name?: string | null
           team_a_score?: number | null
+          team_b_color?: string | null
           team_b_name?: string | null
           team_b_score?: number | null
         }
@@ -392,8 +396,10 @@ export type Database = {
           max_waitlist?: number
           organizer_id?: string
           status?: Database["public"]["Enums"]["match_status_enum"]
+          team_a_color?: string | null
           team_a_name?: string | null
           team_a_score?: number | null
+          team_b_color?: string | null
           team_b_name?: string | null
           team_b_score?: number | null
         }
@@ -552,7 +558,7 @@ export type Database = {
           email: string
           id: string
           name: string
-          role: string
+          role: Database["public"]["Enums"]["user_role_enum"]
         }
         Insert: {
           avatar_url?: string | null
@@ -561,7 +567,7 @@ export type Database = {
           email: string
           id?: string
           name: string
-          role?: string
+          role?: Database["public"]["Enums"]["user_role_enum"]
         }
         Update: {
           avatar_url?: string | null
@@ -570,7 +576,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
-          role?: string
+          role?: Database["public"]["Enums"]["user_role_enum"]
         }
         Relationships: []
       }
@@ -584,6 +590,7 @@ export type Database = {
     Enums: {
       match_status_enum: "open" | "in_progress" | "finished" | "cancelled"
       player_status_enum: "confirmed" | "waitlist" | "cancelled"
+      user_role_enum: "admin" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -713,6 +720,7 @@ export const Constants = {
     Enums: {
       match_status_enum: ["open", "in_progress", "finished", "cancelled"],
       player_status_enum: ["confirmed", "waitlist", "cancelled"],
+      user_role_enum: ["admin", "member"],
     },
   },
 } as const

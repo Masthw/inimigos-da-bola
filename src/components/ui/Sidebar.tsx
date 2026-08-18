@@ -85,7 +85,7 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
         <button
           type="button"
           onClick={logout}
-          className="w-full flex items-center justify-center gap-2 py-3 font-mono text-label-bold text-on-surface-variant hover:text-error transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-5 font-mono text-label-bold text-on-surface-variant hover:text-error transition-colors"
         >
           <MaterialIcon name="logout" className="w-5 h-5" />
           Sair
