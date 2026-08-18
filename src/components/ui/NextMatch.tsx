@@ -105,7 +105,8 @@ export function NextMatch() {
   const { match, loading } = useNextMatch();
   const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
-  const [status, setStatus] = useState<ConfirmStatus>("idle");
+  const [busy, setBusy] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const [photoIndex] = useState(() => {
     const array = new Uint32Array(1);
     window.crypto.getRandomValues(array);
@@ -113,19 +114,33 @@ export function NextMatch() {
   });
   const imageSrc = getImageSrc(match, photoIndex);
   const { title, subtitle } = getCardMeta(loading, match);
+  const isConfirmed = match?.myStatus === "confirmed";
+  const status: ConfirmStatus = busy ? "confirming" : hasError ? "error" : isConfirmed ? "confirmed" : "idle";
 
   async function handleConfirm() {
-    if (!match || !user || status !== "idle") return;
+    if (!match || !user || busy) return;
 
-    setStatus("confirming");
-    const { error } = await supabase.from("match_players").insert({ match_id: match.id, user_id: user.id, status: "confirmed" });
+    setBusy(true);
+    setHasError(false);
 
-    if (error) {
-      console.error("Erro ao confirmar presença:", error);
-      setStatus("error");
+    const { data: existing } = await supabase
+      .from("match_players")
+      .select("id")
+      .eq("match_id", match.id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const result = existing
+      ? await supabase.from("match_players").update({ status: "confirmed" }).eq("id", existing.id)
+      : await supabase.from("match_players").insert({ match_id: match.id, user_id: user.id, status: "confirmed" });
+
+    setBusy(false);
+
+    if (result.error) {
+      console.error("Erro ao confirmar presença:", result.error);
+      setHasError(true);
       return;
     }
-    setStatus("confirmed");
   }
 
   return (
@@ -181,7 +196,7 @@ export function NextMatch() {
               hasMatch={Boolean(match)}
               isAdmin={isAdmin}
               onConfirm={handleConfirm}
-              onRetry={() => setStatus("idle")}
+              onRetry={() => setHasError(false)}
             />
           </div>
         </div>
