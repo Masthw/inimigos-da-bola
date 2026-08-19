@@ -364,6 +364,8 @@ export type Database = {
           team_b_color: string | null
           team_b_name: string | null
           team_b_score: number | null
+          voting_closed_by: string | null
+          voting_ends_at: string | null
         }
         Insert: {
           created_at?: string
@@ -383,6 +385,8 @@ export type Database = {
           team_b_color?: string | null
           team_b_name?: string | null
           team_b_score?: number | null
+          voting_closed_by?: string | null
+          voting_ends_at?: string | null
         }
         Update: {
           created_at?: string
@@ -402,6 +406,8 @@ export type Database = {
           team_b_color?: string | null
           team_b_name?: string | null
           team_b_score?: number | null
+          voting_closed_by?: string | null
+          voting_ends_at?: string | null
         }
         Relationships: [
           {
@@ -588,7 +594,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      match_status_enum: "open" | "in_progress" | "finished" | "cancelled"
+      match_status_enum: "open" | "in_progress" | "voting" | "finished" | "cancelled"
       player_status_enum: "confirmed" | "waitlist" | "cancelled"
       user_role_enum: "admin" | "member"
     }
@@ -718,7 +724,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      match_status_enum: ["open", "in_progress", "finished", "cancelled"],
+      match_status_enum: ["open", "in_progress", "voting", "finished", "cancelled"],
       player_status_enum: ["confirmed", "waitlist", "cancelled"],
       user_role_enum: ["admin", "member"],
     },

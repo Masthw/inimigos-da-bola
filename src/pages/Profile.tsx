@@ -9,19 +9,7 @@ import { useUserRank } from '../hooks/useUserRank'
 import { usePlayerMatchHistory, type HistoryMatch, type HistoryPlayer } from '../hooks/usePlayerMatchHistory'
 import { getFirstName } from '../lib/profile'
 import { PHOTOS } from '../lib/courts'
-
-const BADGES = [
-  { icon: 'sports_soccer', title: 'Goleador', className: 'bg-linear-to-br from-violet-200 via-violet-300 to-violet-500 text-violet-950' },
-  { icon: 'send', title: 'Garçom', className: 'bg-linear-to-br from-purple-200 via-purple-300 to-purple-500 text-purple-950' },
-  { icon: 'verified', title: 'Craque da Partida', className: 'bg-linear-to-br from-yellow-200 via-amber-300 to-amber-500 text-amber-950' },
-  { icon: 'shield', title: 'Muralha', className: 'bg-linear-to-br from-blue-200 via-blue-300 to-blue-500 text-blue-950' },
-  { icon: 'bolt', title: 'Motorzinho', className: 'bg-linear-to-br from-emerald-200 via-emerald-300 to-emerald-500 text-emerald-950' },
-  { icon: 'footprints', title: 'Rei do Drible', className: 'bg-linear-to-br from-cyan-200 via-cyan-300 to-cyan-500 text-cyan-950' },
-  { icon: 'thumb_down', title: 'Perninha da Partida', className: 'bg-linear-to-br from-red-200 via-red-300 to-red-500 text-red-950' },
-  { icon: 'egg', title: 'Frango', className: 'bg-linear-to-br from-orange-200 via-orange-300 to-orange-500 text-orange-950' },
-  { icon: 'turtle', title: 'Tartaruga', className: 'bg-linear-to-br from-lime-200 via-lime-300 to-lime-500 text-lime-950' },
-  { icon: 'ghost', title: 'Fantasma', className: 'bg-linear-to-br from-slate-300 via-slate-400 to-slate-600 text-slate-950' },
-] as const
+import { AWARD_BADGES, getAwardMeta } from '../lib/awards'
 
 const OUTCOME_LABELS: Record<string, string> = {
   victory: 'Vitória',
@@ -33,20 +21,6 @@ const OUTCOME_CLASSES: Record<string, { chip: string; score: string }> = {
   victory: { chip: 'bg-success text-white', score: 'text-success' },
   defeat: { chip: 'bg-danger text-white', score: 'text-danger' },
   draw: { chip: 'bg-slate-500 text-white', score: 'text-on-surface' },
-}
-
-function getAwardMeta(name: string): { icon: string; chip: string; title: string } {
-  const key = name.toLowerCase()
-  if (key.includes('goleador')) {
-    return { icon: 'sports_soccer', chip: 'bg-primary-container text-on-primary-container', title: 'Goleador' }
-  }
-  if (key.includes('garçom') || key.includes('garcom')) {
-    return { icon: 'send', chip: 'bg-secondary-container text-on-secondary-container', title: 'Garçom' }
-  }
-  if (key.includes('craque')) {
-    return { icon: 'verified', chip: 'bg-tertiary-container text-on-tertiary-container', title: 'Craque da Partida' }
-  }
-  return { icon: 'star', chip: 'bg-surface-variant text-on-surface', title: name }
 }
 
 function PlayerTable({ title, players }: Readonly<{ title: string; players: HistoryPlayer[] }>) {
@@ -184,7 +158,7 @@ export default function Profile() {
     const title = getAwardMeta(name).title
     normalizedBadgeCounts[title] = (normalizedBadgeCounts[title] ?? 0) + count
   }
-  const badges = BADGES.map((badge) => ({ ...badge, count: normalizedBadgeCounts[badge.title] ?? 0 })).filter(
+  const badges = AWARD_BADGES.map((badge) => ({ icon: badge.icon, title: badge.name, count: normalizedBadgeCounts[badge.name] ?? 0, className: badge.className })).filter(
     (badge) => badge.count > 0,
   )
 

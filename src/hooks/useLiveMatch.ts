@@ -83,16 +83,26 @@ export function useLiveMatch() {
   )
 
   const addOwnGoal = useCallback(
-    async (matchId: string, teamBenefited: string) => {
+    async (matchId: string, teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => {
       setBusy(true)
 
-      const { data: matchRes, error: matchErr } = await supabase
-        .from('matches')
-        .select('team_a_score, team_b_score')
-        .eq('id', matchId)
-        .single()
+      const [matchRes, scorerRes] = await Promise.all([
+        supabase
+          .from('matches')
+          .select('team_a_score, team_b_score')
+          .eq('id', matchId)
+          .single(),
+        scorerUserId
+          ? supabase
+              .from('match_players')
+              .select('id, own_goals_scored')
+              .eq('match_id', matchId)
+              .eq('user_id', scorerUserId)
+              .maybeSingle()
+          : null,
+      ])
 
-      if (matchErr || !matchRes) {
+      if (matchRes.error || !matchRes.data) {
         setBusy(false)
         return { error: 'Erro ao buscar placar' }
       }
@@ -100,15 +110,29 @@ export function useLiveMatch() {
       const currentScore = teamBenefited === 'A' ? (matchRes.team_a_score ?? 0) : (matchRes.team_b_score ?? 0)
       const scoreField = teamBenefited === 'A' ? 'team_a_score' : 'team_b_score'
 
-      const { error } = await supabase
-        .from('matches')
-        .update({ [scoreField]: currentScore + 1 })
-        .eq('id', matchId)
+      const updates = [
+        supabase
+          .from('matches')
+          .update({ [scoreField]: currentScore + 1 })
+          .eq('id', matchId),
+      ]
 
+      if (scorerRes?.data) {
+        const currentOwnGoals = scorerRes.data.own_goals_scored ?? 0
+        updates.push(
+          supabase
+            .from('match_players')
+            .update({ own_goals_scored: currentOwnGoals + 1 })
+            .eq('id', scorerRes.data.id)
+        )
+      }
+
+      const results = await Promise.all(updates)
       setBusy(false)
 
+      const error = results.find((r) => r.error)
       if (error) {
-        console.error('Erro ao registrar gol contra:', error)
+        console.error('Erro ao registrar gol contra:', error.error)
         return { error: 'Erro ao registrar gol contra' }
       }
 

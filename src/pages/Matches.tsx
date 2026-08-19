@@ -21,7 +21,9 @@ const monthFormatter = new Intl.DateTimeFormat(PT_BR, { month: 'short' })
 const STATUS_META: Record<MatchWithMeta['status'], { label: string; className: string }> = {
   open: { label: 'AGENDADA', className: 'bg-secondary-container text-on-secondary-container' },
   in_progress: { label: 'AO VIVO', className: 'bg-error-container text-on-error-container' },
+  voting: { label: 'VOTAÇÃO ABERTA', className: 'bg-primary-container text-on-primary-container' },
   finished: { label: 'FINALIZADA', className: 'bg-surface-variant text-on-surface-variant' },
+  cancelled: { label: 'CANCELADA', className: 'bg-error text-on-error' }
 }
 
 function capitalize(value: string): string {
@@ -169,7 +171,7 @@ function ConfirmedPlayersList({ players, waitlist }: Readonly<{ players: MatchPl
   )
 }
 
-function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onCancel, onStart, onRefresh }: Readonly<{
+function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onCancel, onStart }: Readonly<{
   match: MatchWithMeta
   myStatus: PlayerStatus | undefined
   busy: boolean
@@ -178,13 +180,14 @@ function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onC
   onDesist: () => void
   onCancel: () => void
   onStart: () => void
-  onRefresh: () => void
 }>) {
   const hour = new Date(match.dateTime).getHours()
   const photos = getCourtPhotos(match.sportName, hour)
   const imageSrc = photos[0] ?? null
   const statusMeta = STATUS_META[match.status]
   const progress = Math.min(100, Math.round((match.confirmedCount / match.maxPlayers) * 100))
+
+  const isPlayableStatus = match.status === 'open' || match.status === 'in_progress'
 
   return (
     <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-primary/30 flex flex-col md:flex-row transition-colors hover:border-primary/50">
@@ -202,7 +205,8 @@ function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onC
                 {match.gameTypeName}
               </span>
             )}
-            {isAdmin && match.status !== 'finished' && (
+            
+            {isAdmin && isPlayableStatus && (
               <div className="ml-auto flex items-center gap-2">
                 {match.status === 'open' && (
                   <button
@@ -270,13 +274,26 @@ function FeaturedCard({ match, myStatus, busy, isAdmin, onConfirm, onDesist, onC
             </div>
           </div>
 
-          <AttendanceButtons
-            match={match}
-            myStatus={myStatus}
-            busy={busy}
-            onConfirm={onConfirm}
-            onDesist={onDesist}
-          />
+          {/* Sem nested ternaries. Condicionais limpas! */}
+          {match.status === 'voting' && (
+            <Link
+              to={`/matches/${match.id}/vote`}
+              className="w-full py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+            >
+              <MaterialIcon name="how_to_vote" className="w-5 h-5" />
+              VOTAR NOS CRAQUES
+            </Link>
+          )}
+
+          {isPlayableStatus && (
+            <AttendanceButtons
+              match={match}
+              myStatus={myStatus}
+              busy={busy}
+              onConfirm={onConfirm}
+              onDesist={onDesist}
+            />
+          )}
         </div>
       </div>
 
@@ -419,6 +436,8 @@ export default function Matches() {
           matchId={featured.id}
           teamAName={featured.teamAName ?? 'Time A'}
           teamBName={featured.teamBName ?? 'Time B'}
+          teamAColor={featured.teamAColor ?? '#ef4444'}
+          teamBColor={featured.teamBColor ?? '#3b82f6'}
           teamAScore={featured.teamAScore ?? 0}
           teamBScore={featured.teamBScore ?? 0}
           teamAPlayers={featured.confirmedPlayers.filter((p) => p.team === 'A')}
@@ -426,6 +445,7 @@ export default function Matches() {
           onGoalScored={handleGoalScored}
           onOwnGoal={handleOwnGoal}
           onFinish={handleFinishMatch}
+          onRequestReview={() => {}} // A página principal não fará review, ela lida com a LiveMatch page para isso
           busy={liveBusy}
         />
       ) : (
@@ -542,13 +562,13 @@ export default function Matches() {
                   Assim que uma pelada for agendada, ela aparece aqui com status e contagem de presença em tempo real.
                 </p>
                 {isAdmin && (
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex items-center flex-col sm:flex-row gap-3">
                     <Link
                       to="/matches/new"
-                      className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
+                      className="flex items-center gap-2 px-6 py-3 bg-primary-container text-primary  font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
                     >
                       <MaterialIcon name="add_circle" className="w-5 h-5" />
-                      Criar Primeira Partida
+                      Criar Partida
                     </Link>
                     <Link
                       to="/matches/test-live"

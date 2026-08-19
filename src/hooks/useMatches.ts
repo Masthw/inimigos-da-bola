@@ -24,7 +24,7 @@ export interface MatchWithMeta {
   id: string
   dateTime: string
   location: string
-  status: 'open' | 'in_progress' | 'finished'
+  status: 'open' | 'in_progress' | 'finished' | 'voting' | 'cancelled'
   maxPlayers: number
   maxWaitlist: number
   teamAName: string | null
@@ -40,6 +40,8 @@ export interface MatchWithMeta {
   waitlistPlayers: MatchPlayer[]
   teamAPlayers: MatchPlayerDetail[]
   teamBPlayers: MatchPlayerDetail[]
+  teamAColor: string | null
+  teamBColor: string | null
 }
 
 export interface MatchGroups {
@@ -48,6 +50,7 @@ export interface MatchGroups {
   finished: MatchWithMeta[]
 }
 
+// Atualizado para receber as cores do banco
 interface MatchRow {
   id: string
   date_time: string
@@ -59,6 +62,8 @@ interface MatchRow {
   team_b_name: string | null
   team_a_score: number | null
   team_b_score: number | null
+  team_a_color: string | null
+  team_b_color: string | null
   organizer_id: string
   game_types: { name: string | null; sports: { name: string | null } | null } | null
 }
@@ -83,8 +88,9 @@ async function fetchMatchesData(userId: string | null) {
   const [matchesResult, playersResult] = await Promise.all([
     supabase
       .from('matches')
+      // Adicionado team_a_color e team_b_color no select
       .select(
-        'id, date_time, location, status, max_players, max_waitlist, team_a_name, team_b_name, team_a_score, team_b_score, organizer_id, game_types(name, sports(name))'
+        'id, date_time, location, status, max_players, max_waitlist, team_a_name, team_b_name, team_a_score, team_b_score, team_a_color, team_b_color, organizer_id, game_types(name, sports(name))'
       )
       .is('deleted_at', null)
       .neq('status', 'cancelled')
@@ -175,13 +181,15 @@ async function fetchMatchesData(userId: string | null) {
       id: match.id,
       dateTime: match.date_time,
       location: match.location,
-      status: match.status as MatchWithMeta['status'],
+      status: match.status,
       maxPlayers: match.max_players,
       maxWaitlist: match.max_waitlist,
       teamAName: match.team_a_name,
       teamBName: match.team_b_name,
       teamAScore: match.team_a_score,
       teamBScore: match.team_b_score,
+      teamAColor: match.team_a_color, // Adicionado mapeamento da cor A
+      teamBColor: match.team_b_color, // Adicionado mapeamento da cor B
       sportName: match.game_types?.name ?? match.game_types?.sports?.name ?? null,
       gameTypeName: match.game_types?.name ?? null,
       organizerId: match.organizer_id,
@@ -211,11 +219,12 @@ export function useMatches() {
   const applyData = useCallback(({ rows, myStatusMap }: { rows: MatchWithMeta[]; myStatusMap: Record<string, PlayerStatus | undefined> }) => {
     const now = Date.now()
     const openMatches = rows.filter((match) => match.status === 'open')
-    const inProgress = rows.filter((match) => match.status === 'in_progress')
+    // Modificado para colocar partidas 'in_progress' E 'voting' como destaque
+    const inProgressOrVoting = rows.filter((match) => match.status === 'in_progress' || match.status === 'voting')
 
     let featured: MatchWithMeta | null = null
-    if (inProgress.length > 0) {
-      featured = inProgress[0]
+    if (inProgressOrVoting.length > 0) {
+      featured = inProgressOrVoting[0]
     } else {
       featured = openMatches.find((match) => new Date(match.dateTime).getTime() >= now) ?? null
     }

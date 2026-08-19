@@ -14,15 +14,16 @@ interface LiveMatchViewProps {
   teamAPlayers: MatchPlayer[];
   teamBPlayers: MatchPlayer[];
   onGoalScored: (scorer: MatchPlayer, assist: MatchPlayer | null) => void;
-  onOwnGoal: (teamBenefited: string) => void;
+  onOwnGoal: (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => void;
   onFinish: (scoreA: number, scoreB: number) => void;
+  onRequestReview: () => void;
   busy?: boolean;
 }
 
 type SheetPhase = "closed" | "goal_type" | "assist" | "finish";
 
 interface PlayerStats {
-  [userId: string]: { goals: number; assists: number };
+  [userId: string]: { goals: number; assists: number; ownGoals: number };
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -34,6 +35,13 @@ function withAlpha(hex: string, alpha: number): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+function isDarkColor(hex: string): boolean {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return false;
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance <= 0.25;
 }
 
 export function LiveMatchView({
@@ -49,6 +57,7 @@ export function LiveMatchView({
   onGoalScored,
   onOwnGoal,
   onFinish,
+  onRequestReview,
   busy = false,
 }: Readonly<LiveMatchViewProps>) {
   const [sheetPhase, setSheetPhase] = useState<SheetPhase>("closed");
@@ -57,18 +66,28 @@ export function LiveMatchView({
   const [playerStats, setPlayerStats] = useState<PlayerStats>({});
 
   const getStats = (userId: string | null) => {
-    if (!userId) return { goals: 0, assists: 0 };
-    return playerStats[userId] || { goals: 0, assists: 0 };
+    if (!userId) return { goals: 0, assists: 0, ownGoals: 0 };
+    return playerStats[userId] || { goals: 0, assists: 0, ownGoals: 0 };
   };
 
   const updateStats = (scorerId: string | null, assistId: string | null) => {
     setPlayerStats((prev) => {
       const next = { ...prev };
       if (scorerId) {
-        next[scorerId] = { goals: (next[scorerId]?.goals || 0) + 1, assists: next[scorerId]?.assists || 0 };
+        next[scorerId] = { goals: (next[scorerId]?.goals || 0) + 1, assists: next[scorerId]?.assists || 0, ownGoals: next[scorerId]?.ownGoals || 0 };
       }
       if (assistId) {
-        next[assistId] = { goals: next[assistId]?.goals || 0, assists: (next[assistId]?.assists || 0) + 1 };
+        next[assistId] = { goals: next[assistId]?.goals || 0, assists: (next[assistId]?.assists || 0) + 1, ownGoals: next[assistId]?.ownGoals || 0 };
+      }
+      return next;
+    });
+  };
+
+  const updateOwnGoalStats = (playerId: string | null) => {
+    setPlayerStats((prev) => {
+      const next = { ...prev };
+      if (playerId) {
+        next[playerId] = { goals: next[playerId]?.goals || 0, assists: next[playerId]?.assists || 0, ownGoals: (next[playerId]?.ownGoals || 0) + 1 };
       }
       return next;
     });
@@ -87,7 +106,8 @@ export function LiveMatchView({
   const handleOwnGoal = () => {
     if (!selectedPlayer) return;
     const teamBenefited = selectedPlayer.team === "A" ? "B" : "A";
-    onOwnGoal(teamBenefited);
+    updateOwnGoalStats(selectedPlayer.userId);
+    onOwnGoal(teamBenefited, selectedPlayer.userId, selectedPlayer.team);
     closeSheet();
   };
 
@@ -151,12 +171,6 @@ export function LiveMatchView({
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
           <div>
-            <div className="flex items-center gap-2 mb-3 h-5">
-              <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: teamAColor }} />
-              <p className="font-mono text-label-bold uppercase tracking-widest truncate" style={{ color: teamAColor }}>
-                {teamAName}
-              </p>
-            </div>
             <div className="space-y-2">
               {teamAPlayers.map((p) => {
                 const stats = getStats(p.userId);
@@ -169,21 +183,21 @@ export function LiveMatchView({
                     className="w-full flex items-center gap-3 p-3 transition-colors text-left"
                     style={{
                       backgroundColor: withAlpha(teamAColor, 0.05),
-                      borderColor: withAlpha(teamAColor, 0.2),
+                      borderColor: isDarkColor(teamAColor) ? 'rgba(156,163,175,0.4)' : withAlpha(teamAColor, 0.2),
                       borderWidth: "1px",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = withAlpha(teamAColor, 0.5);
+                      e.currentTarget.style.borderColor = isDarkColor(teamAColor) ? 'rgba(156,163,175,0.6)' : withAlpha(teamAColor, 0.5);
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = withAlpha(teamAColor, 0.2);
+                      e.currentTarget.style.borderColor = isDarkColor(teamAColor) ? 'rgba(156,163,175,0.4)' : withAlpha(teamAColor, 0.2);
                     }}
                   >
                     <Avatar
                       src={p.avatarUrl}
                       alt={p.name}
                       className="w-10 h-10 rounded-full shrink-0"
-                      style={{ borderColor: withAlpha(teamAColor, 0.3), borderWidth: "2px" }}
+                      style={{ borderColor: isDarkColor(teamAColor) ? 'rgba(156,163,175,0.5)' : withAlpha(teamAColor, 0.3), borderWidth: "2px" }}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-mono text-label-sm text-on-surface truncate leading-tight">{p.name}</p>
@@ -194,6 +208,11 @@ export function LiveMatchView({
                           </span>
                         )}
                         {stats.assists > 0 && <span className="font-mono text-[10px] text-on-surface-variant">{stats.assists}A</span>}
+                        {stats.ownGoals > 0 && (
+                          <span className="font-mono text-[10px] font-bold text-error">
+                            {stats.ownGoals}GC
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -202,12 +221,6 @@ export function LiveMatchView({
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-3 h-5">
-              <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: teamBColor }} />
-              <p className="font-mono text-label-bold uppercase tracking-widest truncate" style={{ color: teamBColor }}>
-                {teamBName}
-              </p>
-            </div>
             <div className="space-y-2">
               {teamBPlayers.map((p) => {
                 const stats = getStats(p.userId);
@@ -220,21 +233,21 @@ export function LiveMatchView({
                     className="w-full flex items-center gap-3 p-3 transition-colors text-left"
                     style={{
                       backgroundColor: withAlpha(teamBColor, 0.05),
-                      borderColor: withAlpha(teamBColor, 0.2),
+                      borderColor: isDarkColor(teamBColor) ? 'rgba(156,163,175,0.4)' : withAlpha(teamBColor, 0.2),
                       borderWidth: "1px",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = withAlpha(teamBColor, 0.5);
+                      e.currentTarget.style.borderColor = isDarkColor(teamBColor) ? 'rgba(156,163,175,0.6)' : withAlpha(teamBColor, 0.5);
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = withAlpha(teamBColor, 0.2);
+                      e.currentTarget.style.borderColor = isDarkColor(teamBColor) ? 'rgba(156,163,175,0.4)' : withAlpha(teamBColor, 0.2);
                     }}
                   >
                     <Avatar
                       src={p.avatarUrl}
                       alt={p.name}
                       className="w-10 h-10 rounded-full shrink-0"
-                      style={{ borderColor: withAlpha(teamBColor, 0.3), borderWidth: "2px" }}
+                      style={{ borderColor: isDarkColor(teamBColor) ? 'rgba(156,163,175,0.5)' : withAlpha(teamBColor, 0.3), borderWidth: "2px" }}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-mono text-label-sm text-on-surface truncate leading-tight">{p.name}</p>
@@ -245,6 +258,11 @@ export function LiveMatchView({
                           </span>
                         )}
                         {stats.assists > 0 && <span className="font-mono text-[10px] text-on-surface-variant">{stats.assists}A</span>}
+                        {stats.ownGoals > 0 && (
+                          <span className="font-mono text-[10px] font-bold text-error">
+                            {stats.ownGoals}GC
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -260,10 +278,7 @@ export function LiveMatchView({
         <button
           type="button"
           disabled={busy}
-          onClick={() => {
-            setEditScore({ teamA: teamAScore, teamB: teamBScore });
-            setSheetPhase("finish");
-          }}
+          onClick={onRequestReview}
           className="flex-1 flex items-center justify-center gap-2 py-3 bg-success/15 text-success font-mono text-label-bold border border-success/30 active:bg-success/25 transition-colors"
         >
           <MaterialIcon name="flag" className="w-4 h-4" />
@@ -293,7 +308,7 @@ export function LiveMatchView({
                 <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
                 <div>
                   <p className="font-mono text-label-bold text-on-surface">{selectedPlayer.name}</p>
-                  <p className="font-mono text-label-sm" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
+                   <p className="font-mono text-label-sm" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
                     {selectedPlayer.team === "A" ? teamAName : teamBName}
                   </p>
                 </div>
@@ -327,7 +342,7 @@ export function LiveMatchView({
               <div className="flex items-center gap-3">
                 <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
                 <div>
-                  <p className="font-mono text-label-bold" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
+                   <p className="font-mono text-label-bold" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
                     Gol do {selectedPlayer.name}!
                   </p>
                   <p className="font-mono text-label-sm text-on-surface-variant">Quem deu a assistência?</p>
@@ -364,7 +379,7 @@ export function LiveMatchView({
               <p className="font-mono text-label-bold text-on-surface">Placar final</p>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                 <div>
-                  <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamAColor }}>
+                   <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamAColor }}>
                     {teamAName}
                   </label>
                   <input
@@ -377,7 +392,7 @@ export function LiveMatchView({
                 </div>
                 <span className="font-mono text-label-bold text-on-surface-variant pt-6">x</span>
                 <div>
-                  <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamBColor }}>
+                   <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamBColor }}>
                     {teamBName}
                   </label>
                   <input

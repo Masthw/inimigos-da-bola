@@ -1,4 +1,5 @@
 import { MaterialIcon } from '../ui/MaterialIcon'
+import { getAwardMeta } from '../../lib/awards'
 
 interface FinishedPlayer {
   name: string
@@ -30,14 +31,6 @@ const OUTCOMEClasses = {
 function getOutcome(homeScore: number, awayScore: number): 'victory' | 'defeat' | 'draw' {
   if (homeScore === awayScore) return 'draw'
   return homeScore > awayScore ? 'victory' : 'defeat'
-}
-
-function getAwardMeta(name: string): { icon: string; chip: string; title: string } {
-  const key = name.toLowerCase()
-  if (key.includes('goleador')) return { icon: 'sports_soccer', chip: 'bg-primary-container text-on-primary-container', title: 'Goleador' }
-  if (key.includes('garçom') || key.includes('garcom')) return { icon: 'send', chip: 'bg-secondary-container text-on-secondary-container', title: 'Garçom' }
-  if (key.includes('craque')) return { icon: 'verified', chip: 'bg-tertiary-container text-on-tertiary-container', title: 'Craque da Partida' }
-  return { icon: 'star', chip: 'bg-surface-variant text-on-surface', title: name }
 }
 
 const OUTCOME_LABELS: Record<string, string> = {

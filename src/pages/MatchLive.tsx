@@ -49,6 +49,16 @@ export default function MatchLive() {
       return
     }
 
+    if (matchRes.data.status === 'voting') {
+      navigate(`/matches/${matchId}/vote`)
+      return
+    }
+
+    if (matchRes.data.status === 'finished' || matchRes.data.status === 'cancelled') {
+      navigate('/matches')
+      return
+    }
+
     if (matchRes.data.status !== 'in_progress') {
       navigate('/matches')
       return
@@ -145,9 +155,9 @@ export default function MatchLive() {
     fetchData()
   }
 
-  const handleOwnGoal = async (teamBenefited: string) => {
+  const handleOwnGoal = async (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => {
     if (!match) return
-    await addOwnGoal(match.id, teamBenefited)
+    await addOwnGoal(match.id, teamBenefited, scorerUserId, scorerTeam)
     fetchData()
   }
 
@@ -155,6 +165,11 @@ export default function MatchLive() {
     if (!match) return
     await finishMatch(match.id, scoreA, scoreB)
     fetchData()
+  }
+
+  const handleRequestReview = () => {
+    if (!match) return
+    navigate(`/matches/${match.id}/review`)
   }
 
   return (
@@ -172,6 +187,7 @@ export default function MatchLive() {
         onGoalScored={handleGoalScored}
         onOwnGoal={handleOwnGoal}
         onFinish={handleFinishMatch}
+        onRequestReview={handleRequestReview}
         busy={busy}
       />
     </AppShell>
