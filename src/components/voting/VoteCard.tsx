@@ -21,7 +21,7 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
 
   const awardMeta = getAwardMeta(award.name)
   const icon = awardMeta.icon
-  const isCraque = award.name.toLowerCase().includes('craque')
+  const isMvp = award.name.toLowerCase().includes('craque')
   const eligiblePlayers = players.filter((p) => p.userId !== currentUserId)
 
   const allVoteCounts = useMemo(() => {
@@ -42,7 +42,7 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
   const maxVotes = Math.max(...Object.values(allVoteCounts), 1)
 
   const togglePlayer = (playerId: string) => {
-    if (isCraque) {
+    if (isMvp) {
       setSelectedPlayerIds([playerId])
     } else {
       setSelectedPlayerIds((prev) =>
@@ -53,19 +53,18 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
 
   const handleConfirm = async () => {
     setSubmitting(true)
-    if (isCraque) {
+    if (isMvp) {
       const playerId = selectedPlayerIds[0] || null
       await onVote(playerId)
     } else {
       const currentIds = votedPlayers.map((vp) => vp.userId)
       const toAdd = selectedPlayerIds.filter((id) => !currentIds.includes(id))
       const toRemove = currentIds.filter((id) => !selectedPlayerIds.includes(id))
-      for (const playerId of toAdd) {
-        await onVote(playerId)
-      }
-      for (const playerId of toRemove) {
-        await onVote(playerId)
-      }
+      
+      await Promise.all([
+        ...toAdd.map((playerId) => onVote(playerId)),
+        ...toRemove.map((playerId) => onVote(playerId))
+      ])
     }
     setSubmitting(false)
     setShowModal(false)
@@ -74,12 +73,10 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
 
   const handleRemoveVote = async () => {
     setSubmitting(true)
-    if (isCraque) {
+    if (isMvp) {
       await onVote(null)
     } else {
-      for (const vp of votedPlayers) {
-        await onVote(vp.userId)
-      }
+      await Promise.all(votedPlayers.map((vp) => onVote(vp.userId)))
     }
     setSubmitting(false)
   }
@@ -117,7 +114,7 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
               <div key={vp.userId} className={`flex items-center gap-1 px-2 py-1 rounded-lg ${awardMeta.chip}`}>
                 <Avatar src={null} alt={vp.name} className="w-4 h-4 rounded-full" />
                 <span className="font-mono text-[10px]">{vp.name}</span>
-                {isCraque && <span className="font-mono text-[9px] opacity-70">+1pt</span>}
+                {isMvp && <span className="font-mono text-[9px] opacity-70">+1pt</span>}
               </div>
             ))}
             <button
