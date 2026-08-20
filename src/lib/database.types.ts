@@ -245,6 +245,7 @@ export type Database = {
           guest_name: string | null
           id: string
           match_id: string
+          own_goals_scored: number | null
           status: Database["public"]["Enums"]["player_status_enum"]
           tactical_position: string | null
           team: string | null
@@ -256,6 +257,7 @@ export type Database = {
           guest_name?: string | null
           id?: string
           match_id: string
+          own_goals_scored?: number | null
           status?: Database["public"]["Enums"]["player_status_enum"]
           tactical_position?: string | null
           team?: string | null
@@ -267,6 +269,7 @@ export type Database = {
           guest_name?: string | null
           id?: string
           match_id?: string
+          own_goals_scored?: number | null
           status?: Database["public"]["Enums"]["player_status_enum"]
           tactical_position?: string | null
           team?: string | null
@@ -431,6 +434,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "matches_voting_closed_by_fkey"
+            columns: ["voting_closed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       positions: {
@@ -501,6 +511,60 @@ export type Database = {
           },
           {
             foreignKeyName: "season_awards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_leaderboards: {
+        Row: {
+          created_at: string
+          draws: number | null
+          id: number
+          losses: number | null
+          matches_played: number | null
+          points: number | null
+          season_id: number
+          updated_at: string
+          user_id: string
+          wins: number | null
+        }
+        Insert: {
+          created_at?: string
+          draws?: number | null
+          id?: never
+          losses?: number | null
+          matches_played?: number | null
+          points?: number | null
+          season_id: number
+          updated_at?: string
+          user_id: string
+          wins?: number | null
+        }
+        Update: {
+          created_at?: string
+          draws?: number | null
+          id?: never
+          losses?: number | null
+          matches_played?: number | null
+          points?: number | null
+          season_id?: number
+          updated_at?: string
+          user_id?: string
+          wins?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_leaderboards_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "group_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_leaderboards_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -591,10 +655,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      close_expired_votings: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      match_status_enum: "open" | "in_progress" | "voting" | "finished" | "cancelled"
+      match_status_enum:
+        | "open"
+        | "in_progress"
+        | "finished"
+        | "cancelled"
+        | "voting"
       player_status_enum: "confirmed" | "waitlist" | "cancelled"
       user_role_enum: "admin" | "member"
     }
@@ -724,7 +794,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      match_status_enum: ["open", "in_progress", "voting", "finished", "cancelled"],
+      match_status_enum: [
+        "open",
+        "in_progress",
+        "finished",
+        "cancelled",
+        "voting",
+      ],
       player_status_enum: ["confirmed", "waitlist", "cancelled"],
       user_role_enum: ["admin", "member"],
     },
