@@ -120,7 +120,9 @@ serve(async (req) => {
 
     // 4. Inserir os Awards no banco
     if (awardsToInsert.length > 0) {
-      await supabaseClient.from('match_awards').insert(awardsToInsert)
+      await supabaseClient
+        .from('match_awards')
+        .upsert(awardsToInsert, { onConflict: 'match_id,user_id,award_id' })
     }
 
     // 5. Mudar status da partida para 'finished'
@@ -177,7 +179,7 @@ serve(async (req) => {
         const currentMap = new Map((currentLeaderboard || []).map(l => [l.user_id, l]))
 
         const leaderboardUpdates = (players || []).map(player => {
-          if (!player.user_id) return null
+          if (!player.user_id || !player.team) return null
           const isTeamA = player.team === 'A'
           const matchResult = isTeamA ? resultA : resultB
           const extraPoint = craqueWinners.has(player.user_id) ? 1 : 0
