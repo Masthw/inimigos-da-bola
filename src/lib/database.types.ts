@@ -248,7 +248,7 @@ export type Database = {
           own_goals_scored: number | null
           status: Database["public"]["Enums"]["player_status_enum"]
           tactical_position: string | null
-          team: string | null
+          team: string
           user_id: string | null
         }
         Insert: {
@@ -260,7 +260,7 @@ export type Database = {
           own_goals_scored?: number | null
           status?: Database["public"]["Enums"]["player_status_enum"]
           tactical_position?: string | null
-          team?: string | null
+          team: string
           user_id?: string | null
         }
         Update: {
@@ -272,7 +272,7 @@ export type Database = {
           own_goals_scored?: number | null
           status?: Database["public"]["Enums"]["player_status_enum"]
           tactical_position?: string | null
-          team?: string | null
+          team?: string
           user_id?: string | null
         }
         Relationships: [
