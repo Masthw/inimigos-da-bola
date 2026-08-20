@@ -30,7 +30,7 @@ serve(async (req) => {
     // 2. Buscar os jogadores e seus status na partida (gols e assistências)
     const { data: players } = await supabaseClient
       .from('match_players')
-      .select('user_id, goals_scored, assists')
+      .select('user_id, team, goals_scored, assists')
       .eq('match_id', matchId)
       .eq('status', 'confirmed')
       .not('user_id', 'is', null) // Apenas usuários registrados recebem awards
@@ -128,6 +128,80 @@ serve(async (req) => {
       .from('matches')
       .update({ status: 'finished' })
       .eq('id', matchId)
+
+    // 6. ATUALIZAR O LEADERBOARD
+    const { data: matchData } = await supabaseClient
+      .from('matches')
+      .select('group_id, date_time, team_a_score, team_b_score')
+      .eq('id', matchId)
+      .single()
+
+    if (matchData && matchData.group_id) {
+      const { data: activeSeason } = await supabaseClient
+        .from('group_seasons')
+        .select('id')
+        .eq('group_id', matchData.group_id)
+        .lte('start_date', matchData.date_time)
+        .gte('end_date', matchData.date_time)
+        .single()
+
+      if (activeSeason) {
+        const scoreA = matchData.team_a_score || 0
+        const scoreB = matchData.team_b_score || 0
+
+        let resultA = { w: 0, d: 0, l: 0, pts: 0 }
+        let resultB = { w: 0, d: 0, l: 0, pts: 0 }
+
+        if (scoreA > scoreB) {
+          resultA = { w: 1, d: 0, l: 0, pts: 3 }
+        } else if (scoreB > scoreA) {
+          resultB = { w: 1, d: 0, l: 0, pts: 3 }
+        } else {
+          resultA = { w: 0, d: 1, l: 0, pts: 1 }
+          resultB = { w: 0, d: 1, l: 0, pts: 1 }
+        }
+
+        // Craque winners get +1 bonus point
+        const craqueAwardIds = votingAwards.filter(a => a.name.toLowerCase().includes('craque')).map(a => a.id)
+        const craqueWinners = new Set(
+          awardsToInsert.filter(aw => craqueAwardIds.includes(aw.award_id)).map(aw => aw.user_id)
+        )
+
+        const playerIds = players?.map(p => p.user_id).filter(Boolean) ?? []
+        const { data: currentLeaderboard } = await supabaseClient
+          .from('season_leaderboards')
+          .select('*')
+          .eq('season_id', activeSeason.id)
+          .in('user_id', playerIds)
+
+        const currentMap = new Map((currentLeaderboard || []).map(l => [l.user_id, l]))
+
+        const leaderboardUpdates = (players || []).map(player => {
+          if (!player.user_id) return null
+          const isTeamA = player.team === 'A'
+          const matchResult = isTeamA ? resultA : resultB
+          const extraPoint = craqueWinners.has(player.user_id) ? 1 : 0
+          const cur = currentMap.get(player.user_id)
+
+          return {
+            season_id: activeSeason.id,
+            user_id: player.user_id,
+            points: (cur?.points || 0) + matchResult.pts + extraPoint,
+            matches_played: (cur?.matches_played || 0) + 1,
+            wins: (cur?.wins || 0) + matchResult.w,
+            draws: (cur?.draws || 0) + matchResult.d,
+            losses: (cur?.losses || 0) + matchResult.l,
+            updated_at: new Date().toISOString()
+          }
+        }).filter(Boolean)
+
+        if (leaderboardUpdates.length > 0) {
+          await supabaseClient
+            .from('season_leaderboards')
+            .upsert(leaderboardUpdates, { onConflict: 'season_id,user_id' })
+        }
+      }
+    }
 
     return new Response(JSON.stringify({ success: true, awarded: awardsToInsert.length }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
