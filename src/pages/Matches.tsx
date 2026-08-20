@@ -570,13 +570,6 @@ export default function Matches() {
                       <MaterialIcon name="add_circle" className="w-5 h-5" />
                       Criar Partida
                     </Link>
-                    <Link
-                      to="/matches/test-live"
-                      className="flex items-center gap-2 px-6 py-3 bg-success/20 text-success font-mono text-label-bold border border-success/40 hover:bg-success/30 transition-colors"
-                    >
-                      <MaterialIcon name="play_arrow" className="w-5 h-5" />
-                      Testar Partida Ao Vivo
-                    </Link>
                   </div>
                 )}
               </div>

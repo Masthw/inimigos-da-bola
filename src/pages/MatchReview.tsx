@@ -1,97 +1,98 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { AppShell } from '../components/ui/AppShell'
-import { MaterialIcon } from '../components/ui/MaterialIcon'
-import { Avatar } from '../components/ui/Avatar'
-import { useMatchReview } from '../hooks/useMatchReview'
-import type { MatchPlayer } from '../hooks/useMatches'
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { AppShell } from "../components/ui/AppShell";
+import { MaterialIcon } from "../components/ui/MaterialIcon";
+import { Avatar } from "../components/ui/Avatar";
+import { useMatchReview } from "../hooks/useMatchReview";
+import type { MatchPlayer } from "../hooks/useMatches";
 
-type SheetPhase = 'closed' | 'goal_type' | 'assist' | 'manage'
+type SheetPhase = "closed" | "goal_type" | "assist" | "manage";
 
 export default function MatchReview() {
-  const { matchId } = useParams<{ matchId: string }>()
-  const navigate = useNavigate()
-  const { match, loading, saving, error, updateScore, startVoting, addGoal, addOwnGoal, removeGoal, removeAssist, removeOwnGoal, addAssistOnly } = useMatchReview(matchId)
-  const [editScore, setEditScore] = useState({ teamA: 0, teamB: 0 })
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [sheetPhase, setSheetPhase] = useState<SheetPhase>('closed')
-  const [selectedPlayer, setSelectedPlayer] = useState<MatchPlayer | null>(null)
+  const { matchId } = useParams<{ matchId: string }>();
+  const navigate = useNavigate();
+  const { match, loading, saving, error, updateScore, startVoting, addGoal, addOwnGoal, removeGoal, removeAssist, removeOwnGoal, addAssistOnly } =
+    useMatchReview(matchId);
+  const [editScore, setEditScore] = useState({ teamA: 0, teamB: 0 });
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [sheetPhase, setSheetPhase] = useState<SheetPhase>("closed");
+  const [selectedPlayer, setSelectedPlayer] = useState<MatchPlayer | null>(null);
 
   useEffect(() => {
     if (match) {
-      setEditScore({ teamA: match.teamAScore, teamB: match.teamBScore })
+      setEditScore({ teamA: match.teamAScore, teamB: match.teamBScore });
     }
-  }, [match])
+  }, [match]);
 
   const handleStartVoting = async () => {
-    const scoreUpdated = await updateScore(editScore.teamA, editScore.teamB)
-    if (!scoreUpdated) return
+    const scoreUpdated = await updateScore(editScore.teamA, editScore.teamB);
+    if (!scoreUpdated) return;
 
-    const votingStarted = await startVoting()
+    const votingStarted = await startVoting();
     if (votingStarted) {
-      navigate(`/matches/${matchId}/vote`)
+      navigate(`/matches/${matchId}/vote`);
     }
-  }
+  };
 
-  const handlePlayerClick = (player: { userId: string; name: string; team: 'A' | 'B' }) => {
-    if (saving) return
+  const handlePlayerClick = (player: { userId: string; name: string; team: "A" | "B" }) => {
+    if (saving) return;
     setSelectedPlayer({
       userId: player.userId,
       name: player.name,
       avatarUrl: null,
       team: player.team,
-    })
-    const goalCount = match?.goals.filter((g) => g.playerId === player.userId).length ?? 0
-    const assistCount = match?.assists.filter((a) => a.assistPlayerId === player.userId).length ?? 0
-    const ownGoalCount = match?.ownGoals.filter((og) => og.playerId === player.userId).length ?? 0
+    });
+    const goalCount = match?.goals.filter((g) => g.playerId === player.userId).length ?? 0;
+    const assistCount = match?.assists.filter((a) => a.assistPlayerId === player.userId).length ?? 0;
+    const ownGoalCount = match?.ownGoals.filter((og) => og.playerId === player.userId).length ?? 0;
     if (goalCount > 0 || assistCount > 0 || ownGoalCount > 0) {
-      setSheetPhase('manage')
+      setSheetPhase("manage");
     } else {
-      setSheetPhase('goal_type')
+      setSheetPhase("goal_type");
     }
-  }
+  };
 
   const handleGoal = () => {
-    setSheetPhase('assist')
-  }
+    setSheetPhase("assist");
+  };
 
   const handleOwnGoal = async () => {
-    if (!selectedPlayer) return
-    await addOwnGoal(selectedPlayer.userId, selectedPlayer.team)
-    closeSheet()
-  }
+    if (!selectedPlayer) return;
+    await addOwnGoal(selectedPlayer.userId, selectedPlayer.team);
+    closeSheet();
+  };
 
   const handleAddAssistOnly = async () => {
-    if (!selectedPlayer) return
-    await addAssistOnly(selectedPlayer.userId)
-    closeSheet()
-  }
+    if (!selectedPlayer) return;
+    await addAssistOnly(selectedPlayer.userId);
+    closeSheet();
+  };
 
   const handleRemoveGoal = async () => {
-    if (!selectedPlayer) return
-    await removeGoal(selectedPlayer.userId)
-  }
+    if (!selectedPlayer) return;
+    await removeGoal(selectedPlayer.userId);
+  };
 
   const handleRemoveAssist = async () => {
-    if (!selectedPlayer) return
-    await removeAssist(selectedPlayer.userId)
-  }
+    if (!selectedPlayer) return;
+    await removeAssist(selectedPlayer.userId);
+  };
 
   const handleRemoveOwnGoal = async () => {
-    if (!selectedPlayer) return
-    await removeOwnGoal(selectedPlayer.userId)
-  }
+    if (!selectedPlayer) return;
+    await removeOwnGoal(selectedPlayer.userId);
+  };
 
   const handleAssistSelect = async (assist: { userId: string } | null) => {
-    if (!selectedPlayer) return
-    await addGoal(selectedPlayer.userId, selectedPlayer.team, assist?.userId || null)
-    closeSheet()
-  }
+    if (!selectedPlayer) return;
+    await addGoal(selectedPlayer.userId, selectedPlayer.team, assist?.userId || null);
+    closeSheet();
+  };
 
   const closeSheet = () => {
-    setSheetPhase('closed')
-    setSelectedPlayer(null)
-  }
+    setSheetPhase("closed");
+    setSelectedPlayer(null);
+  };
 
   if (loading) {
     return (
@@ -103,7 +104,7 @@ export default function MatchReview() {
           </div>
         </div>
       </AppShell>
-    )
+    );
   }
 
   if (error || !match) {
@@ -112,10 +113,10 @@ export default function MatchReview() {
         <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
           <div className="text-center">
             <MaterialIcon name="error" className="w-10 h-10 text-error mx-auto mb-4" />
-            <p className="font-mono text-label-bold text-on-surface">{error || 'Erro ao carregar partida'}</p>
+            <p className="font-mono text-label-bold text-on-surface">{error || "Erro ao carregar partida"}</p>
             <button
               type="button"
-              onClick={() => navigate('/matches')}
+              onClick={() => navigate("/matches")}
               className="mt-4 px-4 py-2 font-mono text-label-sm text-primary hover:bg-surface-variant transition-colors"
             >
               Voltar para partidas
@@ -123,22 +124,22 @@ export default function MatchReview() {
           </div>
         </div>
       </AppShell>
-    )
+    );
   }
 
-  const teamAPlayers = match.players.filter((p) => p.team === 'A')
-  const teamBPlayers = match.players.filter((p) => p.team === 'B')
-  const teamAGoals = match.goals.filter((g) => g.team === 'A')
-  const teamBGoals = match.goals.filter((g) => g.team === 'B')
+  const teamAPlayers = match.players.filter((p) => p.team === "A");
+  const teamBPlayers = match.players.filter((p) => p.team === "B");
+  const teamAGoals = match.goals.filter((g) => g.team === "A");
+  const teamBGoals = match.goals.filter((g) => g.team === "B");
 
-  const sameTeamPlayers = selectedPlayer?.team === 'A' ? teamAPlayers : teamBPlayers
-  const assistCandidates = sameTeamPlayers.filter((p) => p.userId && p.userId !== selectedPlayer?.userId)
+  const sameTeamPlayers = selectedPlayer?.team === "A" ? teamAPlayers : teamBPlayers;
+  const assistCandidates = sameTeamPlayers.filter((p) => p.userId && p.userId !== selectedPlayer?.userId);
 
-  const sheetOpen = sheetPhase !== 'closed'
+  const sheetOpen = sheetPhase !== "closed";
 
   return (
     <AppShell>
-      <div className="min-h-[calc(100svh-4rem)] flex flex-col">
+      <div className="min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-4 py-3 border-b border-outline-variant bg-surface-container">
           <button
             type="button"
@@ -157,7 +158,9 @@ export default function MatchReview() {
             <p className="font-mono text-label-sm text-on-surface-variant uppercase tracking-widest mb-4 text-center">Placar Final</p>
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
               <div className="text-center">
-                <p className="font-mono text-label-sm uppercase truncate mb-2" style={{ color: match.teamAColor }}>{match.teamAName}</p>
+                <p className="font-mono text-label-sm uppercase truncate mb-2" style={{ color: match.teamAColor }}>
+                  {match.teamAName}
+                </p>
                 <input
                   type="number"
                   min={0}
@@ -168,7 +171,9 @@ export default function MatchReview() {
               </div>
               <span className="text-headline-md font-mono text-on-surface-variant pt-6">x</span>
               <div className="text-center">
-                <p className="font-mono text-label-sm uppercase truncate mb-2" style={{ color: match.teamBColor }}>{match.teamBName}</p>
+                <p className="font-mono text-label-sm uppercase truncate mb-2" style={{ color: match.teamBColor }}>
+                  {match.teamBName}
+                </p>
                 <input
                   type="number"
                   min={0}
@@ -254,9 +259,7 @@ export default function MatchReview() {
                   <div key={og.id} className="flex items-center gap-3 p-2 bg-surface-variant/50 rounded-lg">
                     <MaterialIcon name="warning" className="w-4 h-4 text-error" />
                     <span className="font-mono text-label-sm text-on-surface flex-1">{og.playerName}</span>
-                    <span className="font-mono text-[10px] text-on-surface-variant">
-                      {og.team === 'A' ? match.teamAName : match.teamBName}
-                    </span>
+                    <span className="font-mono text-[10px] text-on-surface-variant">{og.team === "A" ? match.teamAName : match.teamBName}</span>
                   </div>
                 ))}
               </div>
@@ -304,7 +307,7 @@ export default function MatchReview() {
             onClick={() => setShowConfirm(true)}
             className="w-full py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover transition-transform"
           >
-            {saving ? 'Salvando...' : 'Confirmar e Abrir Votação'}
+            {saving ? "Salvando..." : "Confirmar e Abrir Votação"}
           </button>
         </div>
 
@@ -314,8 +317,12 @@ export default function MatchReview() {
               <MaterialIcon name="how_to_vote" className="w-10 h-10 text-primary mx-auto mb-4" />
               <h3 className="text-headline-sm font-display text-on-surface text-center mb-2">Abrir Votação?</h3>
               <p className="font-mono text-label-sm text-on-surface-variant text-center mb-6">
-                Os jogadores poderão votar nos prêmios da partida por <strong className="text-on-surface">2 horas</strong>.
-                O placar será atualizado para <strong className="text-on-surface">{editScore.teamA} x {editScore.teamB}</strong>.
+                Os jogadores poderão votar nos prêmios da partida por <strong className="text-on-surface">2 horas</strong>. O placar será atualizado
+                para{" "}
+                <strong className="text-on-surface">
+                  {editScore.teamA} x {editScore.teamB}
+                </strong>
+                .
               </p>
               <div className="flex gap-3">
                 <button
@@ -331,7 +338,7 @@ export default function MatchReview() {
                   onClick={handleStartVoting}
                   className="flex-1 py-3 bg-primary text-on-primary font-mono text-label-bold active:bg-primary/80 transition-colors"
                 >
-                  {saving ? '...' : 'Confirmar'}
+                  {saving ? "..." : "Confirmar"}
                 </button>
               </div>
             </div>
@@ -343,7 +350,7 @@ export default function MatchReview() {
 
       <div
         className={`fixed bottom-0 left-0 right-0 z-50 bg-surface-container-high rounded-t-2xl border-t border-outline-variant transition-transform duration-300 ease-out ${
-          sheetOpen ? 'translate-y-0' : 'translate-y-full'
+          sheetOpen ? "translate-y-0" : "translate-y-full"
         }`}
       >
         <div className="flex justify-center pt-3 pb-2">
@@ -351,75 +358,107 @@ export default function MatchReview() {
         </div>
 
         <div className="px-5 pb-8 max-h-[70vh] overflow-y-auto">
-          {(sheetPhase === 'manage' || sheetPhase === 'goal_type') && selectedPlayer && (() => {
-            const goalCount = match.goals.filter((g) => g.playerId === selectedPlayer.userId).length
-            const assistCount = match.assists.filter((a) => a.assistPlayerId === selectedPlayer.userId).length
-            const ownGoalCount = match.ownGoals.filter((og) => og.playerId === selectedPlayer.userId).length
-            const hasAny = goalCount > 0 || assistCount > 0 || ownGoalCount > 0
-            return (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
-                  <div>
-                    <p className="font-mono text-label-bold text-on-surface">{selectedPlayer.name}</p>
-                    <p className="font-mono text-label-sm" style={{ color: selectedPlayer.team === 'A' ? match.teamAColor : match.teamBColor }}>
-                      {selectedPlayer.team === 'A' ? match.teamAName : match.teamBName}
-                    </p>
-                  </div>
-                </div>
-
-                {hasAny && (
-                  <div className="space-y-2">
-                    <p className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest">Remover</p>
-                    <div className="flex flex-wrap gap-2">
-                      {goalCount > 0 && (
-                        <button type="button" disabled={saving} onClick={handleRemoveGoal} className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors">
-                          <MaterialIcon name="remove_circle" className="w-4 h-4" />
-                          {goalCount} {goalCount === 1 ? 'Gol' : 'Gols'}
-                        </button>
-                      )}
-                      {assistCount > 0 && (
-                        <button type="button" disabled={saving} onClick={handleRemoveAssist} className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors">
-                          <MaterialIcon name="remove_circle" className="w-4 h-4" />
-                          {assistCount} {assistCount === 1 ? 'Assist.' : 'Assists.'}
-                        </button>
-                      )}
-                      {ownGoalCount > 0 && (
-                        <button type="button" disabled={saving} onClick={handleRemoveOwnGoal} className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors">
-                          <MaterialIcon name="remove_circle" className="w-4 h-4" />
-                          {ownGoalCount} {ownGoalCount === 1 ? 'Gol Contra' : 'Gols Contra'}
-                        </button>
-                      )}
+          {(sheetPhase === "manage" || sheetPhase === "goal_type") &&
+            selectedPlayer &&
+            (() => {
+              const goalCount = match.goals.filter((g) => g.playerId === selectedPlayer.userId).length;
+              const assistCount = match.assists.filter((a) => a.assistPlayerId === selectedPlayer.userId).length;
+              const ownGoalCount = match.ownGoals.filter((og) => og.playerId === selectedPlayer.userId).length;
+              const hasAny = goalCount > 0 || assistCount > 0 || ownGoalCount > 0;
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
+                    <div>
+                      <p className="font-mono text-label-bold text-on-surface">{selectedPlayer.name}</p>
+                      <p className="font-mono text-label-sm" style={{ color: selectedPlayer.team === "A" ? match.teamAColor : match.teamBColor }}>
+                        {selectedPlayer.team === "A" ? match.teamAName : match.teamBName}
+                      </p>
                     </div>
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button type="button" disabled={saving} onClick={handleGoal} className="flex flex-col items-center gap-2 py-4 bg-primary-container text-primary font-mono text-label-bold border border-primary/30 active:bg-primary/20 transition-colors">
-                      <MaterialIcon name="sports_soccer" className="w-6 h-6" />
-                      Gol
-                    </button>
-                    <button type="button" disabled={saving} onClick={handleOwnGoal} className="flex flex-col items-center gap-2 py-4 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors">
-                      <MaterialIcon name="error" className="w-6 h-6" />
-                      Gol Contra
+                  {hasAny && (
+                    <div className="space-y-2">
+                      <p className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest">Remover</p>
+                      <div className="flex flex-wrap gap-2">
+                        {goalCount > 0 && (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={handleRemoveGoal}
+                            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
+                          >
+                            <MaterialIcon name="remove_circle" className="w-4 h-4" />
+                            {goalCount} {goalCount === 1 ? "Gol" : "Gols"}
+                          </button>
+                        )}
+                        {assistCount > 0 && (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={handleRemoveAssist}
+                            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
+                          >
+                            <MaterialIcon name="remove_circle" className="w-4 h-4" />
+                            {assistCount} {assistCount === 1 ? "Assist." : "Assists."}
+                          </button>
+                        )}
+                        {ownGoalCount > 0 && (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={handleRemoveOwnGoal}
+                            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
+                          >
+                            <MaterialIcon name="remove_circle" className="w-4 h-4" />
+                            {ownGoalCount} {ownGoalCount === 1 ? "Gol Contra" : "Gols Contra"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={handleGoal}
+                        className="flex flex-col items-center gap-2 py-4 bg-primary-container text-primary font-mono text-label-bold border border-primary/30 active:bg-primary/20 transition-colors"
+                      >
+                        <MaterialIcon name="sports_soccer" className="w-6 h-6" />
+                        Gol
+                      </button>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={handleOwnGoal}
+                        className="flex flex-col items-center gap-2 py-4 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors"
+                      >
+                        <MaterialIcon name="error" className="w-6 h-6" />
+                        Gol Contra
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={handleAddAssistOnly}
+                      className="w-full flex flex-col items-center gap-2 py-4 bg-secondary-container text-secondary font-mono text-label-bold border border-secondary/30 active:bg-secondary/20 transition-colors"
+                    >
+                      <MaterialIcon name="send" className="w-6 h-6" />
+                      Assistência
                     </button>
                   </div>
-                  <button type="button" disabled={saving} onClick={handleAddAssistOnly} className="w-full flex flex-col items-center gap-2 py-4 bg-secondary-container text-secondary font-mono text-label-bold border border-secondary/30 active:bg-secondary/20 transition-colors">
-                    <MaterialIcon name="send" className="w-6 h-6" />
-                    Assistência
-                  </button>
                 </div>
-              </div>
-            )
-          })()}
+              );
+            })()}
 
-          {sheetPhase === 'assist' && selectedPlayer && (
+          {sheetPhase === "assist" && selectedPlayer && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
                 <div>
-                  <p className="font-mono text-label-bold" style={{ color: selectedPlayer.team === 'A' ? match.teamAColor : match.teamBColor }}>
+                  <p className="font-mono text-label-bold" style={{ color: selectedPlayer.team === "A" ? match.teamAColor : match.teamBColor }}>
                     Gol do {selectedPlayer.name}!
                   </p>
                   <p className="font-mono text-label-sm text-on-surface-variant">Quem deu a assistência?</p>
@@ -452,5 +491,5 @@ export default function MatchReview() {
         </div>
       </div>
     </AppShell>
-  )
+  );
 }

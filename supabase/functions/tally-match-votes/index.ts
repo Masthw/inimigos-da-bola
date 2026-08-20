@@ -38,7 +38,7 @@ serve(async (req) => {
     // 3. Buscar todos os votos dessa partida
     const { data: votes } = await supabaseClient
       .from('match_votes')
-      .select('award_id, voted_user_id')
+      .select('award_id, voted_user_id, voter_user_id')
       .eq('match_id', matchId)
 
     const awardsToInsert: { match_id: string, user_id: string, award_id: number }[] = []
@@ -48,18 +48,26 @@ serve(async (req) => {
     const garcomAward = awards?.find(a => a.name.toLowerCase().includes('garçom') || a.name.toLowerCase().includes('garcom'))
 
     if (players && players.length > 0) {
-      // Goleador
+      // Goleador - empate = ninguém ganha
       if (goleadorAward) {
-        const topScorer = [...players].sort((a, b) => (b.goals_scored || 0) - (a.goals_scored || 0))[0]
-        if (topScorer && topScorer.goals_scored > 0) {
-          awardsToInsert.push({ match_id: matchId, user_id: topScorer.user_id, award_id: goleadorAward.id })
+        const sortedByGoals = [...players].sort((a, b) => (b.goals_scored || 0) - (a.goals_scored || 0))
+        const topGoals = sortedByGoals[0]
+        if (topGoals && topGoals.goals_scored > 0) {
+          const tiedCount = sortedByGoals.filter(p => p.goals_scored === topGoals.goals_scored).length
+          if (tiedCount === 1) {
+            awardsToInsert.push({ match_id: matchId, user_id: topGoals.user_id, award_id: goleadorAward.id })
+          }
         }
       }
-      // Garçom
+      // Garçom - empate = ninguém ganha
       if (garcomAward) {
-        const topAssister = [...players].sort((a, b) => (b.assists || 0) - (a.assists || 0))[0]
-        if (topAssister && topAssister.assists > 0) {
-          awardsToInsert.push({ match_id: matchId, user_id: topAssister.user_id, award_id: garcomAward.id })
+        const sortedByAssists = [...players].sort((a, b) => (b.assists || 0) - (a.assists || 0))
+        const topAssist = sortedByAssists[0]
+        if (topAssist && topAssist.assists > 0) {
+          const tiedCount = sortedByAssists.filter(p => p.assists === topAssist.assists).length
+          if (tiedCount === 1) {
+            awardsToInsert.push({ match_id: matchId, user_id: topAssist.user_id, award_id: garcomAward.id })
+          }
         }
       }
     }
@@ -82,13 +90,13 @@ serve(async (req) => {
       const sortedCandidates = Object.entries(voteCount).sort((a, b) => b[1] - a[1])
 
       if (isCraque) {
-        // CRAQUE: Não precisa de mínimo. Empate = ambos ganham. Zero votos = default (Goleador)
+        // CRAQUE: Empate = ninguém ganha. Zero votos = default (Goleador)
         if (sortedCandidates.length > 0) {
           const maxVotes = sortedCandidates[0][1]
           const winners = sortedCandidates.filter(c => c[1] === maxVotes)
           
-          for (const [winnerId] of winners) {
-            awardsToInsert.push({ match_id: matchId, user_id: winnerId, award_id: award.id })
+          if (winners.length === 1) {
+            awardsToInsert.push({ match_id: matchId, user_id: winners[0][0], award_id: award.id })
           }
         } else {
           // Se todo mundo pulou (skip), o Goleador ganha o Craque por default
@@ -98,11 +106,12 @@ serve(async (req) => {
           }
         }
       } else {
-        // OUTROS AWARDS: Precisam de pelo menos 3 votos para valer (pode ajustar esse número)
-        const MIN_VOTES_REQUIRED = 3
+        // OUTROS AWARDS: Vencedor precisa de 50%+ dos jogadores que votaram e sem empate no topo
         if (sortedCandidates.length > 0) {
+          const uniqueVoters = new Set(awardVotes.map(v => v.voter_user_id)).size
           const [winnerId, winnerVotes] = sortedCandidates[0]
-          if (winnerVotes >= MIN_VOTES_REQUIRED) {
+          const tiedCount = sortedCandidates.filter(c => c[1] === winnerVotes).length
+          if (winnerVotes >= Math.ceil(uniqueVoters / 2) && tiedCount === 1) {
             awardsToInsert.push({ match_id: matchId, user_id: winnerId, award_id: award.id })
           }
         }

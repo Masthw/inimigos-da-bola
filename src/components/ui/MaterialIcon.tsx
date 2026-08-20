@@ -48,6 +48,10 @@ import {
   Ghost,
   Play,
   Flag,
+  BrainCircuit,
+  Utensils,
+  CircleStar,
+  Crown,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -101,6 +105,10 @@ const iconRegistry: Record<string, LucideIcon> = {
   ghost: Ghost,
   play_arrow: Play,
   flag: Flag,
+  'brain-circuit': BrainCircuit,
+  utensils: Utensils,
+  'circle-star': CircleStar,
+  crown: Crown,
 }
 
 interface MaterialIconProps {
