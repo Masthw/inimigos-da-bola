@@ -24,30 +24,34 @@ export function useLeaderboard() {
     let cancelled = false
 
     async function load() {
-      const [{ data: users }, { count }] = await Promise.all([
+      const [{ data: users }, { count }, { data: leaderboard }] = await Promise.all([
         supabase
           .from('users')
           .select('id, name, avatar_url')
           .is('deleted_at', null)
           .order('name', { ascending: true }),
         supabase.from('matches').select('id', { count: 'exact', head: true }).eq('status', 'finished'),
+        supabase.from('season_leaderboards').select('user_id, points'),
       ])
 
       if (cancelled) return
 
       const rows = users ?? []
       const finishedCount = count ?? 0
+      const pointsMap = new Map(
+        (leaderboard ?? []).map((entry) => [entry.user_id, entry.points ?? 0]),
+      )
 
       setEntries(
         rows.map((row) => ({
           id: row.id,
           name: getFirstName(row.name ?? 'Jogador'),
           avatarUrl: row.avatar_url,
-          points: 0,
+          points: pointsMap.get(row.id) ?? 0,
           isCurrentUser: row.id === currentUserId,
         })),
       )
-      setSeasonStarted(finishedCount > 0)
+      setSeasonStarted(finishedCount > 0 || (leaderboard?.length ?? 0) > 0)
       setLoading(false)
     }
 
