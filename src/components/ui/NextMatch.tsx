@@ -64,7 +64,7 @@ function MatchActions({ status, loading, hasMatch, isAdmin, onConfirm, onRetry }
     return (
       <Link
         to="/matches/new"
-        className="inline-flex w-full md:w-auto bg-primary-container text-primary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform items-center justify-center gap-3"
+        className="inline-flex w-full md:w-auto bg-primary text-on-primary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform items-center justify-center gap-3"
       >
         <MaterialIcon name="add_circle" className="w-5 h-5" />
         Novo Jogo
@@ -123,12 +123,7 @@ export function NextMatch() {
     setBusy(true);
     setHasError(false);
 
-    const { data: existing } = await supabase
-      .from("match_players")
-      .select("id")
-      .eq("match_id", match.id)
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const { data: existing } = await supabase.from("match_players").select("id").eq("match_id", match.id).eq("user_id", user.id).maybeSingle();
 
     const result = existing
       ? await supabase.from("match_players").update({ status: "confirmed" }).eq("id", existing.id)

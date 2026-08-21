@@ -2,6 +2,7 @@ import { Route } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import Home from '../pages/Home'
 import Profile from '../pages/Profile'
+import Tactics from '../pages/Tactics'
 import NewMatch from '../pages/NewMatch'
 import Matches from '../pages/Matches'
 import MatchLive from '../pages/MatchLive'
@@ -17,7 +18,7 @@ export const protectedRoutes = (
     <Route path="/matches/:matchId/vote" element={<VoteMatch />} />
     <Route path="/matches/:matchId" element={<MatchLive />} />
     <Route path="/matches" element={<Matches />} />
-    <Route path="/tactics" element={<div className="p-8 text-on-surface">Tactical Board — Em construção</div>} />
+    <Route path="/tactics" element={<Tactics />} />
     <Route path="/rankings" element={<div className="p-8 text-on-surface">League Table — Em construção</div>} />
     <Route path="/history" element={<div className="p-8 text-on-surface">History — Em construção</div>} />
     <Route path="/stats" element={<div className="p-8 text-on-surface">Player Stats — Em construção</div>} />

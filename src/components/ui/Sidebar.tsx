@@ -1,37 +1,34 @@
-import { Link, useLocation } from 'react-router-dom'
-import { MaterialIcon } from './MaterialIcon'
-import { Avatar } from './Avatar'
-import { NAV_ITEMS } from '../../navlinks/links'
-import { useAuth } from '../../hooks/useAuth'
-import { useIsAdmin } from '../../hooks/useIsAdmin'
-import { getAvatarUrl, getDisplayName, getFirstName } from '../../lib/profile'
+import { Link, useLocation } from "react-router-dom";
+import { MaterialIcon } from "./MaterialIcon";
+import { Avatar } from "./Avatar";
+import { NAV_ITEMS } from "../../navlinks/links";
+import { useAuth } from "../../hooks/useAuth";
+import { useIsAdmin } from "../../hooks/useIsAdmin";
+import { getAvatarUrl, getDisplayName, getFirstName } from "../../lib/profile";
 
 interface SidebarProps {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }
 
 export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
-  const { logout, user } = useAuth()
-  const { isAdmin } = useIsAdmin()
-  const { pathname } = useLocation()
-  const name = getFirstName(getDisplayName(user))
-  const avatarUrl = getAvatarUrl(user)
+  const { logout, user } = useAuth();
+  const { isAdmin } = useIsAdmin();
+  const { pathname } = useLocation();
+  const name = getFirstName(getDisplayName(user));
+  const avatarUrl = getAvatarUrl(user);
 
-  const navItems = [
-    ...NAV_ITEMS,
-    { icon: 'person', label: 'Perfil', href: `/profile/${user?.id ?? ''}` },
-  ]
+  const navItems = [...NAV_ITEMS, { icon: "person", label: "Perfil", href: `/profile/${user?.id ?? ""}` }];
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/'
-    return pathname === href || pathname.startsWith(`${href}/`)
-  }
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   const content = (
     <>
       <div className="flex items-center justify-between px-6 py-stack-lg">
-        <h1 className="text-headline-lg font-display font-black text-primary tracking-tighter">INIMIGOS DA BOLA</h1>
+        <h1 className="text-headline-lg text-xl font-display font-black text-primary tracking-tighter">INIMIGOS DA BOLA</h1>
         <button
           type="button"
           onClick={onClose}
@@ -43,7 +40,7 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
       </div>
 
       <Link
-        to={`/profile/${user?.id ?? ''}`}
+        to={`/profile/${user?.id ?? ""}`}
         onClick={onClose}
         className="flex items-center gap-3 px-6 py-4 mb-stack-lg hover:bg-surface-variant transition-colors rounded-lg mx-2"
       >
@@ -61,8 +58,8 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
             onClick={onClose}
             className={`flex items-center gap-3 py-3 px-4 rounded-lg mx-2 transition-all ${
               isActive(item.href)
-                ? 'bg-primary-container text-on-primary-container translate-x-1'
-                : 'text-on-surface-variant hover:bg-surface-variant'
+                ? "bg-primary-container text-on-primary-container translate-x-1"
+                : "text-on-surface-variant hover:bg-surface-variant"
             }`}
           >
             <MaterialIcon name={item.icon} className="w-5 h-5" />
@@ -76,7 +73,7 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
           <Link
             to="/matches/new"
             onClick={onClose}
-            className="w-full bg-primary-container text-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+            className="w-full bg-primary text-on-primary font-mono text-label-bold py-4 brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
           >
             <MaterialIcon name="add_circle" className="w-5 h-5" />
             Novo Jogo
@@ -92,7 +89,7 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
         </button>
       </div>
     </>
-  )
+  );
 
   return (
     <>
@@ -109,5 +106,5 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
         </div>
       )}
     </>
-  )
+  );
 }

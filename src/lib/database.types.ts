@@ -192,6 +192,86 @@ export type Database = {
         }
         Relationships: []
       }
+      lineup_players: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_sub: boolean | null
+          lineup_id: string
+          position: string
+          team: string
+          user_id: string
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_sub?: boolean | null
+          lineup_id: string
+          position: string
+          team: string
+          user_id: string
+          x: number
+          y: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_sub?: boolean | null
+          lineup_id?: string
+          position?: string
+          team?: string
+          user_id?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lineup_players_lineup_id_fkey"
+            columns: ["lineup_id"]
+            isOneToOne: false
+            referencedRelation: "lineups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineup_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lineups: {
+        Row: {
+          created_at: string | null
+          id: string
+          match_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          match_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          match_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lineups_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_awards: {
         Row: {
           award_id: number
