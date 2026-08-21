@@ -329,26 +329,49 @@ export default function Rankings() {
                     </table>
                   </div>
 
-                  {/* Mobile List */}
-                  <div className="md:hidden divide-y divide-outline-variant/10">
-                    {entries.map((player, index) => {
-                      const rank = index + 1;
-                      const isCurrent = player.isCurrentUser;
+                  {/* Mobile Table */}
+                  <div className="md:hidden overflow-x-auto no-scrollbar">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-surface-container-high border-b border-outline-variant">
+                        <tr>
+                          <th className="px-4 py-3 font-label-bold text-label-sm text-on-surface-variant uppercase tracking-wider text-center">#</th>
+                          <th className="px-4 py-3 font-label-bold text-label-sm text-on-surface-variant uppercase tracking-wider">Jogador</th>
+                          <th className="px-4 py-3 font-label-bold text-label-sm text-on-surface-variant uppercase tracking-wider text-right">PTS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {entries.map((player, index) => {
+                          const rank = index + 1;
+                          const isCurrent = player.isCurrentUser;
 
-                      return (
-                        <Link
-                          key={player.id}
-                          to={`/profile/${player.id}`}
-                          className={`flex items-center justify-between px-4 py-3 hover:bg-surface-container-highest/50 transition-colors ${isCurrent ? "bg-primary-container/5" : ""}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="font-label-bold text-primary w-8 text-center">{rank.toString().padStart(2, "0")}</span>
-                            <span className="font-label-bold truncate">{getFirstName(player.name)}</span>
-                          </div>
-                          <span className={`font-label-bold ${isCurrent ? "text-tertiary" : "text-on-surface-variant"}`}>{player.points}</span>
-                        </Link>
-                      );
-                    })}
+                          return (
+                            <tr
+                              key={player.id}
+                              className={`hover:bg-surface-container-highest/50 transition-colors group ${isCurrent ? "bg-primary-container/5" : ""}`}
+                            >
+                              <td className="px-4 py-3 font-label-bold text-center text-primary">{rank.toString().padStart(2, "0")}</td>
+                              <td className="px-4 py-3">
+                                <Link to={`/profile/${player.id}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity truncate">
+                                  <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-variant shrink-0">
+                                    {player.avatarUrl ? (
+                                      <img className="w-full h-full object-cover" src={player.avatarUrl} alt={player.name} referrerPolicy="no-referrer" />
+                                    ) : (
+                                      <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
+                                        <MaterialIcon name="person" className="w-4 h-4 text-on-surface-variant" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="font-label-bold truncate">{getFirstName(player.name)}</span>
+                                </Link>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <span className={`font-label-bold ${isCurrent ? "text-tertiary" : "text-on-surface-variant"}`}>{player.points}</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </>
               )}
