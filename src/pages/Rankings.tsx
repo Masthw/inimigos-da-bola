@@ -20,15 +20,15 @@ interface PlayerRank {
 }
 
 const MOCK_PLAYERS: PlayerRank[] = [
-  { id: "p1", name: "Marcus King", avatarUrl: null, points: 34, matchesPlayed: 12, wins: 8, draws: 2, losses: 2, goals: 18, assists: 7, badges: ["Craque", "Goleador"], isCurrentUser: false },
-  { id: "p2", name: "Bruno Silva", avatarUrl: null, points: 29, matchesPlayed: 12, wins: 7, draws: 3, losses: 2, goals: 5, assists: 9, badges: ["Garçom"], isCurrentUser: false },
-  { id: "p3", name: "Felipe Costa", avatarUrl: null, points: 24, matchesPlayed: 10, wins: 6, draws: 2, losses: 2, goals: 14, assists: 4, badges: ["Craque"], isCurrentUser: false },
-  { id: "p4", name: "Lucas Mendes", avatarUrl: null, points: 21, matchesPlayed: 11, wins: 5, draws: 3, losses: 3, goals: 3, assists: 6, badges: [], isCurrentUser: false },
-  { id: "p5", name: "Tiago Porto", avatarUrl: null, points: 19, matchesPlayed: 9, wins: 4, draws: 2, losses: 3, goals: 8, assists: 2, badges: ["Goleador"], isCurrentUser: false },
-  { id: "p6", name: "André Santos", avatarUrl: null, points: 16, matchesPlayed: 8, wins: 3, draws: 2, losses: 3, goals: 2, assists: 5, badges: [], isCurrentUser: false },
-  { id: "p7", name: "Rodrigo Gomes", avatarUrl: null, points: 14, matchesPlayed: 7, wins: 2, draws: 1, losses: 4, goals: 1, assists: 3, badges: [], isCurrentUser: false },
-  { id: "p8", name: "Pedro Lima", avatarUrl: null, points: 11, matchesPlayed: 6, wins: 1, draws: 2, losses: 3, goals: 0, assists: 2, badges: [], isCurrentUser: false },
-  { id: "p9", name: "Você", avatarUrl: null, points: 27, matchesPlayed: 11, wins: 7, draws: 2, losses: 2, goals: 12, assists: 5, badges: ["Craque", "Garçom"], isCurrentUser: true },
+  { id: "p1", name: "Marcus King", avatarUrl: null, points: 34, matchesPlayed: 12, wins: 8, draws: 2, losses: 2, goals: 18, assists: 7, badges: ["Craque", "Goleador", "Líder"], isCurrentUser: false },
+  { id: "p2", name: "Bruno Silva", avatarUrl: null, points: 29, matchesPlayed: 12, wins: 7, draws: 3, losses: 2, goals: 5, assists: 9, badges: ["Garçom", "Fair Play"], isCurrentUser: false },
+  { id: "p3", name: "Felipe Costa", avatarUrl: null, points: 24, matchesPlayed: 10, wins: 6, draws: 2, losses: 2, goals: 14, assists: 4, badges: ["Craque", "Goleador"], isCurrentUser: false },
+  { id: "p4", name: "Lucas Mendes", avatarUrl: null, points: 21, matchesPlayed: 11, wins: 5, draws: 3, losses: 3, goals: 3, assists: 6, badges: ["Defensor"], isCurrentUser: false },
+  { id: "p5", name: "Tiago Porto", avatarUrl: null, points: 19, matchesPlayed: 9, wins: 4, draws: 2, losses: 3, goals: 8, assists: 2, badges: ["Goleador", "Destaque"], isCurrentUser: false },
+  { id: "p6", name: "André Santos", avatarUrl: null, points: 16, matchesPlayed: 8, wins: 3, draws: 2, losses: 3, goals: 2, assists: 5, badges: ["Garçom"], isCurrentUser: false },
+  { id: "p7", name: "Rodrigo Gomes", avatarUrl: null, points: 14, matchesPlayed: 7, wins: 2, draws: 1, losses: 4, goals: 1, assists: 3, badges: ["Fair Play"], isCurrentUser: false },
+  { id: "p8", name: "Pedro Lima", avatarUrl: null, points: 11, matchesPlayed: 6, wins: 1, draws: 2, losses: 3, goals: 0, assists: 2, badges: ["Destaque"], isCurrentUser: false },
+  { id: "p9", name: "Você", avatarUrl: null, points: 27, matchesPlayed: 11, wins: 7, draws: 2, losses: 2, goals: 12, assists: 5, badges: ["Craque", "Garçom", "Líder"], isCurrentUser: true },
 ];
 
 export default function Rankings() {
