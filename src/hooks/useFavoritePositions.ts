@@ -18,20 +18,25 @@ export function useFavoritePositions() {
   const { user } = useAuth()
   const [positions, setPositions] = useState<Position[]>([])
   const [favorites, setFavorites] = useState<Map<number, FavoritePosition>>(new Map())
+  const [gameTypeIds, setGameTypeIds] = useState<{ futsal: number | null; society: number | null }>({ futsal: null, society: null })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
 
     let cancelled = false
+    const userId = user.id
 
     async function load() {
       setLoading(true)
+      setError(null)
 
-      const [{ data: positionsData }, { data: favoritesData }] = await Promise.all([
+      const [{ data: positionsData }, { data: favoritesData }, { data: gameTypesData }] = await Promise.all([
         supabase.from('positions').select('id, name, code, game_type_id').order('name', { ascending: true }),
-        supabase.from('user_favorite_positions').select('position_id, is_primary').eq('user_id', user.id),
+        supabase.from('user_favorite_positions').select('position_id, is_primary').eq('user_id', userId),
+        supabase.from('game_types').select('id, name'),
       ])
 
       if (cancelled) return
@@ -43,6 +48,11 @@ export function useFavoritePositions() {
         favMap.set(fav.position_id, { position_id: fav.position_id, is_primary: fav.is_primary })
       }
       setFavorites(favMap)
+
+      const futsal = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'futsal')?.id ?? null
+      const society = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'society')?.id ?? null
+      setGameTypeIds({ futsal, society })
+
       setLoading(false)
     }
 
@@ -57,38 +67,56 @@ export function useFavoritePositions() {
     if (!user) return
 
     setSaving(true)
+    setError(null)
 
     const existing = favorites.get(positionId)
+    const userId = user.id
 
-    if (existing) {
-      await supabase
-        .from('user_favorite_positions')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('position_id', positionId)
-    } else {
-      await supabase.from('user_favorite_positions').insert({
-        user_id: user.id,
-        position_id: positionId,
-        is_primary: isPrimary,
-      })
-    }
+    try {
+      let dbError: { message?: string } | null = null
 
-    setFavorites((prev) => {
-      const next = new Map(prev)
       if (existing) {
-        next.delete(positionId)
+        const { error } = await supabase
+          .from('user_favorite_positions')
+          .delete()
+          .eq('user_id', userId)
+          .eq('position_id', positionId)
+        dbError = error
       } else {
-        next.set(positionId, { position_id: positionId, is_primary: isPrimary })
+        const { error } = await supabase.from('user_favorite_positions').insert({
+          user_id: userId,
+          position_id: positionId,
+          is_primary: isPrimary,
+        })
+        dbError = error
       }
-      return next
-    })
 
-    setSaving(false)
+      if (dbError) {
+        setError(dbError.message ?? 'Erro ao salvar posição favorita')
+        setSaving(false)
+        return
+      }
+
+      setFavorites((prev) => {
+        const next = new Map(prev)
+        if (existing) {
+          next.delete(positionId)
+        } else {
+          next.set(positionId, { position_id: positionId, is_primary: isPrimary })
+        }
+        return next
+      })
+    } catch {
+      setError('Erro inesperado ao salvar posição favorita')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const getPositionsByGameType = (gameTypeId: number) => {
-    return positions.filter((p) => p.game_type_id === gameTypeId)
+  const getPositionsByGameType = (gameType: 'futsal' | 'society') => {
+    const id = gameTypeIds[gameType]
+    if (!id) return []
+    return positions.filter((p) => p.game_type_id === id)
   }
 
   const isFavorite = (positionId: number) => {
@@ -98,8 +126,10 @@ export function useFavoritePositions() {
   return {
     positions,
     favorites,
+    gameTypeIds,
     loading,
     saving,
+    error,
     toggleFavorite,
     getPositionsByGameType,
     isFavorite,
