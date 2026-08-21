@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { supabase } from "../lib/supabaseClient";
@@ -19,147 +19,11 @@ interface PlayerRank {
   isCurrentUser: boolean;
 }
 
-const MOCK_PLAYERS: PlayerRank[] = [
-  {
-    id: "p1",
-    name: "Marcus King",
-    avatarUrl: null,
-    points: 34,
-    matchesPlayed: 12,
-    wins: 8,
-    draws: 2,
-    losses: 2,
-    goals: 18,
-    assists: 7,
-    badges: ["Craque", "Goleador", "Líder"],
-    isCurrentUser: false,
-  },
-  {
-    id: "p2",
-    name: "Bruno Silva",
-    avatarUrl: null,
-    points: 29,
-    matchesPlayed: 12,
-    wins: 7,
-    draws: 3,
-    losses: 2,
-    goals: 5,
-    assists: 9,
-    badges: ["Garçom", "Fair Play"],
-    isCurrentUser: false,
-  },
-  {
-    id: "p3",
-    name: "Felipe Costa",
-    avatarUrl: null,
-    points: 24,
-    matchesPlayed: 10,
-    wins: 6,
-    draws: 2,
-    losses: 2,
-    goals: 14,
-    assists: 4,
-    badges: ["Craque", "Goleador"],
-    isCurrentUser: false,
-  },
-  {
-    id: "p4",
-    name: "Lucas Mendes",
-    avatarUrl: null,
-    points: 21,
-    matchesPlayed: 11,
-    wins: 5,
-    draws: 3,
-    losses: 3,
-    goals: 3,
-    assists: 6,
-    badges: ["Defensor"],
-    isCurrentUser: false,
-  },
-  {
-    id: "p5",
-    name: "Tiago Porto",
-    avatarUrl: null,
-    points: 19,
-    matchesPlayed: 9,
-    wins: 4,
-    draws: 2,
-    losses: 3,
-    goals: 8,
-    assists: 2,
-    badges: ["Goleador", "Destaque"],
-    isCurrentUser: false,
-  },
-  {
-    id: "p6",
-    name: "André Santos",
-    avatarUrl: null,
-    points: 16,
-    matchesPlayed: 8,
-    wins: 3,
-    draws: 2,
-    losses: 3,
-    goals: 2,
-    assists: 5,
-    badges: ["Garçom"],
-    isCurrentUser: false,
-  },
-  {
-    id: "p7",
-    name: "Rodrigo Gomes",
-    avatarUrl: null,
-    points: 14,
-    matchesPlayed: 7,
-    wins: 2,
-    draws: 1,
-    losses: 4,
-    goals: 1,
-    assists: 3,
-    badges: ["Fair Play"],
-    isCurrentUser: false,
-  },
-  {
-    id: "p8",
-    name: "Pedro Lima",
-    avatarUrl: null,
-    points: 11,
-    matchesPlayed: 6,
-    wins: 1,
-    draws: 2,
-    losses: 3,
-    goals: 0,
-    assists: 2,
-    badges: ["Destaque"],
-    isCurrentUser: false,
-  },
-  {
-    id: "p9",
-    name: "Você",
-    avatarUrl: null,
-    points: 27,
-    matchesPlayed: 11,
-    wins: 7,
-    draws: 2,
-    losses: 2,
-    goals: 12,
-    assists: 5,
-    badges: ["Craque", "Garçom", "Líder"],
-    isCurrentUser: true,
-  },
-];
 
 export default function Rankings() {
   const { user } = useAuth();
-  const [useMock, setUseMock] = useState(false);
-  const [realEntries, setRealEntries] = useState<PlayerRank[]>([]);
+  const [entries, setEntries] = useState<PlayerRank[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const entries = useMemo(() => {
-    if (useMock) {
-      return MOCK_PLAYERS;
-    }
-    return realEntries;
-  }, [useMock, realEntries]);
 
   useEffect(() => {
     let cancelled = false;
@@ -254,7 +118,7 @@ export default function Rankings() {
         .sort((a, b) => b.points - a.points || b.goals - a.goals || b.assists - a.assists);
 
       if (!cancelled) {
-        setRealEntries(result);
+        setEntries(result);
         setLoading(false);
       }
     }
@@ -274,9 +138,9 @@ export default function Rankings() {
   };
 
   const getPositionBadge = (pos: number) => {
-    if (pos === 1) return { label: "LEADER", className: "bg-tertiary text-on-tertiary" };
-    if (pos === 2) return { label: "#2", className: "bg-secondary text-on-secondary" };
-    if (pos === 3) return { label: "#3", className: "bg-outline-variant text-on-surface" };
+    if (pos === 1) return { label: "RANK #1", className: "bg-tertiary text-on-tertiary" };
+    if (pos === 2) return { label: "RANK #2", className: "bg-secondary text-on-secondary" };
+    if (pos === 3) return { label: "RANK #3", className: "bg-outline-variant text-on-surface" };
     return { label: `#${pos}`, className: "bg-primary text-on-primary" };
   };
 
@@ -292,13 +156,7 @@ export default function Rankings() {
       <div className="min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
           <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">Rankings & Estatísticas</h2>
-          <button
-            type="button"
-            onClick={() => setUseMock((v) => !v)}
-            className="px-3 py-1.5 bg-surface-variant text-on-surface font-mono text-[10px] border border-outline-variant active:bg-surface-container-high transition-colors rounded-lg"
-          >
-            {useMock ? "Dados Reais" : "Mock"}
-          </button>
+
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 md:px-margin-desktop py-6">
@@ -315,63 +173,82 @@ export default function Rankings() {
                   }
                 `}</style>
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-stack-lg">
-                {entries.slice(0, 3).map((player, index) => {
-                  const pos = index + 1;
-                  const badge = getPositionBadge(pos);
-                  const accent = getRankAccent(pos);
-                  return (
-                    <div
-                      key={player.id}
-                      className={`${getPositionColor(pos)} p-stack-md rounded-xl border flex flex-col justify-between h-48 relative overflow-hidden group ${
-                        pos === 1 ? "md:order-2 md:h-64 scale-105 shadow-2xl shadow-tertiary/40" : ""
-                      } ${pos === 2 ? "md:order-1" : ""} ${pos === 3 ? "md:order-3" : ""}`}
-                    >
-                      <div className={`absolute inset-0 bg-gradient-to-br ${accent} pointer-events-none`} />
-                      {pos === 1 && (
-                        <div className="absolute -inset-1 rounded-xl border-2 border-tertiary/30 animate-spin-slow pointer-events-none" />
-                      )}
+                  {entries.slice(0, 3).map((player, index) => {
+                    const pos = index + 1;
+                    const badge = getPositionBadge(pos);
+                    const accent = getRankAccent(pos);
+                    return (
+                      <div
+                        key={player.id}
+                        className={`${getPositionColor(pos)} p-stack-md rounded-xl border flex flex-col justify-between h-48 relative overflow-hidden group ${
+                          pos === 1 ? "md:order-2 md:h-64 scale-105 shadow-2xl shadow-tertiary/40" : ""
+                        } ${pos === 2 ? "md:order-1" : ""} ${pos === 3 ? "md:order-3" : ""}`}
+                      >
+                        <div className={`absolute inset-0 bg-linear-to-br ${accent} pointer-events-none`} />
+                        {pos === 1 && (
+                          <>
+                            {/* Máscara que cria o rastro de luz giratório apenas na borda */}
+                            <div
+                              className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-10"
+                              style={{
+                                padding: "2px", // Aqui você controla a grossura da linha brilhante
+                                WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                                WebkitMaskComposite: "xor",
+                                maskComposite: "exclude",
+                              }}
+                            >
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(transparent_70%,currentColor_100%)] text-tertiary" />
+                            </div>
 
-                      <div className="absolute top-[-30px] right-[-20px] opacity-[0.07] group-hover:opacity-[0.12] transition-opacity pointer-events-none">
-                        <span className="font-display-lg text-[140px] leading-none font-black text-on-background">#{pos}</span>
-                      </div>
+                            {/* Glow (sombra brilhante) pulsante ao redor do card */}
+                            <div className="absolute inset-0 rounded-xl shadow-[0_0_20px_currentColor] text-tertiary opacity-30 animate-pulse pointer-events-none" />
 
-                      <div className="relative z-10">
-                        <div className="flex justify-between items-start">
-                          <span className={`px-3 py-1 text-label-bold rounded-sm ${badge.className}`}>{badge.label}</span>
+                            {/* Borda de base suave para dar acabamento quando a luz não estiver passando */}
+                            <div className="absolute inset-0 rounded-xl border border-tertiary/20 pointer-events-none" />
+                          </>
+                        )}
+
+                        <div className="absolute top-[-30px] right-[-20px] opacity-[0.07] group-hover:opacity-[0.12] transition-opacity pointer-events-none">
+                          <span className="font-display-lg text-[140px] leading-none font-black text-on-background">#{pos}</span>
                         </div>
-                        <div className="flex items-center gap-3 mt-4">
-                          <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-variant border-2 border-transparent group-hover:border-primary/50 transition-all shrink-0">
-                            {player.avatarUrl ? (
-                              <img className="w-full h-full object-cover" src={player.avatarUrl} alt={player.name} referrerPolicy="no-referrer" />
-                            ) : (
-                              <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
-                                <MaterialIcon name="person" className="w-6 h-6 text-on-surface-variant" />
-                              </div>
-                            )}
+
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-start">
+                            <span className={`px-3 py-1 text-label-bold rounded-sm ${badge.className}`}>{badge.label}</span>
                           </div>
-                          <h3 className="font-display-lg text-headline-lg truncate">{player.name}</h3>
+                          <div className="flex items-center gap-3 mt-4">
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-variant border-2 border-transparent group-hover:border-primary/50 transition-all shrink-0">
+                              {player.avatarUrl ? (
+                                <img className="w-full h-full object-cover" src={player.avatarUrl} alt={player.name} referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
+                                  <MaterialIcon name="person" className="w-6 h-6 text-on-surface-variant" />
+                                </div>
+                              )}
+                            </div>
+                            <h3 className="font-display-lg text-headline-lg truncate">{player.name}</h3>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="relative z-10 flex gap-4 border-t border-outline-variant/20 pt-2">
-                        <div>
-                          <p className="text-label-sm opacity-60">P</p>
-                          <p className="font-label-bold text-primary">{player.matchesPlayed}</p>
-                        </div>
-                        <div>
-                          <p className="text-label-sm opacity-60">G</p>
-                          <p className="font-label-bold text-primary">{player.goals}</p>
-                        </div>
-                        <div>
-                          <p className="text-label-sm opacity-60">A</p>
-                          <p className="font-label-bold text-secondary">{player.assists}</p>
+                        <div className="relative z-10 flex gap-4 border-t border-outline-variant/20 pt-2">
+                          <div>
+                            <p className="text-label-sm opacity-60">P</p>
+                            <p className="font-label-bold text-primary">{player.matchesPlayed}</p>
+                          </div>
+                          <div>
+                            <p className="text-label-sm opacity-60">G</p>
+                            <p className="font-label-bold text-primary">{player.goals}</p>
+                          </div>
+                          <div>
+                            <p className="text-label-sm opacity-60">A</p>
+                            <p className="font-label-bold text-secondary">{player.assists}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </section>
-            </>
+                    );
+                  })}
+                </section>
+              </>
             )}
 
             {/* Main Ranking Table */}
