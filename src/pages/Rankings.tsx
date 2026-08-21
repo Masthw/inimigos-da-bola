@@ -290,7 +290,7 @@ export default function Rankings() {
                               key={player.id}
                               className={`hover:bg-surface-container-highest/50 transition-colors group ${isCurrent ? "bg-primary-container/5" : ""}`}
                             >
-                              <td className={`px-4 py-3 font-label-bold text-center ${getPositionTextColor(rank)}`}>
+                              <td className="px-4 py-3 font-label-bold text-center text-primary">
                                 {rank.toString().padStart(2, "0")}
                               </td>
                               <td className="px-4 py-3">
