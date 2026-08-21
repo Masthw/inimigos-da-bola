@@ -21,7 +21,5 @@ export const protectedRoutes = (
     <Route path="/matches" element={<Matches />} />
     <Route path="/tactics" element={<Tactics />} />
     <Route path="/rankings" element={<Rankings />} />
-    <Route path="/history" element={<div className="p-8 text-on-surface">History — Em construção</div>} />
-    <Route path="/stats" element={<div className="p-8 text-on-surface">Player Stats — Em construção</div>} />
   </Route>
 )

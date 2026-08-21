@@ -4,6 +4,7 @@ import { AppShell } from '../components/ui/AppShell'
 import { Avatar } from '../components/ui/Avatar'
 import { ConquistasCarousel } from '../components/ui/ConquistasCarousel'
 import { MaterialIcon } from '../components/ui/MaterialIcon'
+import { FavoritePositionsModal } from '../components/profile/FavoritePositionsModal'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { useUserRank } from '../hooks/useUserRank'
 import { usePlayerMatchHistory, type HistoryMatch, type HistoryPlayer } from '../hooks/usePlayerMatchHistory'
@@ -129,6 +130,7 @@ export default function Profile() {
   const { rank } = useUserRank(userId)
   const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId)
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null)
+  const [showPositionsModal, setShowPositionsModal] = useState(false)
 
   const totalMatches = matches.length
   const totalGoals = matches.reduce((sum, match) => sum + match.goals, 0)
@@ -166,6 +168,13 @@ export default function Profile() {
     <AppShell>
       <header className="flex items-center px-margin-mobile md:px-margin-desktop w-full h-16 border-b border-outline-variant">
         <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase">Perfil do Jogador</h2>
+        <button
+          type="button"
+          onClick={() => setShowPositionsModal(true)}
+          className="ml-4 px-3 py-1.5 bg-surface-variant text-on-surface font-mono text-[10px] border border-outline-variant active:bg-surface-container-high transition-colors rounded-lg"
+        >
+          Posições Favoritas
+        </button>
       </header>
 
       <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop pt-8 space-y-12">
@@ -273,6 +282,7 @@ export default function Profile() {
           </div>
         </section>
       </div>
+      <FavoritePositionsModal open={showPositionsModal} onClose={() => setShowPositionsModal(false)} />
     </AppShell>
   )
 }

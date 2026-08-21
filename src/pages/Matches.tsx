@@ -459,9 +459,8 @@ export default function Matches() {
                     onConfirm={() => handleConfirm(featured)}
                     onDesist={() => handleDesist(featured)}
                     onCancel={() => setCancelModalMatch(featured)}
-                    onStart={() => setStartModalMatch(featured)}
-                    onRefresh={refetch}
-                  />
+                     onStart={() => setStartModalMatch(featured)}
+                   />
                 )}
 
                 {upcoming.length > 0 && (

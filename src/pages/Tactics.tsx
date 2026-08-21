@@ -26,6 +26,20 @@ const POSITION_LABELS: Record<string, string> = Object.fromEntries([
   ...POSITIONS_SOCIETY.filter((p) => !POSITIONS_FUTSAL.some((f) => f.id === p.id)).map((p) => [p.id, p.label]),
 ]) as Record<string, string>;
 
+const DB_POSITION_TO_LOCAL: Record<string, PositionId> = {
+  "Pivô": "pivo",
+  "Ala Esquerdo": "ala_e",
+  "Ala Esq.": "ala_e",
+  "Ala Direito": "ala_d",
+  "Ala Dir.": "ala_d",
+  "Fixo": "fixo",
+  "Goleiro": "gol",
+  "Meia Esquerdo": "meia_e",
+  "Meia Esq.": "meia_e",
+  "Meia Direito": "meia_d",
+  "Meia Dir.": "meia_d",
+};
+
 interface Player {
   id: string;
   name: string;
@@ -286,6 +300,7 @@ export default function Tactics() {
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<Player[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [userFavoritePosition, setUserFavoritePosition] = useState<PositionId | null>(null);
 
   const courtType = nextMatch?.sportName?.toLowerCase().includes("society") ? "society" : "futsal";
   const activePositions = courtType === "futsal" ? POSITIONS_FUTSAL : POSITIONS_SOCIETY;
@@ -349,7 +364,60 @@ export default function Tactics() {
     };
   }, [nextMatch, isConfirmed]);
 
+  useEffect(() => {
+    if (!user?.id || !nextMatch?.id) return;
+
+    let cancelled = false;
+
+    async function loadFavoritePosition() {
+      const { data, error } = await supabase
+        .from("user_favorite_positions")
+        .select("position_id, is_primary, positions(name)")
+        .eq("user_id", user.id)
+        .order("is_primary", { ascending: false });
+
+      if (cancelled) return;
+
+      if (error || !data || data.length === 0) {
+        setUserFavoritePosition(null);
+        return;
+      }
+
+      const primary = data.find((row) => row.is_primary) ?? data[0];
+      const positionName = primary.positions?.name;
+
+      if (positionName && DB_POSITION_TO_LOCAL[positionName]) {
+        const localId = DB_POSITION_TO_LOCAL[positionName];
+        if (activePositions.some((p) => p.id === localId)) {
+          setUserFavoritePosition(localId);
+        } else {
+          setUserFavoritePosition(null);
+        }
+      } else {
+        setUserFavoritePosition(null);
+      }
+    }
+
+    loadFavoritePosition();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, nextMatch?.id, activePositions]);
+
   const currentUserId = user?.id;
+
+  useEffect(() => {
+    if (!userFavoritePosition || !currentUserId) return;
+
+    setPlayers((prev) => {
+      const me = prev.find((p) => p.id === currentUserId);
+      if (me && me.position !== null) return prev;
+      return prev.map((p) =>
+        p.id === currentUserId ? { ...p, position: userFavoritePosition } : p
+      );
+    });
+  }, [userFavoritePosition, currentUserId]);
 
   const selectPosition = (posId: PositionId) => {
     if (!currentUserId) return;
