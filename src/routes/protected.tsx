@@ -8,6 +8,7 @@ import Matches from '../pages/Matches'
 import MatchLive from '../pages/MatchLive'
 import MatchReview from '../pages/MatchReview'
 import VoteMatch from '../pages/VoteMatch'
+import Rankings from '../pages/Rankings'
 
 export const protectedRoutes = (
   <Route element={<ProtectedRoute />}>
@@ -19,7 +20,7 @@ export const protectedRoutes = (
     <Route path="/matches/:matchId" element={<MatchLive />} />
     <Route path="/matches" element={<Matches />} />
     <Route path="/tactics" element={<Tactics />} />
-    <Route path="/rankings" element={<div className="p-8 text-on-surface">League Table — Em construção</div>} />
+    <Route path="/rankings" element={<Rankings />} />
     <Route path="/history" element={<div className="p-8 text-on-surface">History — Em construção</div>} />
     <Route path="/stats" element={<div className="p-8 text-on-surface">Player Stats — Em construção</div>} />
   </Route>
