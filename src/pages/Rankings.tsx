@@ -151,17 +151,24 @@ export default function Rankings() {
   }, [user, useMock]);
 
   const getPositionColor = (pos: number) => {
-    if (pos === 1) return "border-tertiary bg-surface-container-highest";
-    if (pos === 2) return "border-secondary-container bg-surface-container";
-    if (pos === 3) return "border-outline-variant bg-surface-container-low";
-    return "border-outline-variant/30 bg-surface-container-low";
+    if (pos === 1) return "border-tertiary/60";
+    if (pos === 2) return "border-secondary/60";
+    if (pos === 3) return "border-outline-variant";
+    return "border-outline-variant/30";
   };
 
-  const getPositionTextColor = (pos: number) => {
-    if (pos === 1) return "text-tertiary";
-    if (pos === 2) return "text-secondary";
-    if (pos === 3) return "text-on-surface-variant";
-    return "text-primary";
+  const getPositionBadge = (pos: number) => {
+    if (pos === 1) return { label: "LEADER", className: "bg-tertiary text-on-tertiary" };
+    if (pos === 2) return { label: "RANK #2", className: "bg-secondary text-on-secondary" };
+    if (pos === 3) return { label: "RANK #3", className: "bg-outline-variant text-on-surface" };
+    return { label: `#${pos}`, className: "bg-primary text-on-primary" };
+  };
+
+  const getRankAccent = (pos: number) => {
+    if (pos === 1) return "from-tertiary/20 to-transparent";
+    if (pos === 2) return "from-secondary/20 to-transparent";
+    if (pos === 3) return "from-outline-variant/30 to-transparent";
+    return "from-surface-variant/10 to-transparent";
   };
 
   return (
@@ -184,17 +191,27 @@ export default function Rankings() {
               <section className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-stack-lg">
                 {entries.slice(0, 3).map((player, index) => {
                   const pos = index + 1;
+                  const badge = getPositionBadge(pos);
+                  const accent = getRankAccent(pos);
                   return (
                     <div
                       key={player.id}
-                      className={`${getPositionColor(pos)} p-stack-md rounded-xl border-l-4 flex flex-col justify-between h-48 relative overflow-hidden group ${
-                        pos === 1 ? "md:order-2 md:h-56 shadow-2xl" : ""
+                      className={`${getPositionColor(pos)} p-stack-md rounded-xl border flex flex-col justify-between h-48 relative overflow-hidden group ${
+                        pos === 1 ? "md:order-2 md:h-56 shadow-2xl shadow-tertiary/10" : ""
                       } ${pos === 2 ? "md:order-1" : ""} ${pos === 3 ? "md:order-3" : ""}`}
                     >
+                      <div className={`absolute inset-0 bg-gradient-to-br ${accent} pointer-events-none`} />
+
+                      <div className="absolute top-[-30px] right-[-20px] opacity-[0.07] group-hover:opacity-[0.12] transition-opacity pointer-events-none">
+                        <span className="font-display-lg text-[140px] leading-none font-black text-on-background">
+                          #{pos}
+                        </span>
+                      </div>
+
                       <div className="relative z-10">
                         <div className="flex justify-between items-start">
-                          <span className="px-3 py-1 text-label-bold rounded-sm bg-primary text-on-primary">
-                            #{pos}
+                          <span className={`px-3 py-1 text-label-bold rounded-sm ${badge.className}`}>
+                            {badge.label}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 mt-4">
