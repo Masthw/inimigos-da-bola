@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { MaterialIcon } from '../components/ui/MaterialIcon'
-import { useFavoritePositions, type Position } from '../hooks/useFavoritePositions'
+import { MaterialIcon } from '../../components/ui/MaterialIcon'
+import { useFavoritePositions, type Position } from '../../hooks/useFavoritePositions'
 
 interface FavoritePositionsModalProps {
   open: boolean
