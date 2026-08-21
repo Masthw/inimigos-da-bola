@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { supabase } from "../lib/supabaseClient";
@@ -19,19 +19,36 @@ interface PlayerRank {
   isCurrentUser: boolean;
 }
 
-type FilterPeriod = "monthly" | "yearly" | "all";
+const MOCK_PLAYERS: PlayerRank[] = [
+  { id: "p1", name: "Marcus King", avatarUrl: null, points: 34, matchesPlayed: 12, wins: 8, draws: 2, losses: 2, goals: 18, assists: 7, badges: ["Craque", "Goleador"], isCurrentUser: false },
+  { id: "p2", name: "Bruno Silva", avatarUrl: null, points: 29, matchesPlayed: 12, wins: 7, draws: 3, losses: 2, goals: 5, assists: 9, badges: ["Garçom"], isCurrentUser: false },
+  { id: "p3", name: "Felipe Costa", avatarUrl: null, points: 24, matchesPlayed: 10, wins: 6, draws: 2, losses: 2, goals: 14, assists: 4, badges: ["Craque"], isCurrentUser: false },
+  { id: "p4", name: "Lucas Mendes", avatarUrl: null, points: 21, matchesPlayed: 11, wins: 5, draws: 3, losses: 3, goals: 3, assists: 6, badges: [], isCurrentUser: false },
+  { id: "p5", name: "Tiago Porto", avatarUrl: null, points: 19, matchesPlayed: 9, wins: 4, draws: 2, losses: 3, goals: 8, assists: 2, badges: ["Goleador"], isCurrentUser: false },
+  { id: "p6", name: "André Santos", avatarUrl: null, points: 16, matchesPlayed: 8, wins: 3, draws: 2, losses: 3, goals: 2, assists: 5, badges: [], isCurrentUser: false },
+  { id: "p7", name: "Rodrigo Gomes", avatarUrl: null, points: 14, matchesPlayed: 7, wins: 2, draws: 1, losses: 4, goals: 1, assists: 3, badges: [], isCurrentUser: false },
+  { id: "p8", name: "Pedro Lima", avatarUrl: null, points: 11, matchesPlayed: 6, wins: 1, draws: 2, losses: 3, goals: 0, assists: 2, badges: [], isCurrentUser: false },
+  { id: "p9", name: "Você", avatarUrl: null, points: 27, matchesPlayed: 11, wins: 7, draws: 2, losses: 2, goals: 12, assists: 5, badges: ["Craque", "Garçom"], isCurrentUser: true },
+];
 
 export default function Rankings() {
   const { user } = useAuth();
-  const [period, setPeriod] = useState<FilterPeriod>("all");
   const [entries, setEntries] = useState<PlayerRank[]>([]);
   const [loading, setLoading] = useState(true);
+  const [useMock, setUseMock] = useState(false);
 
   useEffect(() => {
+    if (useMock) {
+      setEntries(MOCK_PLAYERS);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
+    let loadingTimer: number | undefined;
 
     async function load() {
-      setLoading(true);
+      loadingTimer = window.setTimeout(() => setLoading(true), 0);
 
       const [{ data: users }, { data: leaderboard }, { data: matchPlayers }, { data: awards }] = await Promise.all([
         supabase.from("users").select("id, name, avatar_url").is("deleted_at", null),
@@ -129,10 +146,9 @@ export default function Rankings() {
 
     return () => {
       cancelled = true;
+      if (loadingTimer) window.clearTimeout(loadingTimer);
     };
-  }, [user]);
-
-  const top3 = useMemo(() => entries.slice(0, 3), [entries]);
+  }, [user, useMock]);
 
   const getPositionColor = (pos: number) => {
     if (pos === 1) return "border-tertiary bg-surface-container-highest";
@@ -148,76 +164,38 @@ export default function Rankings() {
     return "text-primary";
   };
 
-  const getWinRate = (player: PlayerRank) => {
-    if (player.matchesPlayed === 0) return "0%";
-    return Math.round((player.wins / player.matchesPlayed) * 100) + "%";
-  };
-
   return (
     <AppShell>
       <div className="min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
           <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">Rankings & Estatísticas</h2>
+          <button
+            type="button"
+            onClick={() => setUseMock((v) => !v)}
+            className="px-3 py-1.5 bg-surface-variant text-on-surface font-mono text-[10px] border border-outline-variant active:bg-surface-container-high transition-colors rounded-lg"
+          >
+            {useMock ? "Dados Reais" : "Mock"}
+          </button>
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 md:px-margin-desktop py-6">
           <div className="max-w-5xl mx-auto">
-            {/* Filter Tabs */}
-            <div className="flex bg-surface-container-high p-1 rounded-xl border border-outline-variant/30 w-fit mb-stack-lg">
-              {[
-                { key: "monthly", label: "Mensal" },
-                { key: "yearly", label: "Anual" },
-                { key: "all", label: "Geral" },
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setPeriod(tab.key as FilterPeriod)}
-                  className={`px-6 py-2 rounded-lg font-label-bold text-label-bold transition-all ${
-                    period === tab.key
-                      ? "bg-primary-container text-on-primary-container shadow-sm"
-                      : "text-on-surface-variant hover:bg-surface-variant/50"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Podium Top 3 */}
-            {!loading && top3.length > 0 && (
+            {!loading && entries.length > 0 && (
               <section className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-stack-lg">
-                {top3.map((player, index) => {
+                {entries.slice(0, 3).map((player, index) => {
                   const pos = index + 1;
-                  const isTop1 = pos === 1;
                   return (
                     <div
                       key={player.id}
                       className={`${getPositionColor(pos)} p-stack-md rounded-xl border-l-4 flex flex-col justify-between h-48 relative overflow-hidden group ${
-                        isTop1 ? "md:order-2 md:h-56 shadow-2xl" : ""
+                        pos === 1 ? "md:order-2 md:h-56 shadow-2xl" : ""
                       } ${pos === 2 ? "md:order-1" : ""} ${pos === 3 ? "md:order-3" : ""}`}
                     >
-                      <div className="absolute top-[-20px] right-[-20px] opacity-10 group-hover:opacity-20 transition-opacity">
-                        <span className="material-symbols-outlined text-[120px]" data-icon={pos === 1 ? "emoji_events" : pos === 2 ? "looks_two" : "looks_3"}>
-                          {pos === 1 ? "emoji_events" : pos === 2 ? "looks_two" : "looks_3"}
-                        </span>
-                      </div>
-
                       <div className="relative z-10">
                         <div className="flex justify-between items-start">
-                          <span
-                            className={`px-3 py-1 text-label-bold rounded-sm ${
-                              pos === 1
-                                ? "bg-tertiary text-on-tertiary"
-                                : pos === 2
-                                  ? "bg-secondary text-on-secondary"
-                                  : "bg-tertiary-container text-on-tertiary-container"
-                            }`}
-                          >
-                            {pos === 1 ? "LEADER" : `RANK #${pos}`}
+                          <span className="px-3 py-1 text-label-bold rounded-sm bg-primary text-on-primary">
+                            #{pos}
                           </span>
-                          {pos === 1 && <MaterialIcon name="stars" className="text-tertiary-fixed-dim fill-icon" />}
-                          {pos === 2 && <MaterialIcon name="trending_up" className="text-secondary" />}
-                          {pos === 3 && <MaterialIcon name="remove" className="text-on-surface-variant" />}
                         </div>
                         <div className="flex items-center gap-3 mt-4">
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-variant border-2 border-transparent group-hover:border-primary/50 transition-all shrink-0">
@@ -245,11 +223,6 @@ export default function Rankings() {
                         <div>
                           <p className="text-label-sm opacity-60">A</p>
                           <p className="font-label-bold text-secondary">{player.assists}</p>
-                        </div>
-                        <div className="ml-auto flex items-center gap-1">
-                          {player.badges.slice(0, 2).map((badge) => (
-                            <MaterialIcon key={badge} name="stars" className="text-tertiary text-sm" title={badge} />
-                          ))}
                         </div>
                       </div>
                     </div>
@@ -294,7 +267,6 @@ export default function Rankings() {
                         {entries.map((player, index) => {
                           const rank = index + 1;
                           const isCurrent = player.isCurrentUser;
-                          const winRate = getWinRate(player);
 
                           return (
                             <tr
@@ -315,18 +287,15 @@ export default function Rankings() {
                                       </div>
                                     )}
                                   </div>
-                                  <div className="min-w-0">
-                                    <p className="font-label-bold truncate">{player.name}</p>
-                                    <p className="text-[10px] text-on-surface-variant uppercase">Win Rate {winRate}</p>
-                                  </div>
+                                  <span className="font-label-bold truncate">{player.name}</span>
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-center font-label-bold">{player.matchesPlayed}</td>
                               <td className="px-4 py-3 text-center font-label-bold text-primary">{player.goals}</td>
                               <td className="px-4 py-3 text-center font-label-bold text-secondary">{player.assists}</td>
-                              <td className="px-4 py-3 text-center font-label-bold text-success">{player.wins}</td>
-                              <td className="px-4 py-3 text-center font-label-bold text-on-surface-variant">{player.draws}</td>
-                              <td className="px-4 py-3 text-center font-label-bold text-error">{player.losses}</td>
+                              <td className="px-4 py-3 text-center font-label-bold text-on-surface">{player.wins}</td>
+                              <td className="px-4 py-3 text-center font-label-bold text-on-surface">{player.draws}</td>
+                              <td className="px-4 py-3 text-center font-label-bold text-on-surface-variant">{player.losses}</td>
                               <td className="px-4 py-3">
                                 <div className="flex gap-1 flex-wrap">
                                   {player.badges.slice(0, 3).map((badge) => (
@@ -346,36 +315,8 @@ export default function Rankings() {
                       </tbody>
                     </table>
                   </div>
-
-                  <div className="p-4 bg-surface-container-low border-t border-outline-variant flex flex-col sm:flex-row justify-between items-center gap-3">
-                    <span className="text-label-sm text-on-surface-variant">Mostrando {entries.length} de {entries.length} jogadores</span>
-                    <div className="flex gap-2">
-                      <button className="p-2 hover:bg-surface-variant rounded transition-colors" disabled>
-                        <span className="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span>
-                      </button>
-                      <button className="p-2 hover:bg-surface-variant rounded transition-colors" disabled>
-                        <span className="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
-                      </button>
-                    </div>
-                  </div>
                 </>
               )}
-            </section>
-
-            {/* Stats Legend */}
-            <section className="mt-stack-lg flex flex-wrap gap-stack-md">
-              <div className="flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/30">
-                <span className="material-symbols-outlined text-tertiary-fixed-dim text-sm fill-icon" data-icon="local_fire_department">local_fire_department</span>
-                <span className="text-label-sm uppercase font-label-bold">Streak Holder</span>
-              </div>
-              <div className="flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/30">
-                <span className="material-symbols-outlined text-primary text-sm fill-icon" data-icon="sports_soccer">sports_soccer</span>
-                <span className="text-label-sm uppercase font-label-bold">Golden Boot</span>
-              </div>
-              <div className="flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/30">
-                <span className="material-symbols-outlined text-secondary text-sm fill-icon" data-icon="shield">shield</span>
-                <span className="text-label-sm uppercase font-label-bold">Iron Wall</span>
-              </div>
             </section>
           </div>
         </div>
