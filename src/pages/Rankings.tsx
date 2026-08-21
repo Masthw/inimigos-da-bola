@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { supabase } from "../lib/supabaseClient";
@@ -19,6 +20,7 @@ interface PlayerRank {
   isCurrentUser: boolean;
 }
 
+const getFirstName = (name: string) => name.trim().split(" ")[0] ?? name;
 
 export default function Rankings() {
   const { user } = useAuth();
@@ -156,7 +158,6 @@ export default function Rankings() {
       <div className="min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
           <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">Rankings & Estatísticas</h2>
-
         </header>
 
         <div className="flex-1 overflow-y-auto px-4 md:px-margin-desktop py-6">
@@ -187,24 +188,28 @@ export default function Rankings() {
                         <div className={`absolute inset-0 bg-linear-to-br ${accent} pointer-events-none`} />
                         {pos === 1 && (
                           <>
-                            {/* Máscara que cria o rastro de luz giratório apenas na borda */}
+                            {/* Máscara que cria o rastro de luz giratório */}
                             <div
                               className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden z-10"
                               style={{
-                                padding: "2px", // Aqui você controla a grossura da linha brilhante
+                                padding: "2px",
                                 WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
                                 WebkitMaskComposite: "xor",
                                 maskComposite: "exclude",
                               }}
                             >
-                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(transparent_70%,currentColor_100%)] text-tertiary" />
+                              {/* 1. Tempo alterado para 5s e blur-[2px] adicionado para suavizar */}
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250%] h-[250%] animate-[spin_5s_linear_infinite] blur-[2px]">
+                                {/* 2. Gradiente repensado para ter uma transição muito mais suave na cauda e na ponta */}
+                                <div className="w-full h-full bg-[conic-gradient(transparent_40%,currentColor_85%,transparent_100%)] text-tertiary" />
+                              </div>
                             </div>
 
-                            {/* Glow (sombra brilhante) pulsante ao redor do card */}
-                            <div className="absolute inset-0 rounded-xl shadow-[0_0_20px_currentColor] text-tertiary opacity-30 animate-pulse pointer-events-none" />
+                            {/* Glow pulsante levemente mais sutil */}
+                            <div className="absolute inset-0 rounded-xl shadow-[0_0_15px_currentColor] text-tertiary opacity-20 animate-pulse pointer-events-none" />
 
-                            {/* Borda de base suave para dar acabamento quando a luz não estiver passando */}
-                            <div className="absolute inset-0 rounded-xl border border-tertiary/20 pointer-events-none" />
+                            {/* Borda de base mais discreta */}
+                            <div className="absolute inset-0 rounded-xl border border-tertiary/10 pointer-events-none" />
                           </>
                         )}
 
@@ -267,13 +272,12 @@ export default function Rankings() {
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto no-scrollbar">
+                  {/* Desktop Table */}
+                  <div className="hidden md:block overflow-x-auto no-scrollbar">
                     <table className="w-full text-left border-collapse">
                       <thead className="bg-surface-container-high border-b border-outline-variant">
                         <tr>
-                          <th className="px-4 py-3 font-label-bold text-label-sm text-on-surface-variant uppercase tracking-wider w-16 text-center">
-                            #
-                          </th>
+                          <th className="px-4 py-3 font-label-bold text-label-sm text-on-surface-variant uppercase tracking-wider w-16 text-center">#</th>
                           <th className="px-4 py-3 font-label-bold text-label-sm text-on-surface-variant uppercase tracking-wider">Jogador</th>
                           <th className="px-4 py-3 font-label-bold text-label-sm text-on-surface-variant uppercase tracking-wider text-center">P</th>
                           <th className="px-4 py-3 font-label-bold text-label-sm text-on-surface-variant uppercase tracking-wider text-center">G</th>
@@ -296,15 +300,10 @@ export default function Rankings() {
                             >
                               <td className="px-4 py-3 font-label-bold text-center text-primary">{rank.toString().padStart(2, "0")}</td>
                               <td className="px-4 py-3">
-                                <div className="flex items-center gap-3">
+                                <Link to={`/profile/${player.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                                   <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-variant border-2 border-transparent group-hover:border-primary/50 transition-all shrink-0">
                                     {player.avatarUrl ? (
-                                      <img
-                                        className="w-full h-full object-cover"
-                                        src={player.avatarUrl}
-                                        alt={player.name}
-                                        referrerPolicy="no-referrer"
-                                      />
+                                      <img className="w-full h-full object-cover" src={player.avatarUrl} alt={player.name} referrerPolicy="no-referrer" />
                                     ) : (
                                       <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
                                         <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
@@ -312,7 +311,7 @@ export default function Rankings() {
                                     )}
                                   </div>
                                   <span className="font-label-bold truncate">{player.name}</span>
-                                </div>
+                                </Link>
                               </td>
                               <td className="px-4 py-3 text-center font-label-bold">{player.matchesPlayed}</td>
                               <td className="px-4 py-3 text-center font-label-bold text-primary">{player.goals}</td>
@@ -328,6 +327,28 @@ export default function Rankings() {
                         })}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Mobile List */}
+                  <div className="md:hidden divide-y divide-outline-variant/10">
+                    {entries.map((player, index) => {
+                      const rank = index + 1;
+                      const isCurrent = player.isCurrentUser;
+
+                      return (
+                        <Link
+                          key={player.id}
+                          to={`/profile/${player.id}`}
+                          className={`flex items-center justify-between px-4 py-3 hover:bg-surface-container-highest/50 transition-colors ${isCurrent ? "bg-primary-container/5" : ""}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="font-label-bold text-primary w-8 text-center">{rank.toString().padStart(2, "0")}</span>
+                            <span className="font-label-bold truncate">{getFirstName(player.name)}</span>
+                          </div>
+                          <span className={`font-label-bold ${isCurrent ? "text-tertiary" : "text-on-surface-variant"}`}>{player.points}</span>
+                        </Link>
+                      );
+                    })}
                   </div>
                 </>
               )}
