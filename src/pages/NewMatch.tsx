@@ -8,6 +8,7 @@ import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { TimePicker } from "../components/ui/TimePicker";
 import { useAuth } from "../hooks/useAuth";
 import { useIsAdmin } from "../hooks/useIsAdmin";
+import { useActiveGroup } from "../hooks/useActiveGroup";
 import { supabase } from "../lib/supabaseClient";
 
 interface GameType {
@@ -25,6 +26,7 @@ const labelClass = "label-bold text-on-surface-variant uppercase tracking-wider"
 export default function NewMatch() {
   const { user } = useAuth();
   const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { activeGroupId } = useActiveGroup();
   const navigate = useNavigate();
 
   const [gameTypes, setGameTypes] = useState<GameType[]>([]);
@@ -110,6 +112,7 @@ export default function NewMatch() {
       status: "open",
       team_a_name: teamAName.trim() || null,
       team_b_name: teamBName.trim() || null,
+      group_id: activeGroupId,
     });
 
     setSubmitting(false);

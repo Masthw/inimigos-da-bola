@@ -1,9 +1,11 @@
 import { useAuth } from './useAuth'
 import { usePlayerStats } from './usePlayerStats'
+import { useActiveGroup } from './useActiveGroup'
 
 export function useHomeDashboard() {
   const { user } = useAuth()
-  const { stats, loading } = usePlayerStats(user?.id ?? null)
+  const { activeGroupId } = useActiveGroup()
+  const { stats, loading } = usePlayerStats(user?.id ?? null, activeGroupId)
 
   let winRateValue = '—'
   

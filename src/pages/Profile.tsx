@@ -8,6 +8,7 @@ import { FavoritePositionsModal } from "../components/profile/FavoritePositionsM
 import { useUserProfile } from "../hooks/useUserProfile";
 import { useUserRank } from "../hooks/useUserRank";
 import { usePlayerMatchHistory, type HistoryMatch, type HistoryPlayer } from "../hooks/usePlayerMatchHistory";
+import { useActiveGroup } from "../hooks/useActiveGroup";
 import { getFirstName } from "../lib/profile";
 import { PHOTOS } from "../lib/courts";
 import { AWARD_BADGES, getAwardMeta } from "../lib/awards";
@@ -161,8 +162,9 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: HistoryMatch
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const { name, avatarUrl, loading } = useUserProfile(userId);
-  const { rank } = useUserRank(userId);
-  const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId);
+  const { activeGroupId } = useActiveGroup();
+  const { rank } = useUserRank(userId, activeGroupId);
+  const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId, activeGroupId);
 
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [showPositionsModal, setShowPositionsModal] = useState(false);

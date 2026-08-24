@@ -26,14 +26,14 @@ Deno.serve(async (req) => {
       .update({ status: 'finished' })
       .eq('id', matchId)
       .neq('status', 'finished')
-      .select('id');
+      .select('id, game_type_id');
 
     if (claimError) throw claimError;
     if (!claimed || claimed.length === 0) {
       return jsonResponse({ success: true, alreadyProcessed: true }, 200, headers);
     }
 
-    await tallyMatch(adminClient, matchId);
+    await tallyMatch(adminClient, matchId, claimed[0].game_type_id);
 
     return jsonResponse({ success: true }, 200, headers);
   } catch (error) {
@@ -49,9 +49,17 @@ Deno.serve(async (req) => {
   }
 });
 
-async function tallyMatch(adminClient: SupabaseClient, matchId: string): Promise<void> {
-  // 1. Buscar os awards disponíveis
-  const { data: awards, error: awardsError } = await adminClient.from('awards').select('*');
+async function tallyMatch(
+  adminClient: SupabaseClient,
+  matchId: string,
+  gameTypeId: number,
+): Promise<void> {
+  // 1. Buscar os awards da modalidade da partida (junction award_game_types;
+  //    !inner já filtra — um prêmio pode valer para várias modalidades)
+  const { data: awards, error: awardsError } = await adminClient
+    .from('awards')
+    .select('*, award_game_types!inner(game_type_id)')
+    .eq('award_game_types.game_type_id', gameTypeId);
   if (awardsError) throw awardsError;
 
   // 2. Buscar os jogadores e seus status na partida (gols e assistências)

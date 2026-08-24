@@ -114,7 +114,7 @@ function countUserAwards(rows: AwardRow[], userId: string): Record<string, numbe
   return counts
 }
 
-export function usePlayerMatchHistory(userId: string | undefined) {
+export function usePlayerMatchHistory(userId: string | undefined, groupId: string | null = null) {
   const [matches, setMatches] = useState<HistoryMatch[]>([])
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(false)
@@ -127,18 +127,23 @@ export function usePlayerMatchHistory(userId: string | undefined) {
     async function load() {
       setLoading(true)
 
-      const [{ data: matchesData }, { data: userRows }] = await Promise.all([
-        supabase
-          .from('matches')
-          .select('id, date_time, team_a_name, team_a_score, team_b_name, team_b_score, game_types(name)')
-          .eq('status', 'finished')
-          .is('deleted_at', null)
-          .order('date_time', { ascending: false }),
-        supabase
-          .from('match_players')
-          .select('match_id, goals_scored, assists, team')
-          .eq('user_id', id),
-      ])
+      const matchQuery = supabase
+        .from('matches')
+        .select('id, date_time, team_a_name, team_a_score, team_b_name, team_b_score, game_types(name)')
+        .eq('status', 'finished')
+        .is('deleted_at', null)
+        .order('date_time', { ascending: false })
+
+      if (groupId) {
+        matchQuery.eq('group_id', groupId)
+      }
+
+      const { data: matchesData } = await matchQuery
+
+      const { data: userRows } = await supabase
+        .from('match_players')
+        .select('match_id, goals_scored, assists, team')
+        .eq('user_id', id)
 
       if (cancelled) return
 
@@ -206,7 +211,7 @@ export function usePlayerMatchHistory(userId: string | undefined) {
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [userId, groupId])
 
   return { matches, badgeCounts, loading }
 }

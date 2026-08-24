@@ -17,7 +17,7 @@ const EMPTY_STATS: PlayerStats = {
   winRate: null,
 };
 
-export function usePlayerStats(userId: string | null) {
+export function usePlayerStats(userId: string | null, groupId: string | null = null) {
   const [stats, setStats] = useState<PlayerStats>(EMPTY_STATS);
   const [loaded, setLoaded] = useState(false);
 
@@ -30,23 +30,29 @@ export function usePlayerStats(userId: string | null) {
     async function load() {
       setLoaded(false);
 
-      const { data } = await supabase
+      const matchQuery = supabase
         .from("match_players")
         .select(
-          "goals_scored, assists, team, matches!inner(status, team_a_score, team_b_score)",
+          "goals_scored, assists, team, matches!inner(status, team_a_score, team_b_score, group_id)",
         )
         .eq("user_id", id);
+
+      if (groupId) {
+        matchQuery.eq("matches.group_id", groupId);
+      }
+
+      const { data } = await matchQuery;
 
       if (cancelled) return;
 
       const rows = data ?? [];
-      const finished = rows.filter((row) => row.matches.status === "finished");
+      const finished = rows.filter((row) => (row.matches as { status: string }).status === "finished");
 
       const goals = rows.reduce((acc, row) => acc + (row.goals_scored ?? 0), 0);
       const assists = rows.reduce((acc, row) => acc + (row.assists ?? 0), 0);
 
       const wins = finished.filter((row) => {
-        const match = row.matches;
+        const match = row.matches as { team_a_score: number | null; team_b_score: number | null };
         if (match.team_a_score === null || match.team_b_score === null) {
           return false;
         }
@@ -83,7 +89,7 @@ export function usePlayerStats(userId: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, groupId]);
 
   return { stats, loading: userId !== null && !loaded };
 }

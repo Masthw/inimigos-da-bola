@@ -9,6 +9,7 @@ import { FinishedMatchCard } from "../components/match/FinishedMatchCard";
 import { useMatches, type MatchWithMeta, type MatchPlayer, type PlayerStatus } from "../hooks/useMatches";
 import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useIsAdmin } from "../hooks/useIsAdmin";
+import { useActiveGroup } from "../hooks/useActiveGroup";
 import { getCourtPhotos } from "../lib/courts";
 
 const PT_BR = "pt-BR";
@@ -371,7 +372,8 @@ function UpcomingRow({
 }
 
 export default function Matches() {
-  const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } = useMatches();
+  const { activeGroupId } = useActiveGroup();
+  const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } = useMatches(activeGroupId);
   const { isAdmin } = useIsAdmin();
   const { busy: liveBusy, startMatch, addGoal, addOwnGoal, finishMatch } = useLiveMatch();
   const [cancelModalMatch, setCancelModalMatch] = useState<MatchWithMeta | null>(null);

@@ -105,7 +105,6 @@ export function FinishedMatchCard({
 
   return (
     <div className="bg-surface-container hover:bg-surface-container-high transition-colors border border-outline-variant rounded-xl p-4">
-      {/* Linter super satisfeito: Elemento interativo nativo cobrindo a área clicável */}
       <button
         type="button"
         onClick={onToggle}

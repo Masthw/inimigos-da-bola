@@ -194,16 +194,22 @@ async function fetchFinishedMatchDetails(finishedMatchIds: string[]) {
 
 // BUSCA PRINCIPAL
 
-async function fetchMatchesData(userId: string | null) {
+async function fetchMatchesData(userId: string | null, groupId: string | null) {
+  const matchesQuery = supabase
+    .from("matches")
+    .select(
+      "id, date_time, location, status, max_players, max_waitlist, team_a_name, team_b_name, team_a_score, team_b_score, team_a_color, team_b_color, organizer_id, game_types(name, sports(name))",
+    )
+    .is("deleted_at", null)
+    .neq("status", "cancelled")
+    .order("date_time", { ascending: true });
+
+  if (groupId) {
+    matchesQuery.eq("group_id", groupId);
+  }
+
   const [matchesResult, playersResult] = await Promise.all([
-    supabase
-      .from("matches")
-      .select(
-        "id, date_time, location, status, max_players, max_waitlist, team_a_name, team_b_name, team_a_score, team_b_score, team_a_color, team_b_color, organizer_id, game_types(name, sports(name))",
-      )
-      .is("deleted_at", null)
-      .neq("status", "cancelled")
-      .order("date_time", { ascending: true }),
+    matchesQuery,
     supabase.from("match_players").select(
       "match_id, status, user_id, guest_name, team, users(name, avatar_url)",
     ),
@@ -266,7 +272,7 @@ const EMPTY_GROUPS: MatchGroups = {
 
 // HOOK
 
-export function useMatches() {
+export function useMatches(groupId: string | null = null) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -319,12 +325,12 @@ export function useMatches() {
   );
 
   const refetch = useCallback(() => {
-    fetchMatchesData(userId)
+    fetchMatchesData(userId, groupId)
       .then(applyData)
       .catch((error) => {
         console.error("Erro ao buscar partidas:", error);
       });
-  }, [userId, applyData]);
+  }, [userId, groupId, applyData]);
 
   useEffect(() => {
     refetch();

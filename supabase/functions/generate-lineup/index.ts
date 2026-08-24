@@ -23,12 +23,17 @@ interface FavPositionRow {
   user_id: string;
   position_id: number;
   is_primary: boolean;
-  positions: { code: string; name: string } | { code: string; name: string }[] | null;
+  positions: { code: string; name: string; game_type_id: number } | { code: string; name: string; game_type_id: number }[] | null;
 }
 
 interface LeaderboardRow {
   user_id: string;
   points: number;
+}
+
+interface GameTypeRow {
+  id: number;
+  default_max_players: number;
 }
 
 // 2. HELPERS
@@ -50,7 +55,38 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 // 3. BUSCA DE DADOS
 
-async function getDraftData(adminClient: SupabaseClient, matchId: string): Promise<PlayerData[]> {
+async function getGameType(adminClient: SupabaseClient, matchId: string): Promise<GameTypeRow> {
+  const { data: matchData, error: matchError } = await adminClient
+    .from('matches')
+    .select('game_type_id')
+    .eq('id', matchId)
+    .single();
+
+  if (matchError) throw matchError;
+
+  const { data: gameType, error: gameTypeError } = await adminClient
+    .from('game_types')
+    .select('id, default_max_players')
+    .eq('id', (matchData as { game_type_id: number }).game_type_id)
+    .single();
+
+  if (gameTypeError) throw gameTypeError;
+
+  return gameType as GameTypeRow;
+}
+
+async function getValidPositionIds(adminClient: SupabaseClient, gameTypeId: number): Promise<Set<number>> {
+  const { data: positions, error } = await adminClient
+    .from('positions')
+    .select('id')
+    .eq('game_type_id', gameTypeId);
+
+  if (error) throw error;
+
+  return new Set((positions ?? []).map((p) => p.id));
+}
+
+async function getDraftData(adminClient: SupabaseClient, matchId: string): Promise<{ players: PlayerData[]; teamSize: number }> {
   const { data: matchPlayers, error: playersError } = await adminClient
     .from('match_players')
     .select('user_id, team, goals_scored, assists, users(name)')
@@ -68,7 +104,7 @@ async function getDraftData(adminClient: SupabaseClient, matchId: string): Promi
 
   const { data: favPositions, error: favError } = await adminClient
     .from('user_favorite_positions')
-    .select('user_id, position_id, is_primary, positions(code, name)')
+    .select('user_id, position_id, is_primary, positions(code, name, game_type_id)')
     .in('user_id', userIds)
     .overrideTypes<FavPositionRow[]>();
 
@@ -76,11 +112,15 @@ async function getDraftData(adminClient: SupabaseClient, matchId: string): Promi
 
   const { data: matchData, error: matchError } = await adminClient
     .from('matches')
-    .select('group_id, date_time')
+    .select('group_id, date_time, game_type_id')
     .eq('id', matchId)
     .single();
 
   if (matchError) throw matchError;
+
+  const gameType = await getGameType(adminClient, matchId);
+  const validPositionIds = await getValidPositionIds(adminClient, gameType.id);
+  const teamSize = Math.max(1, Math.floor((gameType.default_max_players || 5) / 2));
 
   let rankMap = new Map<string, number>();
 
@@ -109,11 +149,16 @@ async function getDraftData(adminClient: SupabaseClient, matchId: string): Promi
     }
   }
 
-  return matchPlayers.map((p) => {
-    const fav = favPositions?.find((fp) => fp.user_id === p.user_id);
+  const players = matchPlayers.map((p) => {
+    const userFavs = (favPositions ?? []).filter((fp) => fp.user_id === p.user_id);
+    const primaryFav = userFavs.find((fp) => fp.is_primary);
+    const fallbackFav = userFavs[0];
+    const fav = primaryFav ?? fallbackFav;
 
     const favPosition = Array.isArray(fav?.positions) ? fav?.positions[0] : fav?.positions;
-    const positionName = favPosition?.code || 'MF';
+    const positionCode = favPosition?.code && fav && validPositionIds.has(fav.position_id)
+      ? favPosition.code
+      : 'MF';
 
     const rawUser = Array.isArray(p.users) ? p.users[0] : p.users;
     const points = rankMap.get(p.user_id) || 0;
@@ -121,16 +166,25 @@ async function getDraftData(adminClient: SupabaseClient, matchId: string): Promi
     return {
       userId: p.user_id,
       name: rawUser?.name || 'Jogador',
-      position: positionName,
+      position: positionCode,
       points,
-      isGoalkeeper: positionName === 'GK',
+      isGoalkeeper: positionCode === 'GK',
     };
   });
+
+  return { players, teamSize };
 }
 
 // 4. LÓGICA DE SORTEIO
 
-function distributeTeams(players: PlayerData[]) {
+interface DraftResult {
+  teamA: PlayerData[];
+  teamB: PlayerData[];
+  subs: PlayerData[];
+  totalPlayers: number;
+}
+
+function distributeTeams(players: PlayerData[], teamSize: number): DraftResult {
   const goalkeepers = players.filter((p) => p.isGoalkeeper);
   const fieldPlayers = players.filter((p) => !p.isGoalkeeper);
 
@@ -155,18 +209,74 @@ function distributeTeams(players: PlayerData[]) {
     }
   }
 
+  const maxTeam = Math.max(teamSize, 1);
   const subs: PlayerData[] = [];
-  while (teamA.length > 5) {
+
+  while (teamA.length > maxTeam) {
     subs.push(teamA.pop()!);
   }
-  while (teamB.length > 5) {
+  while (teamB.length > maxTeam) {
     subs.push(teamB.pop()!);
+  }
+
+  const diff = teamA.length - teamB.length;
+  if (diff > 1 && subs.length >= diff) {
+    for (let i = 0; i < diff - 1; i++) {
+      const moved = teamA.pop()!;
+      subs.push(moved);
+      teamB.push(moved);
+    }
+  } else if (diff < -1 && subs.length >= -diff) {
+    for (let i = 0; i < -diff - 1; i++) {
+      const moved = teamB.pop()!;
+      subs.push(moved);
+      teamA.push(moved);
+    }
   }
 
   return { teamA, teamB, subs, totalPlayers: players.length };
 }
 
-// 5. FUNÇÃO PRINCIPAL
+// 5. PERSISTÊNCIA
+
+async function persistDraft(adminClient: SupabaseClient, matchId: string, draft: DraftResult): Promise<void> {
+  const updates = [
+    ...draft.teamA.map((p) =>
+      adminClient
+        .from('match_players')
+        .update({ team: 'A' })
+        .eq('match_id', matchId)
+        .eq('user_id', p.userId)
+        .eq('status', 'confirmed'),
+    ),
+    ...draft.teamB.map((p) =>
+      adminClient
+        .from('match_players')
+        .update({ team: 'B' })
+        .eq('match_id', matchId)
+        .eq('user_id', p.userId)
+        .eq('status', 'confirmed'),
+    ),
+    ...draft.subs.map((p) =>
+      adminClient
+        .from('match_players')
+        .update({ team: null })
+        .eq('match_id', matchId)
+        .eq('user_id', p.userId)
+        .eq('status', 'confirmed'),
+    ),
+  ];
+
+  const results = await Promise.all(updates);
+
+  for (const res of results) {
+    if (res.error) {
+      console.error('Erro ao atualizar time do jogador:', res.error);
+    }
+  }
+}
+
+// 6. FUNÇÃO PRINCIPAL
 
 Deno.serve(async (req: Request) => {
   const headers = corsHeaders(req);
@@ -180,8 +290,10 @@ Deno.serve(async (req: Request) => {
       throw new FunctionError(400, 'matchId é obrigatório');
     }
 
-    const players = await getDraftData(adminClient, matchId);
-    const draftResult = distributeTeams(players);
+    const { players, teamSize } = await getDraftData(adminClient, matchId);
+    const draftResult = distributeTeams(players, teamSize);
+
+    await persistDraft(adminClient, matchId, draftResult);
 
     const formatTeam = (team: PlayerData[]) =>
       team.map((p) => ({
@@ -197,6 +309,7 @@ Deno.serve(async (req: Request) => {
         teamB: formatTeam(draftResult.teamB),
         subs: formatTeam(draftResult.subs),
         totalPlayers: draftResult.totalPlayers,
+        teamSize,
       },
       200,
       headers,

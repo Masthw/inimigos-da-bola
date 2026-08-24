@@ -11,6 +11,7 @@ export interface NextMatchData {
   location: string;
   sportName: string | null;
   myStatus: "confirmed" | "waitlist" | "cancelled" | null;
+  groupId: string | null;
 }
 
 const PT_BR = "pt-BR";
@@ -41,20 +42,24 @@ interface MatchRow {
   location: string;
   team_a_name: string | null;
   team_b_name: string | null;
+  group_id: string | null;
   game_types: { name: string | null; sport_id: number | null; sports: { name: string | null } | null } | null;
 }
 
-async function fetchNextMatch(userId: string | null): Promise<NextMatchData | null> {
+async function fetchNextMatch(userId: string | null, groupId: string | null): Promise<NextMatchData | null> {
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
+  const baseQuery = supabase
     .from("matches")
-    .select("id, date_time, location, team_a_name, team_b_name, game_types(name, sport_id, sports(name))")
+    .select("id, date_time, location, team_a_name, team_b_name, group_id, game_types(name, sport_id, sports(name))")
     .eq("status", "open")
     .gte("date_time", now)
     .order("date_time", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  const { data, error } = await (groupId
+    ? baseQuery.eq("group_id", groupId).maybeSingle()
+    : baseQuery.maybeSingle());
 
   if (error) throw error;
   if (!data) return null;
@@ -83,10 +88,11 @@ async function fetchNextMatch(userId: string | null): Promise<NextMatchData | nu
     location: row.location,
     sportName,
     myStatus,
+    groupId: row.group_id,
   };
 }
 
-export function useNextMatch() {
+export function useNextMatch(groupId: string | null = null) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -96,7 +102,7 @@ export function useNextMatch() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchNextMatch(userId)
+    fetchNextMatch(userId, groupId)
       .then((data) => {
         if (cancelled) return;
         setMatch(data);
@@ -111,14 +117,14 @@ export function useNextMatch() {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, groupId]);
 
   useEffect(() => {
     let cancelled = false;
 
     const refetch = async () => {
       try {
-        const data = await fetchNextMatch(userId);
+        const data = await fetchNextMatch(userId, groupId);
         if (cancelled) return;
         setMatch(data);
         setLoading(false);
@@ -137,7 +143,7 @@ export function useNextMatch() {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, groupId]);
 
   return { match, loading };
 }
