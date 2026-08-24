@@ -1,126 +1,126 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AppShell } from '../components/ui/AppShell'
-import { Button } from '../components/ui/Button'
-import { Dropdown } from '../components/ui/Dropdown'
-import { InputField } from '../components/ui/InputField'
-import { MaterialIcon } from '../components/ui/MaterialIcon'
-import { TimePicker } from '../components/ui/TimePicker'
-import { useAuth } from '../hooks/useAuth'
-import { useIsAdmin } from '../hooks/useIsAdmin'
-import { supabase } from '../lib/supabaseClient'
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AppShell } from "../components/ui/AppShell";
+import { Button } from "../components/ui/Button";
+import { Dropdown } from "../components/ui/Dropdown";
+import { InputField } from "../components/ui/InputField";
+import { MaterialIcon } from "../components/ui/MaterialIcon";
+import { TimePicker } from "../components/ui/TimePicker";
+import { useAuth } from "../hooks/useAuth";
+import { useIsAdmin } from "../hooks/useIsAdmin";
+import { supabase } from "../lib/supabaseClient";
 
 interface GameType {
-  id: number
-  name: string
-  default_max_players: number
-  default_max_waitlist: number
+  id: number;
+  name: string;
+  default_max_players: number;
+  default_max_waitlist: number;
 }
 
 const inputClass =
-  'flex items-center gap-3 px-4 py-3 bg-surface-container-high border border-outline-variant focus-within:border-primary transition-colors'
+  "flex items-center gap-3 px-4 py-3 bg-surface-container-high border border-outline-variant focus-within:border-primary transition-colors";
 
-const labelClass = 'label-bold text-on-surface-variant uppercase tracking-wider'
+const labelClass = "label-bold text-on-surface-variant uppercase tracking-wider";
 
 export default function NewMatch() {
-  const { user } = useAuth()
-  const { isAdmin, loading: adminLoading } = useIsAdmin()
-  const navigate = useNavigate()
+  const { user } = useAuth();
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const navigate = useNavigate();
 
-  const [gameTypes, setGameTypes] = useState<GameType[]>([])
-  const [gameTypeId, setGameTypeId] = useState('')
-  const [date, setDate] = useState('')
-  const [timeHour, setTimeHour] = useState('')
-  const [timeMinute, setTimeMinute] = useState('')
-  const [location, setLocation] = useState('')
-  const [maxPlayers, setMaxPlayers] = useState('12')
-  const [maxWaitlist, setMaxWaitlist] = useState('2')
-  const [teamAName, setTeamAName] = useState('')
-  const [teamBName, setTeamBName] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [gameTypes, setGameTypes] = useState<GameType[]>([]);
+  const [gameTypeId, setGameTypeId] = useState("");
+  const [date, setDate] = useState("");
+  const [timeHour, setTimeHour] = useState("");
+  const [timeMinute, setTimeMinute] = useState("");
+  const [location, setLocation] = useState("");
+  const [maxPlayers, setMaxPlayers] = useState("12");
+  const [maxWaitlist, setMaxWaitlist] = useState("2");
+  const [teamAName, setTeamAName] = useState("");
+  const [teamBName, setTeamBName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     supabase
-      .from('game_types')
-      .select('id, name, default_max_players, default_max_waitlist')
-      .order('name')
+      .from("game_types")
+      .select("id, name, default_max_players, default_max_waitlist")
+      .order("name")
       .then(({ data, error: loadError }) => {
-        if (cancelled || loadError || !data) return
-        setGameTypes(data)
+        if (cancelled || loadError || !data) return;
+        setGameTypes(data);
         if (data.length > 0) {
-          const first = data[0]
-          setGameTypeId(String(first.id))
-          setMaxPlayers(String(first.default_max_players))
-          setMaxWaitlist(String(first.default_max_waitlist))
+          const first = data[0];
+          setGameTypeId(String(first.id));
+          setMaxPlayers(String(first.default_max_players));
+          setMaxWaitlist(String(first.default_max_waitlist));
         }
-      })
+      });
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   function handleGameTypeChange(value: string) {
-    setGameTypeId(value)
-    const selected = gameTypes.find((gameType) => String(gameType.id) === value)
+    setGameTypeId(value);
+    const selected = gameTypes.find((gameType) => String(gameType.id) === value);
     if (selected) {
-      setMaxPlayers(String(selected.default_max_players))
-      setMaxWaitlist(String(selected.default_max_waitlist))
+      setMaxPlayers(String(selected.default_max_players));
+      setMaxWaitlist(String(selected.default_max_waitlist));
     }
   }
 
   async function handleSubmit() {
-    setError(null)
+    setError(null);
 
     if (!gameTypeId) {
-      setError('Selecione o tipo de jogo')
-      return
+      setError("Selecione o tipo de jogo");
+      return;
     }
     if (!date) {
-      setError('Informe a data da partida')
-      return
+      setError("Informe a data da partida");
+      return;
     }
     if (!timeHour || !timeMinute) {
-      setError('Informe o horário da partida')
-      return
+      setError("Informe o horário da partida");
+      return;
     }
     if (!location.trim()) {
-      setError('Informe o local da partida')
-      return
+      setError("Informe o local da partida");
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
 
-    const dateTimeLocal = new Date(`${date}T${timeHour}:${timeMinute}`)
+    const dateTimeLocal = new Date(`${date}T${timeHour}:${timeMinute}`);
     if (Number.isNaN(dateTimeLocal.getTime())) {
-      setError('Data ou hora inválidas')
-      return
+      setError("Data ou hora inválidas");
+      return;
     }
 
-    const { error: insertError } = await supabase.from('matches').insert({
+    const { error: insertError } = await supabase.from("matches").insert({
       date_time: dateTimeLocal.toISOString(),
       location: location.trim(),
       game_type_id: Number(gameTypeId),
       max_players: Math.max(1, Number(maxPlayers) || 10),
       max_waitlist: Math.max(0, Number(maxWaitlist) || 0),
-      organizer_id: user?.id ?? '',
-      status: 'open',
+      organizer_id: user?.id ?? "",
+      status: "open",
       team_a_name: teamAName.trim() || null,
       team_b_name: teamBName.trim() || null,
-    })
+    });
 
-    setSubmitting(false)
+    setSubmitting(false);
 
     if (insertError) {
-      console.error('Erro ao criar partida:', insertError)
-      setError(insertError.message)
-      return
+      console.error("Erro ao criar partida:", insertError);
+      setError(insertError.message);
+      return;
     }
 
-    navigate('/')
+    navigate("/");
   }
 
   if (adminLoading) {
@@ -131,7 +131,7 @@ export default function NewMatch() {
           <div className="h-96 bg-surface-variant animate-pulse rounded-2xl" />
         </div>
       </AppShell>
-    )
+    );
   }
 
   if (!isAdmin) {
@@ -143,7 +143,7 @@ export default function NewMatch() {
           <p className="font-mono text-label-sm text-on-surface-variant">Apenas administradores podem criar partidas.</p>
         </div>
       </AppShell>
-    )
+    );
   }
 
   return (
@@ -188,7 +188,7 @@ export default function NewMatch() {
                     type="date"
                     value={date}
                     onChange={(event) => setDate(event.target.value)}
-                    className="flex-1 bg-transparent text-on-surface font-body focus:outline-none [color-scheme:dark]"
+                    className="flex-1 bg-transparent text-on-surface font-body focus:outline-none scheme-dark"
                   />
                 </div>
               </div>
@@ -197,22 +197,11 @@ export default function NewMatch() {
                 <label className={labelClass} htmlFor="time">
                   Hora
                 </label>
-                <TimePicker
-                  hour={timeHour}
-                  minute={timeMinute}
-                  onHourChange={setTimeHour}
-                  onMinuteChange={setTimeMinute}
-                />
+                <TimePicker hour={timeHour} minute={timeMinute} onHourChange={setTimeHour} onMinuteChange={setTimeMinute} />
               </div>
             </div>
 
-            <InputField
-              label="Local"
-              icon="location_on"
-              placeholder="Ex.: Arena Futsal Centro"
-              value={location}
-              onChange={setLocation}
-            />
+            <InputField label="Local" icon="location_on" placeholder="Ex.: Arena Futsal Centro" value={location} onChange={setLocation} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
               <div className="flex flex-col gap-2">
@@ -231,7 +220,7 @@ export default function NewMatch() {
                   />
                 </div>
                 <span className="font-mono text-[10px] text-on-surface-variant">
-                  {Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : ''}
+                  {Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : ""}
                 </span>
               </div>
 
@@ -254,24 +243,10 @@ export default function NewMatch() {
             </div>
 
             <div className="border-t border-outline-variant/20 pt-6">
-              <p className="font-mono text-label-sm uppercase text-on-surface-variant tracking-widest mb-4">
-                Nomes dos Times (opcional)
-              </p>
+              <p className="font-mono text-label-sm uppercase text-on-surface-variant tracking-widest mb-4">Nomes dos Times (opcional)</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
-                <InputField
-                  label="Time A"
-                  icon="sports_soccer"
-                  placeholder="Ex.: Inimigos da Bola"
-                  value={teamAName}
-                  onChange={setTeamAName}
-                />
-                <InputField
-                  label="Time B"
-                  icon="sports_soccer"
-                  placeholder="Ex.: Grêmio"
-                  value={teamBName}
-                  onChange={setTeamBName}
-                />
+                <InputField label="Time A" icon="sports_soccer" placeholder="Ex.: Inimigos da Bola" value={teamAName} onChange={setTeamAName} />
+                <InputField label="Time B" icon="sports_soccer" placeholder="Ex.: Grêmio" value={teamBName} onChange={setTeamBName} />
               </div>
             </div>
 
@@ -282,18 +257,12 @@ export default function NewMatch() {
               </div>
             )}
 
-            <Button
-              variant="brand"
-              fullWidth
-              icon={submitting ? 'pending' : 'add_circle'}
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
-              {submitting ? 'Criando...' : 'Criar Partida'}
+            <Button variant="brand" fullWidth icon={submitting ? "pending" : "add_circle"} onClick={handleSubmit} disabled={submitting}>
+              {submitting ? "Criando..." : "Criar Partida"}
             </Button>
           </div>
         </div>
       </div>
     </AppShell>
-  )
+  );
 }

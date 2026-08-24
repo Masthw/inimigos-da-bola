@@ -27,13 +27,13 @@ const POSITION_LABELS: Record<string, string> = Object.fromEntries([
 ]) as Record<string, string>;
 
 const DB_POSITION_TO_LOCAL: Record<string, PositionId> = {
-  "Pivô": "pivo",
+  Pivô: "pivo",
   "Ala Esquerdo": "ala_e",
   "Ala Esq.": "ala_e",
   "Ala Direito": "ala_d",
   "Ala Dir.": "ala_d",
-  "Fixo": "fixo",
-  "Goleiro": "gol",
+  Fixo: "fixo",
+  Goleiro: "gol",
   "Meia Esquerdo": "meia_e",
   "Meia Esq.": "meia_e",
   "Meia Direito": "meia_d",
@@ -80,7 +80,7 @@ function TacticalNode({
   occupant,
   isMe,
   onSelect,
-}: {
+}: Readonly<{
   short: string;
   label: string;
   x: number;
@@ -89,7 +89,7 @@ function TacticalNode({
   occupant?: Player;
   isMe: boolean;
   onSelect: () => void;
-}) {
+}>) {
   const canSelect = !occupant || isMe;
 
   return (
@@ -120,7 +120,7 @@ function TacticalNode({
   );
 }
 
-function CourtMarkings({ horizontal }: { horizontal: boolean }) {
+function CourtMarkings({ horizontal }: Readonly<{ horizontal: boolean }>) {
   if (horizontal) {
     return (
       <svg viewBox="0 0 170 100" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 w-full h-full text-white" aria-hidden="true">
@@ -162,7 +162,7 @@ function CourtMarkings({ horizontal }: { horizontal: boolean }) {
   );
 }
 
-function PlayerRow({ player, isMe }: { player: Player; isMe: boolean }) {
+function PlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boolean }>) {
   return (
     <div
       className={`flex items-center justify-between px-2 py-2 rounded-lg transition-colors hover:bg-surface-variant/40 ${isMe ? "bg-primary-container/10" : ""}`}
@@ -191,7 +191,7 @@ function PlayerRow({ player, isMe }: { player: Player; isMe: boolean }) {
   );
 }
 
-function DesktopPlayerRow({ player, isMe }: { player: Player; isMe: boolean }) {
+function DesktopPlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boolean }>) {
   return (
     <div
       className={`grid grid-cols-[1fr_120px_90px] items-center gap-x-3 px-3 py-2 rounded-lg transition-colors hover:bg-surface-variant/40 ${isMe ? "bg-primary-container/10" : ""}`}
@@ -230,27 +230,25 @@ function TeamList({
   courtLabel,
   currentUserId,
   unconfirmedMessage,
-}: {
+}: Readonly<{
   players: Player[];
   match: { opponent: string; date: string; court: string };
   courtLabel: string;
   currentUserId: string | undefined;
   unconfirmedMessage?: string;
-}) {
+}>) {
   const starters = players.filter((p) => p.position !== null);
   const reserves = players.filter((p) => p.position === null);
   const ordered = [...starters, ...reserves];
 
   return (
-    <div className="w-full lg:max-w-none lg:w-[420px] lg:shrink-0 mt-6 lg:mt-0 self-start bg-surface-container-high rounded-xl border border-outline-variant/30 overflow-hidden">
+    <div className="w-full lg:max-w-none lg:w-105 lg:shrink-0 mt-6 lg:mt-0 self-start bg-surface-container-high rounded-xl border border-outline-variant/30 overflow-hidden">
       <div className="px-3 py-2.5 bg-surface-container-highest/50 border-b border-outline-variant/20">
         <p className="font-mono text-label-sm text-on-surface truncate">Escalação para {match.opponent}</p>
         <p className="font-mono text-[10px] text-on-surface-variant mt-0.5 truncate">
           {match.date} • {courtLabel}
         </p>
-        {unconfirmedMessage && (
-          <p className="font-mono text-[10px] text-tertiary mt-1 truncate">{unconfirmedMessage}</p>
-        )}
+        {unconfirmedMessage && <p className="font-mono text-[10px] text-tertiary mt-1 truncate">{unconfirmedMessage}</p>}
       </div>
 
       <div className="lg:hidden">
@@ -292,132 +290,96 @@ function TeamList({
   );
 }
 
-export default function Tactics() {
-  const { user } = useAuth();
-  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch();
-  const isDesktop = useIsDesktop();
+// HELPERS DE BUSCA & ESTADO
 
+async function fetchMatchData(matchId: string, userId?: string, activePositions: readonly { id: string }[] = []) {
+  const [playersRes, favoriteRes] = await Promise.all([
+    supabase.from("match_players").select("user_id, guest_name, team, users(name, avatar_url)").eq("match_id", matchId).eq("status", "confirmed"),
+
+    userId
+      ? supabase
+          .from("user_favorite_positions")
+          .select("position_id, is_primary, positions(name)")
+          .eq("user_id", userId)
+          .order("is_primary", { ascending: false })
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  if (playersRes.error) {
+    throw new Error("Erro ao carregar jogadores");
+  }
+
+  let favoritePosId: PositionId | null = null;
+  if (favoriteRes.data && favoriteRes.data.length > 0) {
+    const primary = favoriteRes.data.find((row) => row.is_primary) ?? favoriteRes.data[0];
+    const positionName = primary.positions?.name;
+
+    if (positionName && DB_POSITION_TO_LOCAL[positionName]) {
+      const localId = DB_POSITION_TO_LOCAL[positionName];
+      if (activePositions.some((p) => p.id === localId)) {
+        favoritePosId = localId;
+      }
+    }
+  }
+
+  return (playersRes.data ?? []).map((row) => {
+    const fullName = row.users?.name ?? row.guest_name ?? "Convidado";
+    const parts = fullName.trim().split(" ");
+    const initials = parts
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+    const isCurrentUser = row.user_id === userId;
+
+    return {
+      id: row.user_id ?? row.guest_name ?? "unknown",
+      name: fullName,
+      initials,
+      position: isCurrentUser ? favoritePosId : null,
+      favoritePosition: isCurrentUser ? favoritePosId : null,
+    };
+  });
+}
+
+function useTacticsBoard(
+  nextMatch: { id: string } | null | undefined,
+  currentUserId: string | undefined,
+  activePositions: readonly { id: string }[],
+  isConfirmed: boolean,
+) {
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<Player[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [userFavoritePosition, setUserFavoritePosition] = useState<PositionId | null>(null);
-
-  const courtType = nextMatch?.sportName?.toLowerCase().includes("society") ? "society" : "futsal";
-  const activePositions = courtType === "futsal" ? POSITIONS_FUTSAL : POSITIONS_SOCIETY;
-  const courtImage = courtType === "futsal" ? "/courts/futsal.jpg" : "/courts/society.jpg";
-
-  const matchInfo = nextMatch
-    ? {
-        opponent: nextMatch.title,
-        date: `${nextMatch.date} • ${nextMatch.time}`,
-        court: courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society",
-      }
-    : { opponent: "Escalação", date: "", court: courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society" };
-
-  const isConfirmed = !!nextMatch && nextMatch.myStatus === "confirmed";
 
   useEffect(() => {
-    if (!nextMatch || !isConfirmed) {
-      setLoading(false);
-      setPlayers([]);
-      return;
-    }
+    let isMounted = true;
 
-    let cancelled = false;
-
-    async function loadPlayers() {
-      const { data, error } = await supabase
-        .from("match_players")
-        .select("user_id, guest_name, team, users(name, avatar_url)")
-        .eq("match_id", nextMatch.id)
-        .eq("status", "confirmed");
-
-      if (cancelled) return;
-
-      if (error) {
-        setError("Erro ao carregar jogadores");
-        setLoading(false);
+    (async () => {
+      if (!nextMatch || !isConfirmed) {
+        if (isMounted) setLoading(false);
         return;
       }
 
-      const list: Player[] = (data ?? []).map((row) => {
-        const fullName = row.users?.name ?? row.guest_name ?? "Convidado";
-        const parts = fullName.trim().split(" ");
-        const initials = parts.map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-        return {
-          id: row.user_id ?? row.guest_name ?? "unknown",
-          name: fullName,
-          initials,
-          position: null,
-          favoritePosition: null,
-        };
-      });
-
-      setPlayers(list);
-      setLoading(false);
-    }
-
-    loadPlayers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [nextMatch, isConfirmed]);
-
-  useEffect(() => {
-    if (!user?.id || !nextMatch?.id) return;
-
-    let cancelled = false;
-
-    async function loadFavoritePosition() {
-      const { data, error } = await supabase
-        .from("user_favorite_positions")
-        .select("position_id, is_primary, positions(name)")
-        .eq("user_id", user.id)
-        .order("is_primary", { ascending: false });
-
-      if (cancelled) return;
-
-      if (error || !data || data.length === 0) {
-        setUserFavoritePosition(null);
-        return;
-      }
-
-      const primary = data.find((row) => row.is_primary) ?? data[0];
-      const positionName = primary.positions?.name;
-
-      if (positionName && DB_POSITION_TO_LOCAL[positionName]) {
-        const localId = DB_POSITION_TO_LOCAL[positionName];
-        if (activePositions.some((p) => p.id === localId)) {
-          setUserFavoritePosition(localId);
-        } else {
-          setUserFavoritePosition(null);
+      try {
+        const data = await fetchMatchData(nextMatch.id, currentUserId, activePositions);
+        if (isMounted) {
+          setPlayers(data);
+          setLoading(false);
         }
-      } else {
-        setUserFavoritePosition(null);
+      } catch (err: unknown) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
+          setLoading(false);
+        }
       }
-    }
-
-    loadFavoritePosition();
+    })();
 
     return () => {
-      cancelled = true;
+      isMounted = false;
     };
-  }, [user?.id, nextMatch?.id, activePositions]);
-
-  const currentUserId = user?.id;
-
-  useEffect(() => {
-    if (!userFavoritePosition || !currentUserId) return;
-
-    setPlayers((prev) => {
-      const me = prev.find((p) => p.id === currentUserId);
-      if (me && me.position !== null) return prev;
-      return prev.map((p) =>
-        p.id === currentUserId ? { ...p, position: userFavoritePosition } : p
-      );
-    });
-  }, [userFavoritePosition, currentUserId]);
+  }, [nextMatch, currentUserId, activePositions, isConfirmed]);
 
   const selectPosition = (posId: PositionId) => {
     if (!currentUserId) return;
@@ -428,40 +390,102 @@ export default function Tactics() {
     });
   };
 
-  const layoutPositions = isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: p.x })) : activePositions;
+  return { loading, players, error, selectPosition };
+}
 
-  if (nextMatchLoading || loading) {
-    return (
-      <AppShell>
-        <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
-          <div className="text-center">
-            <MaterialIcon name="pending" className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-            <p className="font-mono text-label-sm text-on-surface-variant">Carregando escalação...</p>
-          </div>
+// COMPONENTES DE ESTADO DA UI
+
+function TacticsLoading() {
+  return (
+    <AppShell>
+      <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
+        <div className="text-center">
+          <MaterialIcon name="pending" className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+          <p className="font-mono text-label-sm text-on-surface-variant">Carregando escalação...</p>
         </div>
-      </AppShell>
-    );
-  }
+      </div>
+    </AppShell>
+  );
+}
 
-  if (error) {
-    return (
-      <AppShell>
-        <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
-          <div className="text-center">
-            <MaterialIcon name="error" className="w-10 h-10 text-error mx-auto mb-4" />
-            <p className="font-mono text-label-bold text-on-surface">{error}</p>
+function TacticsError({ message }: Readonly<{ message: string }>) {
+  return (
+    <AppShell>
+      <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
+        <div className="text-center">
+          <MaterialIcon name="error" className="w-10 h-10 text-error mx-auto mb-4" />
+          <p className="font-mono text-label-bold text-on-surface">{message}</p>
+          <button
+            type="button"
+            onClick={() => (window.location.href = "/matches")}
+            className="mt-4 px-4 py-2 font-mono text-label-sm text-primary hover:bg-surface-variant transition-colors"
+          >
+            Voltar para partidas
+          </button>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+function TacticsUnconfirmed({ courtType, hasMatch }: Readonly<{ courtType: string; hasMatch: boolean }>) {
+  return (
+    <AppShell>
+      <div className="min-h-screen flex flex-col">
+        <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
+          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">
+            {courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society"}
+          </h2>
+        </header>
+        <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-8 px-4 md:px-margin-desktop py-6">
+          <div className="text-center p-4">
+            <MaterialIcon name="sports_soccer" className="w-16 h-16 text-on-surface-variant mx-auto mb-4 opacity-40" />
+            <p className="font-body-lg text-on-surface mb-2">{!hasMatch ? "Nenhuma partida em breve" : "Você ainda não confirmou presença"}</p>
+            <p className="font-body-md text-on-surface-variant mb-6">
+              {!hasMatch
+                ? "Confirme presença em um jogo para visualizar e montar a escalação tática."
+                : "Confirme sua presença na próxima partida para montar a escalação."}
+            </p>
             <button
               type="button"
               onClick={() => (window.location.href = "/matches")}
-              className="mt-4 px-4 py-2 font-mono text-label-sm text-primary hover:bg-surface-variant transition-colors"
+              className="px-6 py-3 bg-primary text-on-primary font-mono text-label-bold border border-outline-variant active:bg-primary/80 transition-colors"
             >
-              Voltar para partidas
+              Ver Partidas
             </button>
           </div>
         </div>
-      </AppShell>
-    );
-  }
+      </div>
+    </AppShell>
+  );
+}
+
+// COMPONENTE PRINCIPAL
+
+export default function Tactics() {
+  const { user } = useAuth();
+  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch();
+  const isDesktop = useIsDesktop();
+
+  const courtType = nextMatch?.sportName?.toLowerCase().includes("society") ? "society" : "futsal";
+  const activePositions = courtType === "futsal" ? POSITIONS_FUTSAL : POSITIONS_SOCIETY;
+  const currentUserId = user?.id;
+  const isConfirmed = !!nextMatch && nextMatch.myStatus === "confirmed";
+
+  const { loading, players, error, selectPosition } = useTacticsBoard(nextMatch, currentUserId, activePositions, isConfirmed);
+
+  if (nextMatchLoading || loading) return <TacticsLoading />;
+  if (error) return <TacticsError message={error} />;
+  if (!nextMatch || !isConfirmed) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
+
+  const courtImage = courtType === "futsal" ? "/courts/futsal.jpg" : "/courts/society.jpg";
+  const layoutPositions = isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: p.x })) : activePositions;
+
+  const matchInfo = {
+    opponent: nextMatch.title,
+    date: `${nextMatch.date} • ${nextMatch.time}`,
+    court: courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society",
+  };
 
   return (
     <AppShell>
@@ -474,54 +498,30 @@ export default function Tactics() {
 
         <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row items-center lg:items-start gap-6 lg:gap-8 px-4 md:px-margin-desktop py-6">
           <div
-            className={`relative w-full max-w-[340px] md:max-w-3xl lg:max-w-none lg:flex-1 bg-gradient-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
+            className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none lg:flex-1 bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
               isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"
             }`}
           >
-            {isConfirmed ? (
-              <>
-                <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                <CourtMarkings horizontal={isDesktop} />
-                {layoutPositions.map((pos) => {
-                  const occupant = players.find((p) => p.position === pos.id);
-                  return (
-                    <TacticalNode
-                      key={pos.id}
-                      id={pos.id}
-                      short={pos.short}
-                      label={pos.label}
-                      x={pos.x}
-                      y={pos.y}
-                      occupant={occupant}
-                      isMe={!!occupant && occupant.id === currentUserId}
-                      onSelect={() => selectPosition(pos.id)}
-                    />
-                  );
-                })}
-              </>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center p-4">
-                  <MaterialIcon name="sports_soccer" className="w-16 h-16 text-on-surface-variant mx-auto mb-4 opacity-40" />
-                  <p className="font-body-lg text-on-surface mb-2">
-                    {!nextMatch ? "Nenhuma partida em breve" : "Você ainda não confirmou presença"}
-                  </p>
-                  <p className="font-body-md text-on-surface-variant mb-6">
-                    {!nextMatch
-                      ? "Confirme presença em um jogo para visualizar e montar a escalação tática."
-                      : "Confirme sua presença na próxima partida para montar a escalação."}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => (window.location.href = "/matches")}
-                    className="px-6 py-3 bg-primary text-on-primary font-mono text-label-bold border border-outline-variant active:bg-primary/80 transition-colors"
-                  >
-                    Ver Partidas
-                  </button>
-                </div>
-              </div>
-            )}
+            <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+            <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+            <CourtMarkings horizontal={isDesktop} />
+
+            {layoutPositions.map((pos) => {
+              const occupant = players.find((p) => p.position === pos.id);
+              return (
+                <TacticalNode
+                  key={pos.id}
+                  id={pos.id}
+                  short={pos.short}
+                  label={pos.label}
+                  x={pos.x}
+                  y={pos.y}
+                  occupant={occupant}
+                  isMe={!!occupant && occupant.id === currentUserId}
+                  onSelect={() => selectPosition(pos.id)}
+                />
+              );
+            })}
           </div>
 
           <TeamList
@@ -529,7 +529,6 @@ export default function Tactics() {
             match={matchInfo}
             courtLabel={courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society"}
             currentUserId={currentUserId}
-            unconfirmedMessage={!isConfirmed && nextMatch ? "Você ainda não confirmou presença" : undefined}
           />
         </div>
       </div>

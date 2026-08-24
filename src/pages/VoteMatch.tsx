@@ -38,14 +38,19 @@ export default function VoteMatch() {
   }, [matchId, navigate]);
 
   useEffect(() => {
-    if (!loading && votingData) {
-      const now = new Date().getTime();
+    if (!loading && votingData && isAdmin) {
+      const now = Date.now();
       const endsAt = new Date(votingData.votingEndsAt).getTime();
+
       if (now > endsAt) {
-        handleEndVoting();
+        const timeoutId = setTimeout(() => {
+          handleEndVoting();
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
       }
     }
-  }, [loading, votingData, navigate, handleEndVoting]);
+  }, [loading, votingData, navigate, handleEndVoting, isAdmin]);
 
   const goalScorer = useMemo(() => {
     if (!votingData) return null;

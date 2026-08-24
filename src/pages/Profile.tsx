@@ -24,6 +24,34 @@ const OUTCOME_CLASSES: Record<string, { chip: string; score: string }> = {
   draw: { chip: "bg-slate-500 text-white", score: "text-on-surface" },
 };
 
+// HELPERS (Para reduzir a complexidade do componente principal)
+
+function calculateWinStreak(matches: HistoryMatch[]): number {
+  let streak = 0;
+  for (const match of matches) {
+    if (match.outcome === "victory") streak++;
+    else break;
+  }
+  return streak;
+}
+
+function buildBadgesList(badgeCounts: Record<string, number>) {
+  const normalizedBadgeCounts: Record<string, number> = {};
+  for (const [name, count] of Object.entries(badgeCounts)) {
+    const title = getAwardMeta(name).title;
+    normalizedBadgeCounts[title] = (normalizedBadgeCounts[title] ?? 0) + count;
+  }
+
+  return AWARD_BADGES.map((badge) => ({
+    icon: badge.icon,
+    title: badge.name,
+    count: normalizedBadgeCounts[badge.name] ?? 0,
+    className: badge.className,
+  })).filter((badge) => badge.count > 0);
+}
+
+// COMPONENTES MENORES
+
 function PlayerTable({ title, players }: Readonly<{ title: string; players: HistoryPlayer[] }>) {
   return (
     <div>
@@ -70,7 +98,12 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: HistoryMatch
 
   return (
     <div className="p-4 bg-surface-container-high rounded-xl border border-outline-variant/30  transition-colors">
-      <div role="button" tabIndex={0} onClick={onToggle} className="cursor-pointer select-none">
+      m{" "}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full text-left cursor-pointer select-none appearance-none bg-transparent border-none p-0 outline-none block"
+      >
         <div className="flex justify-between items-center gap-3 mb-2">
           <div className="flex items-center gap-2">
             <span className={`text-[10px] font-mono text-label-bold uppercase px-2 py-0.5 rounded ${outcome.chip}`}>
@@ -98,8 +131,7 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: HistoryMatch
 
           <MaterialIcon name={expanded ? "expand_less" : "expand_more"} className="w-5 h-5 text-on-surface shrink-0" />
         </div>
-      </div>
-
+      </button>
       {expanded && (
         <div className="mt-4 pt-4 border-t border-outline-variant/20 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-center">
@@ -124,48 +156,105 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: HistoryMatch
   );
 }
 
+// COMPONENTE PRINCIPAL
+
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const { name, avatarUrl, loading } = useUserProfile(userId);
   const { rank } = useUserRank(userId);
   const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId);
+
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [showPositionsModal, setShowPositionsModal] = useState(false);
 
+  // Cálculos
   const totalMatches = matches.length;
   const totalGoals = matches.reduce((sum, match) => sum + match.goals, 0);
   const totalAssists = matches.reduce((sum, match) => sum + match.assists, 0);
   const totalPoints = matches.reduce((sum, match) => sum + match.points, 0);
+
   const wins = matches.filter((match) => match.outcome === "victory").length;
-  let winStreak = 0;
-  for (const match of matches) {
-    if (match.outcome === "victory") winStreak++;
-    else break;
-  }
-  const formatAverage = (value: number) => (totalMatches > 0 ? (value / totalMatches).toFixed(1).replace(".", ",") : "0,0");
-  const winRate = totalMatches > 0 ? `${Math.round((wins / totalMatches) * 100)}%` : "—";
+  const winStreak = calculateWinStreak(matches);
+
+  const formatAverage = (value: number) => {
+    if (totalMatches === 0) return "0,0";
+    return (value / totalMatches).toFixed(1).replace(".", ",");
+  };
+
+  const getWinRate = () => {
+    if (totalMatches === 0) return "—";
+    return `${Math.round((wins / totalMatches) * 100)}%`;
+  };
+
+  const badges = buildBadgesList(badgeCounts);
+  const displayVal = (val: string | number) => (historyLoading ? "…" : String(val));
 
   const profileStats = [
-    { label: "Média de Gols", value: historyLoading ? "…" : formatAverage(totalGoals), className: "text-primary" },
-    { label: "Win Rate", value: historyLoading ? "…" : winRate, className: "text-secondary" },
-    { label: "Média de Assist.", value: historyLoading ? "…" : formatAverage(totalAssists), className: "text-tertiary" },
-    { label: "Gols", value: historyLoading ? "…" : String(totalGoals), className: "text-primary" },
-    { label: "Assistências", value: historyLoading ? "…" : String(totalAssists), className: "text-secondary" },
-    { label: "Pontos", value: historyLoading ? "…" : String(totalPoints), className: "text-tertiary" },
-    { label: "Vitórias Seguidas", value: historyLoading ? "…" : String(winStreak), className: "text-success" },
+    { label: "Média de Gols", value: displayVal(formatAverage(totalGoals)), className: "text-primary" },
+    { label: "Win Rate", value: displayVal(getWinRate()), className: "text-secondary" },
+    { label: "Média de Assist.", value: displayVal(formatAverage(totalAssists)), className: "text-tertiary" },
+    { label: "Gols", value: displayVal(totalGoals), className: "text-primary" },
+    { label: "Assistências", value: displayVal(totalAssists), className: "text-secondary" },
+    { label: "Pontos", value: displayVal(totalPoints), className: "text-tertiary" },
+    { label: "Vitórias Seguidas", value: displayVal(winStreak), className: "text-success" },
   ];
 
-  const normalizedBadgeCounts: Record<string, number> = {};
-  for (const [name, count] of Object.entries(badgeCounts)) {
-    const title = getAwardMeta(name).title;
-    normalizedBadgeCounts[title] = (normalizedBadgeCounts[title] ?? 0) + count;
-  }
-  const badges = AWARD_BADGES.map((badge) => ({
-    icon: badge.icon,
-    title: badge.name,
-    count: normalizedBadgeCounts[badge.name] ?? 0,
-    className: badge.className,
-  })).filter((badge) => badge.count > 0);
+  // RENDER HELPERS
+
+  const renderBadges = () => {
+    if (historyLoading) {
+      return (
+        <div className="flex gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-11 w-40 rounded-full bg-surface-variant animate-pulse" />
+          ))}
+        </div>
+      );
+    }
+
+    if (badges.length === 0) {
+      return (
+        <p className="font-mono text-label-sm text-on-surface-variant">Nenhuma conquista ainda — os prêmios aparecem aqui depois das partidas</p>
+      );
+    }
+
+    return <ConquistasCarousel badges={badges} />;
+  };
+
+  const renderHistory = () => {
+    if (historyLoading) {
+      return (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-20 bg-surface-variant animate-pulse rounded-xl" />
+          ))}
+        </div>
+      );
+    }
+
+    if (matches.length === 0) {
+      return (
+        <div className="p-8 text-center bg-surface-container-high rounded-xl border border-outline-variant/30">
+          <MaterialIcon name="history" className="w-8 h-8 text-on-surface-variant mx-auto mb-3" />
+          <p className="font-mono text-label-bold text-on-surface">Nenhuma partida finalizada ainda</p>
+          <p className="font-mono text-label-sm text-on-surface-variant mt-1">O histórico aparece depois que o jogador entrar em campo</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {matches.map((match, index) => (
+          <MatchCard
+            key={match.id}
+            match={match}
+            expanded={expandedMatch === index}
+            onToggle={() => setExpandedMatch(expandedMatch === index ? null : index)}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <AppShell>
@@ -207,19 +296,8 @@ export default function Profile() {
 
             <div className="mt-6 md:mt-8">
               <p className="font-mono text-label-sm uppercase text-on-surface tracking-widest mb-3">Conquistas</p>
-              {historyLoading ? (
-                <div className="flex gap-3">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="h-11 w-40 rounded-full bg-surface-variant animate-pulse" />
-                  ))}
-                </div>
-              ) : badges.length === 0 ? (
-                <p className="font-mono text-label-sm text-on-surface-variant">
-                  Nenhuma conquista ainda — os prêmios aparecem aqui depois das partidas
-                </p>
-              ) : (
-                <ConquistasCarousel badges={badges} />
-              )}
+              {/* O ternário confuso virou apenas isso: */}
+              {renderBadges()}
             </div>
           </div>
         </section>
@@ -244,6 +322,7 @@ export default function Profile() {
             </button>
           </div>
         </section>
+
         {/* Estatísticas */}
         <section>
           <div className="bg-surface-container rounded-2xl p-6 md:p-8 border border-outline-variant">
@@ -252,7 +331,7 @@ export default function Profile() {
               {profileStats.map((stat) => (
                 <div key={stat.label} className="bg-surface-container-high rounded-xl border border-outline-variant px-3 py-4 text-center">
                   <p className={`text-headline-md font-display leading-none ${stat.className}`}>{stat.value}</p>
-                  <p className="font-mono text-[10px] leading-tight break-words text-on-surface uppercase mt-2">{stat.label}</p>
+                  <p className="font-mono text-[10px] leading-tight wrap-break-word text-on-surface uppercase mt-2">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -267,30 +346,7 @@ export default function Profile() {
               <MaterialIcon name="history" className="w-5 h-5 text-primary" />
             </div>
 
-            {historyLoading ? (
-              <div className="space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-20 bg-surface-variant animate-pulse rounded-xl" />
-                ))}
-              </div>
-            ) : matches.length === 0 ? (
-              <div className="p-8 text-center bg-surface-container-high rounded-xl border border-outline-variant/30">
-                <MaterialIcon name="history" className="w-8 h-8 text-on-surface-variant mx-auto mb-3" />
-                <p className="font-mono text-label-bold text-on-surface">Nenhuma partida finalizada ainda</p>
-                <p className="font-mono text-label-sm text-on-surface-variant mt-1">O histórico aparece depois que o jogador entrar em campo</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {matches.map((match, index) => (
-                  <MatchCard
-                    key={match.id}
-                    match={match}
-                    expanded={expandedMatch === index}
-                    onToggle={() => setExpandedMatch(expandedMatch === index ? null : index)}
-                  />
-                ))}
-              </div>
-            )}
+            {renderHistory()}
           </div>
         </section>
       </div>

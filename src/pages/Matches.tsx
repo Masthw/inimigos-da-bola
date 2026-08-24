@@ -53,13 +53,13 @@ interface AttendanceButtonsProps {
 function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Readonly<AttendanceButtonsProps>) {
   const isFull = match.confirmedCount >= match.maxPlayers;
   const waitlistFull = match.waitlistCount >= match.maxWaitlist;
-  const buttonClass =
+  const buttonClassBase =
     "px-6 py-3 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2";
 
   if (myStatus === "confirmed") {
     return (
       <div className="flex flex-col sm:flex-row gap-3">
-        <button type="button" disabled className={`${buttonClass} bg-green-800 text-white cursor-not-allowed`}>
+        <button type="button" disabled className={`${buttonClassBase} bg-green-800 text-white cursor-not-allowed`}>
           <MaterialIcon name="verified" className="w-5 h-5" />
           PRESENÇA CONFIRMADA
         </button>
@@ -67,7 +67,7 @@ function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Reado
           type="button"
           disabled={busy}
           onClick={onDesist}
-          className={`${buttonClass} bg-error text-on-error ${busy ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`${buttonClassBase} bg-error text-on-error ${busy ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <MaterialIcon name="close" className="w-5 h-5" />
           DESISTIR
@@ -79,7 +79,7 @@ function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Reado
   if (myStatus === "waitlist") {
     return (
       <div className="flex flex-col sm:flex-row gap-3">
-        <button type="button" disabled className={`${buttonClass} bg-tertiary-container text-on-tertiary-container cursor-not-allowed`}>
+        <button type="button" disabled className={`${buttonClassBase} bg-tertiary-container text-on-tertiary-container cursor-not-allowed`}>
           <MaterialIcon name="pending" className="w-5 h-5" />
           NA LISTA DE ESPERA
         </button>
@@ -87,7 +87,7 @@ function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Reado
           type="button"
           disabled={busy}
           onClick={onDesist}
-          className={`${buttonClass} bg-error text-on-error ${busy ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`${buttonClassBase} bg-error text-on-error ${busy ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <MaterialIcon name="close" className="w-5 h-5" />
           DESISTIR
@@ -99,15 +99,26 @@ function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Reado
   const waiting = isFull || match.status === "in_progress";
   const confirmDisabled = busy || (waiting && waitlistFull);
 
+  let iconName = "check_circle";
+  let buttonText = "EU VOU!";
+
+  if (busy) {
+    iconName = "pending";
+    buttonText = "ENVIANDO...";
+  } else if (waiting) {
+    iconName = "schedule";
+    buttonText = isFull ? "ENTRAR NA ESPERA" : "CONFIRMAR";
+  }
+
   return (
     <button
       type="button"
       disabled={confirmDisabled}
       onClick={onConfirm}
-      className={`${buttonClass} bg-primary-container text-primary ${confirmDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      className={`${buttonClassBase} bg-primary-container text-primary ${confirmDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
-      <MaterialIcon name={busy ? "pending" : waiting ? "schedule" : "check_circle"} className="w-5 h-5" />
-      {busy ? "ENVIANDO..." : waiting ? (isFull ? "ENTRAR NA ESPERA" : "CONFIRMAR") : "EU VOU!"}
+      <MaterialIcon name={iconName} className="w-5 h-5" />
+      {buttonText}
     </button>
   );
 }
@@ -250,7 +261,6 @@ function FeaturedCard({
             </div>
           </div>
 
-          {/* Sem nested ternaries. Condicionais limpas! */}
           {match.status === "voting" && (
             <Link
               to={`/matches/${match.id}/vote`}
@@ -289,6 +299,21 @@ function UpcomingRow({
   const date = new Date(match.dateTime);
   const isFull = match.confirmedCount >= match.maxPlayers;
   const statusMeta = STATUS_META[match.status];
+
+  let iconName = "check_circle";
+  let buttonText = "CONFIRMAR";
+  let buttonBgClass = "bg-primary-container text-primary";
+
+  if (busy) {
+    iconName = "pending";
+    buttonText = "ENVIANDO...";
+  } else if (myStatus === "waitlist") {
+    buttonText = "NA ESPERA";
+  }
+
+  if (myStatus === "waitlist" || myStatus === "cancelled") {
+    buttonBgClass = "bg-surface-container-highest text-on-surface-variant border border-outline-variant";
+  }
 
   return (
     <div className="bg-surface-container hover:bg-surface-container-high transition-colors border border-outline-variant rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -334,14 +359,10 @@ function UpcomingRow({
             type="button"
             disabled={busy}
             onClick={onConfirm}
-            className={`w-full py-2.5 px-4 font-mono text-label-sm brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 ${
-              myStatus === "waitlist" || myStatus === "cancelled"
-                ? "bg-surface-container-highest text-on-surface-variant border border-outline-variant"
-                : "bg-primary-container text-primary"
-            }`}
+            className={`w-full py-2.5 px-4 font-mono text-label-sm brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 ${buttonBgClass}`}
           >
-            <MaterialIcon name={busy ? "pending" : "check_circle"} className="w-4 h-4" />
-            {busy ? "ENVIANDO..." : myStatus === "waitlist" ? "NA ESPERA" : "CONFIRMAR"}
+            <MaterialIcon name={iconName} className="w-4 h-4" />
+            {buttonText}
           </button>
         )}
       </div>
@@ -387,9 +408,9 @@ export default function Matches() {
     refetch();
   };
 
-  const handleOwnGoal = async (teamBenefited: string) => {
+  const handleOwnGoal = async (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => {
     if (!featured) return;
-    await addOwnGoal(featured.id, teamBenefited);
+    await addOwnGoal(featured.id, teamBenefited, scorerUserId, scorerTeam);
     refetch();
   };
 
@@ -415,7 +436,7 @@ export default function Matches() {
           onGoalScored={handleGoalScored}
           onOwnGoal={handleOwnGoal}
           onFinish={handleFinishMatch}
-          onRequestReview={() => {}} // A página principal não fará review, ela lida com a LiveMatch page para isso
+          onRequestReview={() => {}}
           busy={liveBusy}
         />
       ) : (
@@ -459,8 +480,8 @@ export default function Matches() {
                     onConfirm={() => handleConfirm(featured)}
                     onDesist={() => handleDesist(featured)}
                     onCancel={() => setCancelModalMatch(featured)}
-                     onStart={() => setStartModalMatch(featured)}
-                   />
+                    onStart={() => setStartModalMatch(featured)}
+                  />
                 )}
 
                 {upcoming.length > 0 && (

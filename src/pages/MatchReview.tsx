@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
@@ -13,19 +13,17 @@ export default function MatchReview() {
   const navigate = useNavigate();
   const { match, loading, saving, error, updateScore, startVoting, addGoal, addOwnGoal, removeGoal, removeAssist, removeOwnGoal, addAssistOnly } =
     useMatchReview(matchId);
-  const [editScore, setEditScore] = useState({ teamA: 0, teamB: 0 });
+
+  const [manualScore, setManualScore] = useState<{ teamA: number; teamB: number } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [sheetPhase, setSheetPhase] = useState<SheetPhase>("closed");
   const [selectedPlayer, setSelectedPlayer] = useState<MatchPlayer | null>(null);
 
-  useEffect(() => {
-    if (match) {
-      setEditScore({ teamA: match.teamAScore, teamB: match.teamBScore });
-    }
-  }, [match]);
+  const currentScoreA = manualScore?.teamA ?? match?.teamAScore ?? 0;
+  const currentScoreB = manualScore?.teamB ?? match?.teamBScore ?? 0;
 
   const handleStartVoting = async () => {
-    const scoreUpdated = await updateScore(editScore.teamA, editScore.teamB);
+    const scoreUpdated = await updateScore(currentScoreA, currentScoreB);
     if (!scoreUpdated) return;
 
     const votingStarted = await startVoting();
@@ -34,17 +32,20 @@ export default function MatchReview() {
     }
   };
 
-  const handlePlayerClick = (player: { userId: string; name: string; team: "A" | "B" }) => {
-    if (saving) return;
+  const handlePlayerClick = (player: { userId: string; name: string; team: string }) => {
+    if (saving || !player.userId) return;
+
     setSelectedPlayer({
       userId: player.userId,
       name: player.name,
       avatarUrl: null,
-      team: player.team,
+      team: player.team as "A" | "B",
     });
+
     const goalCount = match?.goals.filter((g) => g.playerId === player.userId).length ?? 0;
     const assistCount = match?.assists.filter((a) => a.assistPlayerId === player.userId).length ?? 0;
     const ownGoalCount = match?.ownGoals.filter((og) => og.playerId === player.userId).length ?? 0;
+
     if (goalCount > 0 || assistCount > 0 || ownGoalCount > 0) {
       setSheetPhase("manage");
     } else {
@@ -57,34 +58,35 @@ export default function MatchReview() {
   };
 
   const handleOwnGoal = async () => {
-    if (!selectedPlayer) return;
+    if (!selectedPlayer?.userId || !selectedPlayer.team) return;
     await addOwnGoal(selectedPlayer.userId, selectedPlayer.team);
     closeSheet();
   };
 
   const handleAddAssistOnly = async () => {
-    if (!selectedPlayer) return;
+    if (!selectedPlayer?.userId) return;
     await addAssistOnly(selectedPlayer.userId);
     closeSheet();
   };
 
   const handleRemoveGoal = async () => {
-    if (!selectedPlayer) return;
+    if (!selectedPlayer?.userId) return;
     await removeGoal(selectedPlayer.userId);
   };
 
   const handleRemoveAssist = async () => {
-    if (!selectedPlayer) return;
+    if (!selectedPlayer?.userId) return;
     await removeAssist(selectedPlayer.userId);
   };
 
   const handleRemoveOwnGoal = async () => {
-    if (!selectedPlayer) return;
+    if (!selectedPlayer?.userId) return;
     await removeOwnGoal(selectedPlayer.userId);
   };
 
+  // Tipagem ajustada para a assistência
   const handleAssistSelect = async (assist: { userId: string } | null) => {
-    if (!selectedPlayer) return;
+    if (!selectedPlayer?.userId || !selectedPlayer.team) return;
     await addGoal(selectedPlayer.userId, selectedPlayer.team, assist?.userId || null);
     closeSheet();
   };
@@ -164,8 +166,8 @@ export default function MatchReview() {
                 <input
                   type="number"
                   min={0}
-                  value={editScore.teamA}
-                  onChange={(e) => setEditScore((prev) => ({ ...prev, teamA: Number(e.target.value) }))}
+                  value={currentScoreA}
+                  onChange={(e) => setManualScore({ teamA: Number(e.target.value), teamB: currentScoreB })}
                   className="w-20 bg-surface-variant border border-outline-variant px-3 py-2 font-display text-headline-md text-on-surface text-center appearance-none"
                 />
               </div>
@@ -177,8 +179,8 @@ export default function MatchReview() {
                 <input
                   type="number"
                   min={0}
-                  value={editScore.teamB}
-                  onChange={(e) => setEditScore((prev) => ({ ...prev, teamB: Number(e.target.value) }))}
+                  value={currentScoreB}
+                  onChange={(e) => setManualScore({ teamA: currentScoreA, teamB: Number(e.target.value) })}
                   className="w-20 bg-surface-variant border border-outline-variant px-3 py-2 font-display text-headline-md text-on-surface text-center appearance-none"
                 />
               </div>
@@ -198,7 +200,9 @@ export default function MatchReview() {
               <div className="space-y-2">
                 {teamAGoals.map((goal) => (
                   <div key={goal.id} className="flex items-center gap-3 p-2 bg-surface-variant/50 rounded-lg">
-                    <MaterialIcon name="sports_soccer" className="w-4 h-4" style={{ color: match.teamAColor }} />
+                    <span style={{ color: match.teamAColor }} className="flex items-center">
+                      <MaterialIcon name="sports_soccer" className="w-4 h-4" />
+                    </span>
                     <span className="font-mono text-label-sm text-on-surface flex-1">{goal.playerName}</span>
                   </div>
                 ))}
@@ -219,7 +223,9 @@ export default function MatchReview() {
               <div className="space-y-2">
                 {teamBGoals.map((goal) => (
                   <div key={goal.id} className="flex items-center gap-3 p-2 bg-surface-variant/50 rounded-lg">
-                    <MaterialIcon name="sports_soccer" className="w-4 h-4" style={{ color: match.teamBColor }} />
+                    <span style={{ color: match.teamBColor }} className="flex items-center">
+                      <MaterialIcon name="sports_soccer" className="w-4 h-4" />
+                    </span>
                     <span className="font-mono text-label-sm text-on-surface flex-1">{goal.playerName}</span>
                   </div>
                 ))}
@@ -320,9 +326,9 @@ export default function MatchReview() {
                 Os jogadores poderão votar nos prêmios da partida por <strong className="text-on-surface">2 horas</strong>. O placar será atualizado
                 para{" "}
                 <strong className="text-on-surface">
-                  {editScore.teamA} x {editScore.teamB}
+                  {currentScoreA} x {currentScoreB}
                 </strong>
-                .
+                {""}.
               </p>
               <div className="flex gap-3">
                 <button
@@ -346,7 +352,14 @@ export default function MatchReview() {
         )}
       </div>
 
-      {sheetOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={closeSheet} />}
+      {sheetOpen && (
+        <button
+          type="button"
+          aria-label="Fechar painel"
+          className="fixed inset-0 w-full h-full bg-black/50 z-40 cursor-default border-none outline-none appearance-none"
+          onClick={closeSheet}
+        />
+      )}
 
       <div
         className={`fixed bottom-0 left-0 right-0 z-50 bg-surface-container-high rounded-t-2xl border-t border-outline-variant transition-transform duration-300 ease-out ${
