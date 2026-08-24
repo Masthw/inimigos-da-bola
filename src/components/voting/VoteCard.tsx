@@ -149,21 +149,18 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
       </button>
 
       {showModal && (
-        <div
-          className={`fixed inset-0 z-50 transition-colors duration-200 ${isClosing ? "bg-black/0" : "bg-black/60"}`}
-          onClick={handleClose}
-          onKeyDown={(e) => e.key === "Escape" && handleClose()}
-          role="button"
-          tabIndex={-1}
-        >
+        <div className={`fixed inset-0 z-50 transition-colors duration-200 ${isClosing ? "bg-black/0" : "bg-black/60"}`}>
+          <button
+            type="button"
+            aria-label="Fechar modal"
+            className="absolute inset-0 w-full h-full border-none outline-none bg-transparent cursor-default"
+            onClick={handleClose}
+          />
+
           <div
-            className={`fixed bottom-0 left-0 right-0 bg-surface-container-high rounded-t-2xl max-h-[85vh] flex flex-col transition-transform duration-200 ease-out ${
+            className={`absolute bottom-0 left-0 right-0 bg-surface-container-high rounded-t-2xl max-h-[85vh] flex flex-col transition-transform duration-200 ease-out pointer-events-auto ${
               isClosing ? "translate-y-full" : "translate-y-0"
             }`}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            role="button"
-            tabIndex={-1}
           >
             <div className="p-4 border-b border-outline-variant shrink-0">
               <div className="flex items-center gap-3">

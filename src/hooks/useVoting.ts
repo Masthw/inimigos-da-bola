@@ -82,7 +82,7 @@ export function useVoting(matchId: string | undefined) {
     }
 
     const players: VotingPlayer[] = (playersRes.data ?? []).map((row) => ({
-      userId: row.user_id,
+      userId: row.user_id ?? '',
       name: row.users?.name ?? row.guest_name ?? 'Convidado',
       team: row.team as 'A' | 'B',
       goalsScored: row.goals_scored ?? 0,
@@ -152,7 +152,18 @@ export function useVoting(matchId: string | undefined) {
   }, [matchId, user])
 
   useEffect(() => {
-    fetchVotingData()
+    let active = true
+
+    async function run() {
+      if (!active) return
+      await fetchVotingData()
+    }
+
+    void run()
+
+    return () => {
+      active = false
+    }
   }, [fetchVotingData])
 
   const submitVote = useCallback(async (awardId: number, votedUserId: string | null) => {

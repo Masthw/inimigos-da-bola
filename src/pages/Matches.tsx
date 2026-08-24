@@ -408,9 +408,9 @@ export default function Matches() {
     refetch();
   };
 
-  const handleOwnGoal = async (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => {
+  const handleOwnGoal = async (teamBenefited: string, scorerUserId: string | null) => {
     if (!featured) return;
-    await addOwnGoal(featured.id, teamBenefited, scorerUserId, scorerTeam);
+    await addOwnGoal(featured.id, teamBenefited, scorerUserId);
     refetch();
   };
 

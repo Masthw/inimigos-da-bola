@@ -152,9 +152,9 @@ export default function MatchLive() {
     fetchData();
   };
 
-  const handleOwnGoal = async (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => {
+  const handleOwnGoal = async (teamBenefited: string, scorerUserId: string | null) => {
     if (!match) return;
-    await addOwnGoal(match.id, teamBenefited, scorerUserId, scorerTeam);
+    await addOwnGoal(match.id, teamBenefited, scorerUserId);
     fetchData();
   };
 

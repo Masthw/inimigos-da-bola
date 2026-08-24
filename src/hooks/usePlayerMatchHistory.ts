@@ -31,6 +31,22 @@ export interface PlayerMatchHistory {
   loading: boolean
 }
 
+interface AwardRow {
+  match_id: string
+  user_id: string | null
+  awards: { name: string } | null
+}
+
+interface PlayerRow {
+  match_id: string
+  user_id: string | null
+  guest_name: string | null
+  goals_scored: number | null
+  assists: number | null
+  team: string
+  users: { name: string } | null
+}
+
 function formatDay(iso: string): string {
   const date = new Date(iso)
   const day = String(date.getDate()).padStart(2, '0')
@@ -43,7 +59,59 @@ function isCraqueAward(name: string): boolean {
 }
 
 function basePoints(outcome: HistoryMatch['outcome']): number {
-  return outcome === 'victory' ? 3 : outcome === 'draw' ? 1 : 0
+  if (outcome === 'victory') return 3
+  if (outcome === 'draw') return 1
+  return 0
+}
+
+function getOutcome(team: string, homeScore: number, awayScore: number): HistoryMatch['outcome'] {
+  const myScore = team === 'A' ? homeScore : awayScore
+  const opponentScore = team === 'A' ? awayScore : homeScore
+
+  if (myScore === opponentScore) return 'draw'
+
+  return myScore > opponentScore ? 'victory' : 'defeat'
+}
+
+function buildAwardMap(rows: AwardRow[]): Map<string, string[]> {
+  const awardMap = new Map<string, string[]>()
+  for (const row of rows) {
+    const name = row.awards?.name
+    if (!name || !row.user_id) continue
+    const key = `${row.match_id}:${row.user_id}`
+    const list = awardMap.get(key) ?? []
+    list.push(name)
+    awardMap.set(key, list)
+  }
+  return awardMap
+}
+
+function buildPlayersByMatch(
+  rows: PlayerRow[],
+  awardMap: Map<string, string[]>,
+): Map<string, { home: HistoryPlayer[]; away: HistoryPlayer[] }> {
+  const playersByMatch = new Map<string, { home: HistoryPlayer[]; away: HistoryPlayer[] }>()
+  for (const row of rows) {
+    const name = row.users?.name ?? row.guest_name ?? 'Convidado'
+    const awards = row.user_id ? (awardMap.get(`${row.match_id}:${row.user_id}`) ?? []) : []
+    const player: HistoryPlayer = { name, goals: row.goals_scored ?? 0, assists: row.assists ?? 0, awards }
+    const entry = playersByMatch.get(row.match_id) ?? { home: [], away: [] }
+    if (row.team === 'B') entry.away.push(player)
+    else entry.home.push(player)
+    playersByMatch.set(row.match_id, entry)
+  }
+  return playersByMatch
+}
+
+function countUserAwards(rows: AwardRow[], userId: string): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const row of rows) {
+    if (row.user_id !== userId) continue
+    const awardName = row.awards?.name
+    if (!awardName) continue
+    counts[awardName] = (counts[awardName] ?? 0) + 1
+  }
+  return counts
 }
 
 export function usePlayerMatchHistory(userId: string | undefined) {
@@ -91,26 +159,9 @@ export function usePlayerMatchHistory(userId: string | undefined) {
 
       if (cancelled) return
 
-      const playerAwards = new Map<string, string[]>()
-      for (const row of awardsRes.data ?? []) {
-        const name = row.awards?.name
-        if (!name || !row.user_id) continue
-        const key = `${row.match_id}:${row.user_id}`
-        const list = playerAwards.get(key) ?? []
-        list.push(name)
-        playerAwards.set(key, list)
-      }
-
-      const playersByMatch = new Map<string, { home: HistoryPlayer[]; away: HistoryPlayer[] }>()
-      for (const row of playersRes.data ?? []) {
-        const name = row.users?.name ?? row.guest_name ?? 'Convidado'
-        const awards = row.user_id ? (playerAwards.get(`${row.match_id}:${row.user_id}`) ?? []) : []
-        const player: HistoryPlayer = { name, goals: row.goals_scored ?? 0, assists: row.assists ?? 0, awards }
-        const entry = playersByMatch.get(row.match_id) ?? { home: [], away: [] }
-        if (row.team === 'B') entry.away.push(player)
-        else entry.home.push(player)
-        playersByMatch.set(row.match_id, entry)
-      }
+      const awardRows = awardsRes.data ?? []
+      const playerAwards = buildAwardMap(awardRows)
+      const playersByMatch = buildPlayersByMatch(playersRes.data ?? [], playerAwards)
 
       const myRows = new Map((userRows ?? []).map((row) => [row.match_id, row]))
 
@@ -119,16 +170,7 @@ export function usePlayerMatchHistory(userId: string | undefined) {
         const homeScore = match.team_a_score ?? 0
         const awayScore = match.team_b_score ?? 0
         const team = mine?.team === 'B' ? 'B' : 'A'
-        const outcome: HistoryMatch['outcome'] =
-          homeScore === awayScore
-            ? 'draw'
-            : homeScore > awayScore
-              ? team === 'A'
-                ? 'victory'
-                : 'defeat'
-              : team === 'A'
-                ? 'defeat'
-                : 'victory'
+        const outcome = getOutcome(team, homeScore, awayScore)
         const awards = playerAwards.get(`${match.id}:${id}`) ?? []
         const points = basePoints(outcome) + (awards.some(isCraqueAward) ? 1 : 0)
         const players = playersByMatch.get(match.id) ?? { home: [], away: [] }
@@ -151,13 +193,7 @@ export function usePlayerMatchHistory(userId: string | undefined) {
         }
       })
 
-      const counts: Record<string, number> = {}
-      for (const name of awardsRes.data ?? []) {
-        if (name.user_id !== id) continue
-        const awardName = name.awards?.name
-        if (!awardName) continue
-        counts[awardName] = (counts[awardName] ?? 0) + 1
-      }
+      const counts = countUserAwards(awardRows, id)
 
       if (cancelled) return
       setMatches(result)

@@ -4,6 +4,7 @@ import { Avatar } from "../ui/Avatar";
 import type { MatchPlayer } from "../../hooks/useMatches";
 
 interface LiveMatchViewProps {
+  /** Identificador da partida — disponível para o pai (logs/navegação); o componente não usa diretamente. */
   matchId: string;
   teamAName: string;
   teamBName: string;
@@ -28,7 +29,7 @@ interface PlayerStats {
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+  return result ? { r: Number.parseInt(result[1], 16), g: Number.parseInt(result[2], 16), b: Number.parseInt(result[3], 16) } : null;
 }
 
 function withAlpha(hex: string, alpha: number): string {
@@ -45,7 +46,6 @@ function isDarkColor(hex: string): boolean {
 }
 
 export function LiveMatchView({
-  matchId,
   teamAName,
   teamBName,
   teamAColor,
@@ -136,7 +136,6 @@ export function LiveMatchView({
 
   return (
     <div className="h-[calc(100svh-4rem)] flex flex-col bg-surface relative overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant bg-surface-container shrink-0">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-error animate-pulse" />
@@ -144,7 +143,6 @@ export function LiveMatchView({
         </div>
       </div>
 
-      {/* Scoreboard */}
       <div className="px-4 py-5 bg-surface-container-high border-b border-outline-variant shrink-0">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-w-lg mx-auto">
           <div className="text-center">
@@ -167,7 +165,6 @@ export function LiveMatchView({
         </div>
       </div>
 
-      {/* Player lists */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
           <div>
@@ -183,21 +180,21 @@ export function LiveMatchView({
                     className="w-full flex items-center gap-3 p-3 transition-colors text-left"
                     style={{
                       backgroundColor: withAlpha(teamAColor, 0.05),
-                      borderColor: isDarkColor(teamAColor) ? 'rgba(156,163,175,0.4)' : withAlpha(teamAColor, 0.2),
+                      borderColor: isDarkColor(teamAColor) ? "rgba(156,163,175,0.4)" : withAlpha(teamAColor, 0.2),
                       borderWidth: "1px",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = isDarkColor(teamAColor) ? 'rgba(156,163,175,0.6)' : withAlpha(teamAColor, 0.5);
+                      e.currentTarget.style.borderColor = isDarkColor(teamAColor) ? "rgba(156,163,175,0.6)" : withAlpha(teamAColor, 0.5);
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = isDarkColor(teamAColor) ? 'rgba(156,163,175,0.4)' : withAlpha(teamAColor, 0.2);
+                      e.currentTarget.style.borderColor = isDarkColor(teamAColor) ? "rgba(156,163,175,0.4)" : withAlpha(teamAColor, 0.2);
                     }}
                   >
                     <Avatar
                       src={p.avatarUrl}
                       alt={p.name}
                       className="w-10 h-10 rounded-full shrink-0"
-                      style={{ borderColor: isDarkColor(teamAColor) ? 'rgba(156,163,175,0.5)' : withAlpha(teamAColor, 0.3), borderWidth: "2px" }}
+                      style={{ borderColor: isDarkColor(teamAColor) ? "rgba(156,163,175,0.5)" : withAlpha(teamAColor, 0.3), borderWidth: "2px" }}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-mono text-label-sm text-on-surface truncate leading-tight">{p.name}</p>
@@ -208,11 +205,7 @@ export function LiveMatchView({
                           </span>
                         )}
                         {stats.assists > 0 && <span className="font-mono text-[10px] text-on-surface-variant">{stats.assists}A</span>}
-                        {stats.ownGoals > 0 && (
-                          <span className="font-mono text-[10px] font-bold text-error">
-                            {stats.ownGoals}GC
-                          </span>
-                        )}
+                        {stats.ownGoals > 0 && <span className="font-mono text-[10px] font-bold text-error">{stats.ownGoals}GC</span>}
                       </div>
                     </div>
                   </button>
@@ -233,21 +226,21 @@ export function LiveMatchView({
                     className="w-full flex items-center gap-3 p-3 transition-colors text-left"
                     style={{
                       backgroundColor: withAlpha(teamBColor, 0.05),
-                      borderColor: isDarkColor(teamBColor) ? 'rgba(156,163,175,0.4)' : withAlpha(teamBColor, 0.2),
+                      borderColor: isDarkColor(teamBColor) ? "rgba(156,163,175,0.4)" : withAlpha(teamBColor, 0.2),
                       borderWidth: "1px",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = isDarkColor(teamBColor) ? 'rgba(156,163,175,0.6)' : withAlpha(teamBColor, 0.5);
+                      e.currentTarget.style.borderColor = isDarkColor(teamBColor) ? "rgba(156,163,175,0.6)" : withAlpha(teamBColor, 0.5);
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = isDarkColor(teamBColor) ? 'rgba(156,163,175,0.4)' : withAlpha(teamBColor, 0.2);
+                      e.currentTarget.style.borderColor = isDarkColor(teamBColor) ? "rgba(156,163,175,0.4)" : withAlpha(teamBColor, 0.2);
                     }}
                   >
                     <Avatar
                       src={p.avatarUrl}
                       alt={p.name}
                       className="w-10 h-10 rounded-full shrink-0"
-                      style={{ borderColor: isDarkColor(teamBColor) ? 'rgba(156,163,175,0.5)' : withAlpha(teamBColor, 0.3), borderWidth: "2px" }}
+                      style={{ borderColor: isDarkColor(teamBColor) ? "rgba(156,163,175,0.5)" : withAlpha(teamBColor, 0.3), borderWidth: "2px" }}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-mono text-label-sm text-on-surface truncate leading-tight">{p.name}</p>
@@ -258,11 +251,7 @@ export function LiveMatchView({
                           </span>
                         )}
                         {stats.assists > 0 && <span className="font-mono text-[10px] text-on-surface-variant">{stats.assists}A</span>}
-                        {stats.ownGoals > 0 && (
-                          <span className="font-mono text-[10px] font-bold text-error">
-                            {stats.ownGoals}GC
-                          </span>
-                        )}
+                        {stats.ownGoals > 0 && <span className="font-mono text-[10px] font-bold text-error">{stats.ownGoals}GC</span>}
                       </div>
                     </div>
                   </button>
@@ -273,7 +262,6 @@ export function LiveMatchView({
         </div>
       </div>
 
-      {/* Bottom action bar */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 py-3 border-t border-outline-variant bg-surface-container flex gap-3">
         <button
           type="button"
@@ -286,29 +274,29 @@ export function LiveMatchView({
         </button>
       </div>
 
-      {/* Backdrop */}
-      {sheetOpen && <div className="fixed inset-0 bg-black/50 z-40" onClick={closeSheet} />}
+      {sheetOpen && (
+        <button type="button" aria-label="Fechar painel" onClick={closeSheet} className="fixed inset-0 bg-black/50 z-40 cursor-default" />
+      )}
 
-      {/* Bottom Sheet */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-surface-container-high rounded-t-2xl border-t border-outline-variant transition-transform duration-300 ease-out ${
+      <dialog
+        open={sheetOpen}
+        aria-label="Registrar evento da partida"
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-surface-container-high rounded-t-2xl border-t border-outline-variant transition-transform duration-300 ease-out m-0 max-w-none w-full p-0 border-none ${
           sheetOpen ? "translate-y-0" : "translate-y-full"
         }`}
       >
-        {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-10 h-1 rounded-full bg-outline-variant" />
         </div>
 
         <div className="px-5 pb-8 max-h-[70vh] overflow-y-auto">
-          {/* Goal Type Selection */}
           {sheetPhase === "goal_type" && selectedPlayer && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
                 <div>
                   <p className="font-mono text-label-bold text-on-surface">{selectedPlayer.name}</p>
-                   <p className="font-mono text-label-sm" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
+                  <p className="font-mono text-label-sm" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
                     {selectedPlayer.team === "A" ? teamAName : teamBName}
                   </p>
                 </div>
@@ -336,13 +324,12 @@ export function LiveMatchView({
             </div>
           )}
 
-          {/* Assist Selection */}
           {sheetPhase === "assist" && selectedPlayer && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
                 <div>
-                   <p className="font-mono text-label-bold" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
+                  <p className="font-mono text-label-bold" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
                     Gol do {selectedPlayer.name}!
                   </p>
                   <p className="font-mono text-label-sm text-on-surface-variant">Quem deu a assistência?</p>
@@ -373,13 +360,12 @@ export function LiveMatchView({
             </div>
           )}
 
-          {/* Finish Match */}
           {sheetPhase === "finish" && (
             <div className="space-y-4">
               <p className="font-mono text-label-bold text-on-surface">Placar final</p>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                 <div>
-                   <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamAColor }}>
+                  <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamAColor }}>
                     {teamAName}
                   </label>
                   <input
@@ -392,7 +378,7 @@ export function LiveMatchView({
                 </div>
                 <span className="font-mono text-label-bold text-on-surface-variant pt-6">x</span>
                 <div>
-                   <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamBColor }}>
+                  <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamBColor }}>
                     {teamBName}
                   </label>
                   <input
@@ -415,7 +401,7 @@ export function LiveMatchView({
             </div>
           )}
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

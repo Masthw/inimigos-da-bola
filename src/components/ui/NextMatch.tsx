@@ -6,8 +6,10 @@ import { useIsAdmin } from "../../hooks/useIsAdmin";
 import { useAuth } from "../../hooks/useAuth";
 import { supabase } from "../../lib/supabaseClient";
 import { ATMOSPHERE_PHOTOS, getCourtPhotos } from "../../lib/courts";
+import type { Database } from "../../lib/database.types";
 
 type ConfirmStatus = "idle" | "confirming" | "confirmed" | "error";
+type MatchPlayerInsert = Database["public"]["Tables"]["match_players"]["Insert"];
 
 interface MatchActionsProps {
   status: ConfirmStatus;
@@ -101,6 +103,13 @@ function getImageSrc(match: NextMatchData | null, photoIndex: number): string | 
   return pool.length > 0 ? pool[photoIndex % pool.length] : null;
 }
 
+function resolveConfirmStatus(busy: boolean, hasError: boolean, isConfirmed: boolean): ConfirmStatus {
+  if (busy) return "confirming";
+  if (hasError) return "error";
+  if (isConfirmed) return "confirmed";
+  return "idle";
+}
+
 export function NextMatch() {
   const { match, loading } = useNextMatch();
   const { user } = useAuth();
@@ -112,10 +121,12 @@ export function NextMatch() {
     window.crypto.getRandomValues(array);
     return array[0] % Math.max(ATMOSPHERE_PHOTOS.length, 1);
   });
+
   const imageSrc = getImageSrc(match, photoIndex);
   const { title, subtitle } = getCardMeta(loading, match);
   const isConfirmed = match?.myStatus === "confirmed";
-  const status: ConfirmStatus = busy ? "confirming" : hasError ? "error" : isConfirmed ? "confirmed" : "idle";
+
+  const status: ConfirmStatus = resolveConfirmStatus(busy, hasError, isConfirmed);
 
   async function handleConfirm() {
     if (!match || !user || busy) return;
@@ -125,16 +136,22 @@ export function NextMatch() {
 
     const { data: existing } = await supabase.from("match_players").select("id").eq("match_id", match.id).eq("user_id", user.id).maybeSingle();
 
+    const insertPayload: MatchPlayerInsert = {
+      match_id: match.id,
+      user_id: user.id,
+      status: "confirmed",
+      team: "A",
+    };
+
     const result = existing
       ? await supabase.from("match_players").update({ status: "confirmed" }).eq("id", existing.id)
-      : await supabase.from("match_players").insert({ match_id: match.id, user_id: user.id, status: "confirmed" });
+      : await supabase.from("match_players").insert(insertPayload);
 
     setBusy(false);
 
     if (result.error) {
       console.error("Erro ao confirmar presença:", result.error);
       setHasError(true);
-      return;
     }
   }
 
