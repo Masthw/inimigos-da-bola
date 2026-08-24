@@ -1,159 +1,215 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { SupabaseClient } from '@supabase/supabase-js';
+import { corsHeaders, FunctionError, jsonResponse, requireAdmin } from '../_shared/auth.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// 1. TIPAGENS
+
+interface PlayerData {
+  userId: string;
+  name: string;
+  position: string;
+  points: number;
+  isGoalkeeper: boolean;
 }
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+interface MatchPlayerRow {
+  user_id: string;
+  team: string;
+  goals_scored: number;
+  assists: number;
+  users: { name: string } | { name: string }[] | null;
+}
+
+interface FavPositionRow {
+  user_id: string;
+  position_id: number;
+  is_primary: boolean;
+  positions: { code: string; name: string } | { code: string; name: string }[] | null;
+}
+
+interface LeaderboardRow {
+  user_id: string;
+  points: number;
+}
+
+// 2. HELPERS
+
+function secureRandom(): number {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return array[0] / (0xffffffff + 1);
+}
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const shuffled = [...arr];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(secureRandom() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
+  return shuffled;
+}
+
+// 3. BUSCA DE DADOS
+
+async function getDraftData(adminClient: SupabaseClient, matchId: string): Promise<PlayerData[]> {
+  const { data: matchPlayers, error: playersError } = await adminClient
+    .from('match_players')
+    .select('user_id, team, goals_scored, assists, users(name)')
+    .eq('match_id', matchId)
+    .eq('status', 'confirmed')
+    .not('user_id', 'is', null)
+    .overrideTypes<MatchPlayerRow[]>();
+
+  if (playersError) throw playersError;
+  if (!matchPlayers || matchPlayers.length === 0) {
+    throw new FunctionError(400, 'Nenhum jogador confirmado');
+  }
+
+  const userIds = matchPlayers.map((p) => p.user_id);
+
+  const { data: favPositions, error: favError } = await adminClient
+    .from('user_favorite_positions')
+    .select('user_id, position_id, is_primary, positions(code, name)')
+    .in('user_id', userIds)
+    .overrideTypes<FavPositionRow[]>();
+
+  if (favError) throw favError;
+
+  const { data: matchData, error: matchError } = await adminClient
+    .from('matches')
+    .select('group_id, date_time')
+    .eq('id', matchId)
+    .single();
+
+  if (matchError) throw matchError;
+
+  let rankMap = new Map<string, number>();
+
+  if (matchData?.group_id) {
+    const { data: activeSeason, error: seasonError } = await adminClient
+      .from('group_seasons')
+      .select('id')
+      .eq('group_id', matchData.group_id)
+      .lte('start_date', matchData.date_time)
+      .gte('end_date', matchData.date_time)
+      .maybeSingle();
+
+    if (seasonError) throw seasonError;
+
+    if (activeSeason) {
+      const { data: leaderboard, error: leaderboardError } = await adminClient
+        .from('season_leaderboards')
+        .select('user_id, points')
+        .eq('season_id', activeSeason.id)
+        .in('user_id', userIds)
+        .overrideTypes<LeaderboardRow[]>();
+
+      if (leaderboardError) throw leaderboardError;
+
+      rankMap = new Map((leaderboard || []).map((l) => [l.user_id, l.points || 0]));
+    }
+  }
+
+  return matchPlayers.map((p) => {
+    const fav = favPositions?.find((fp) => fp.user_id === p.user_id);
+
+    const favPosition = Array.isArray(fav?.positions) ? fav?.positions[0] : fav?.positions;
+    const positionName = favPosition?.code || 'MF';
+
+    const rawUser = Array.isArray(p.users) ? p.users[0] : p.users;
+    const points = rankMap.get(p.user_id) || 0;
+
+    return {
+      userId: p.user_id,
+      name: rawUser?.name || 'Jogador',
+      position: positionName,
+      points,
+      isGoalkeeper: positionName === 'GK',
+    };
+  });
+}
+
+// 4. LÓGICA DE SORTEIO
+
+function distributeTeams(players: PlayerData[]) {
+  const goalkeepers = players.filter((p) => p.isGoalkeeper);
+  const fieldPlayers = players.filter((p) => !p.isGoalkeeper);
+
+  const shuffledGK = shuffleArray(goalkeepers);
+  const teamA: PlayerData[] = [];
+  const teamB: PlayerData[] = [];
+
+  if (shuffledGK.length >= 2) {
+    teamA.push(shuffledGK[0]);
+    teamB.push(shuffledGK[1]);
+  } else if (shuffledGK.length === 1) {
+    teamA.push(shuffledGK[0]);
+  }
+
+  fieldPlayers.sort((a, b) => b.points - a.points);
+
+  for (let i = 0; i < fieldPlayers.length; i++) {
+    if (i % 4 === 0 || i % 4 === 3) {
+      teamA.push(fieldPlayers[i]);
+    } else {
+      teamB.push(fieldPlayers[i]);
+    }
+  }
+
+  const subs: PlayerData[] = [];
+  while (teamA.length > 5) {
+    subs.push(teamA.pop()!);
+  }
+  while (teamB.length > 5) {
+    subs.push(teamB.pop()!);
+  }
+
+  return { teamA, teamB, subs, totalPlayers: players.length };
+}
+
+// 5. FUNÇÃO PRINCIPAL
+
+Deno.serve(async (req: Request) => {
+  const headers = corsHeaders(req);
+  if (req.method === 'OPTIONS') return new Response('ok', { headers });
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
-    const { matchId } = await req.json()
+    const { adminClient } = await requireAdmin(req);
+    const { matchId } = await req.json().catch(() => ({}));
 
     if (!matchId) {
-      throw new Error('matchId é obrigatório')
+      throw new FunctionError(400, 'matchId é obrigatório');
     }
 
-    // 1. Buscar jogadores confirmados
-    const { data: matchPlayers } = await supabaseClient
-      .from('match_players')
-      .select('user_id, team, goals_scored, assists, users(name)')
-      .eq('match_id', matchId)
-      .eq('status', 'confirmed')
-      .not('user_id', 'is', null)
+    const players = await getDraftData(adminClient, matchId);
+    const draftResult = distributeTeams(players);
 
-    if (!matchPlayers || matchPlayers.length === 0) {
-      throw new Error('Nenhum jogador confirmado')
-    }
+    const formatTeam = (team: PlayerData[]) =>
+      team.map((p) => ({
+        userId: p.userId,
+        name: p.name,
+        position: p.position,
+        points: p.points,
+      }));
 
-    // 2. Buscar posições favoritas
-    const userIds = matchPlayers.map(p => p.user_id)
-    const { data: favPositions } = await supabaseClient
-      .from('user_favorite_positions')
-      .select('user_id, position_id, is_primary, positions(code, name)')
-      .in('user_id', userIds)
-
-    // 3. Buscar rank dos jogadores
-    const { data: matchData } = await supabaseClient
-      .from('matches')
-      .select('group_id, date_time')
-      .eq('id', matchId)
-      .single()
-
-    let rankMap = new Map<string, number>()
-    if (matchData?.group_id) {
-      const { data: activeSeason } = await supabaseClient
-        .from('group_seasons')
-        .select('id')
-        .eq('group_id', matchData.group_id)
-        .lte('start_date', matchData.date_time)
-        .gte('end_date', matchData.date_time)
-        .single()
-
-      if (activeSeason) {
-        const { data: leaderboard } = await supabaseClient
-          .from('season_leaderboards')
-          .select('user_id, points')
-          .eq('season_id', activeSeason.id)
-          .in('user_id', userIds)
-
-        rankMap = new Map((leaderboard || []).map(l => [l.user_id, l.points || 0]))
-      }
-    }
-
-    // 4. Classificar jogadores por tipo
-    const players = matchPlayers.map(p => {
-      const fav = favPositions?.find(fp => fp.user_id === p.user_id)
-      const positionName = fav?.positions?.code || 'MF'
-      const points = rankMap.get(p.user_id) || 0
-      return {
-        userId: p.user_id,
-        name: p.users?.name || 'Jogador',
-        position: positionName,
-        points,
-        isGoalkeeper: positionName === 'GK',
-      }
-    })
-
-    const goalkeepers = players.filter(p => p.isGoalkeeper)
-    const fieldPlayers = players.filter(p => !p.isGoalkeeper)
-
-    // 5. Algoritmo de sorteio equilibrado
-    function shuffleArray<T>(arr: T[]): T[] {
-      const shuffled = [...arr]
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-      }
-      return shuffled
-    }
-
-    // Distribui goleiros: 1 por time se possível (embaralhados para não ser sempre os mesmos)
-    const shuffledGK = shuffleArray(goalkeepers)
-    const teamA: typeof players = []
-    const teamB: typeof players = []
-
-    if (shuffledGK.length >= 2) {
-      teamA.push(shuffledGK[0])
-      teamB.push(shuffledGK[1])
-    } else if (shuffledGK.length === 1) {
-      teamA.push(shuffledGK[0])
-    }
-
-    // Ordena jogadores de linha por rank (maior pontuação = melhor)
-    fieldPlayers.sort((a, b) => b.points - a.points)
-
-    // Distribui de forma equilibrada (ABBA / snake draft)
-    // Posições 0,3,4,7... vão pro Time A. Posições 1,2,5,6... vão pro Time B
-    for (let i = 0; i < fieldPlayers.length; i++) {
-      if (i % 4 === 0 || i % 4 === 3) {
-        teamA.push(fieldPlayers[i])
-      } else {
-        teamB.push(fieldPlayers[i])
-      }
-    }
-
-    // Se um time ficou com mais de 5, move os excedentes para subs
-    const subs: typeof players = []
-    while (teamA.length > 5) {
-      const removed = teamA.pop()!
-      subs.push(removed)
-    }
-    while (teamB.length > 5) {
-      const removed = teamB.pop()!
-      subs.push(removed)
-    }
-
-    // 6. Montar resposta
-    const formatTeam = (team: typeof players) => team.map(p => ({
-      userId: p.userId,
-      name: p.name,
-      position: p.position,
-      points: p.points,
-    }))
-
-    return new Response(
-      JSON.stringify({
-        teamA: formatTeam(teamA),
-        teamB: formatTeam(teamB),
-        subs: formatTeam(subs),
-        totalPlayers: players.length,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
+    return jsonResponse(
+      {
+        teamA: formatTeam(draftResult.teamA),
+        teamB: formatTeam(draftResult.teamB),
+        subs: formatTeam(draftResult.subs),
+        totalPlayers: draftResult.totalPlayers,
+      },
+      200,
+      headers,
+    );
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-    )
+    if (error instanceof FunctionError) {
+      return jsonResponse({ error: error.message }, error.status, headers);
+    }
+    console.error('generate-lineup:', error);
+    return jsonResponse(
+      { error: 'Erro interno ao sortear os times. Tente novamente.' },
+      500,
+      headers,
+    );
   }
-})
+});
