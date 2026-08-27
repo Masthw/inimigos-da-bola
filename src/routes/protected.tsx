@@ -1,6 +1,7 @@
 import { Route } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { GroupGuard } from "./GroupGuard";
+import { GroupContextProvider } from "../contexts/GroupContextProvider";
 import Home from "../pages/Home";
 import Profile from "../pages/Profile";
 import Tactics from "../pages/Tactics";
@@ -15,18 +16,20 @@ import GroupManagement from "../pages/GroupManagement";
 
 export const protectedRoutes = (
   <Route element={<ProtectedRoute />}>
-    <Route path="/group" element={<GroupOnboarding />} />
-    <Route path="/group/management" element={<GroupManagement />} />
-    <Route element={<GroupGuard />}>
-      <Route path="/" element={<Home />} />
-      <Route path="/profile/:userId" element={<Profile />} />
-      <Route path="/matches/new" element={<NewMatch />} />
-      <Route path="/matches/:matchId/review" element={<MatchReview />} />
-      <Route path="/matches/:matchId/vote" element={<VoteMatch />} />
-      <Route path="/matches/:matchId" element={<MatchLive />} />
-      <Route path="/matches" element={<Matches />} />
-      <Route path="/tactics" element={<Tactics />} />
-      <Route path="/rankings" element={<Rankings />} />
+    <Route element={<GroupContextProvider />}>
+      <Route path="/group" element={<GroupOnboarding />} />
+      <Route path="/group/management" element={<GroupManagement />} />
+      <Route element={<GroupGuard />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/profile/:userId" element={<Profile />} />
+        <Route path="/matches/new" element={<NewMatch />} />
+        <Route path="/matches/:matchId/review" element={<MatchReview />} />
+        <Route path="/matches/:matchId/vote" element={<VoteMatch />} />
+        <Route path="/matches/:matchId" element={<MatchLive />} />
+        <Route path="/matches" element={<Matches />} />
+        <Route path="/tactics" element={<Tactics />} />
+        <Route path="/rankings" element={<Rankings />} />
+      </Route>
     </Route>
   </Route>
 );

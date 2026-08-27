@@ -16,7 +16,7 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
   const { logout, user } = useAuth();
   const { isAdmin } = useIsAdmin();
-  const { groups, activeGroup, activeGroupId, setActiveGroup, loading: groupLoading } = useActiveGroup();
+  const { groups, activeGroup, activeGroupId, setActiveGroup } = useActiveGroup();
   const { pathname } = useLocation();
   const name = getFirstName(getDisplayName(user));
   const avatarUrl = getAvatarUrl(user);
@@ -43,39 +43,28 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
         </button>
       </div>
 
-      {groupLoading ? (
-        <div className="flex items-center gap-3 px-6 py-4 mb-stack-lg mx-2">
-          <div className="w-12 h-12 rounded-full bg-surface-variant animate-pulse" />
-          <div className="flex-1 h-4 bg-surface-variant animate-pulse rounded" />
+      <Link
+        to={`/profile/${user?.id ?? ""}`}
+        onClick={onClose}
+        className="flex items-center gap-3 px-6 py-4 mb-stack-lg hover:bg-surface-variant transition-colors rounded-lg mx-2"
+      >
+        <Avatar src={avatarUrl} alt={name} className="w-12 h-12 rounded-full" />
+        <div className="min-w-0">
+          <p className="text-on-surface font-mono text-label-bold truncate">{name}</p>
         </div>
-      ) : (
-        <Link
-          to={`/profile/${user?.id ?? ""}`}
-          onClick={onClose}
-          className="flex items-center gap-3 px-6 py-4 mb-stack-lg hover:bg-surface-variant transition-colors rounded-lg mx-2"
-        >
-          <Avatar src={avatarUrl} alt={name} className="w-12 h-12 rounded-full" />
-          <div className="min-w-0">
-            <p className="text-on-surface font-mono text-label-bold truncate">{name}</p>
-          </div>
-        </Link>
-      )}
+      </Link>
 
-      {groupLoading ? (
-        <div className="mx-2 mb-2">
-          <div className="h-8 bg-surface-variant animate-pulse rounded" />
-        </div>
-      ) : activeGroup ? (
+      {activeGroup && (
         <div className="mx-2 mb-2">
           <div className="flex items-center gap-2 px-3 py-2 text-on-surface-variant">
             <MaterialIcon name="groups" className="w-4 h-4 shrink-0" />
             <span className="font-mono text-label-sm truncate">{activeGroup.name}</span>
           </div>
         </div>
-      ) : null}
+      )}
 
       <div className="flex-1 space-y-1">
-        {groups.length > 1 && !groupLoading && (
+        {groups.length > 1 && (
           <div className="relative px-2 pb-2">
             <button
               type="button"
@@ -121,7 +110,7 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
             <span className="font-mono text-label-bold">{item.label}</span>
           </Link>
         ))}
-        {isAdmin && !groupLoading && (
+        {isAdmin && (
           <Link
             to="/group/management"
             onClick={onClose}
@@ -138,7 +127,7 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
       </div>
 
       <div className="px-4 mt-auto space-y-1">
-        {isAdmin && !groupLoading && (
+        {isAdmin && (
           <Link
             to="/matches/new"
             onClick={onClose}
