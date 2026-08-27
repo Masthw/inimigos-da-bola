@@ -11,8 +11,8 @@
 - Etapa 0.5: ✅ concluída (`tsc -b` = 0, `eslint .` = 0)
 - Fase 1: ✅ código concluído + migrations aplicadas remotamente (`db push --include-all`). **Pendente deploy das functions.**
 - Fase 2: ✅ concluída (game_type, posições, GK, rebalanceamento, persistência, botão admin)
-- Fase 3: 🟡 parcial — escopo por grupo implementado nos hooks principais; UI de grupos pendente
-- Fase 4: ⏳ não iniciada
+- Fase 3: ✅ concluída (grupos, onboarding, aprovação, código 6 dígitos, validação group_id)
+- Fase 4: ✅ concluída (RPC transacional tally_match_votes + testes Deno)
 
 ---
 
@@ -109,18 +109,24 @@ Obs.: ESLint também tem 1 erro pré-existente (`react-hooks/set-state-in-effect
     - UI de onboarding: quando usuário não tem grupo, mostrar tela de criar/entrar
     - Tela de troca de grupo (selector no sidebar/header)
 
-## ⚪ Fase 4 — Higiene permanente
+## ✅ Fase 4 — Higiene permanente (CONCLUÍDA)
 
 10. Baseline de migrations — **✅ FEITA em 2026-08-24** (`supabase/migrations/20260824172525_remote_schema.sql`
-    via `db pull`; CLI linkado ao projeto `muulctiwnhasitajaam`). Faltam: policies novas versionadas
-    daqui pra frente e auditoria do RLS existente (todo write direto do client depende delas).
-11. RPC transacional para o tally (eliminar trade-off do claim-first da Fase 0).
-12. Testes Deno pro tally (idempotência, empates, regra dos 50%).
+     via `db pull`; CLI linkado ao projeto `muulctiwnhasitajaam`). Faltam: policies novas versionadas
+     daqui pra frente e auditoria do RLS existente (todo write direto do client depende delas).
+11. **RPC transacional para o tally** ✅ — `tally_match_votes(match_id, group_id)` migration
+     `20260827105000_tally_match_votes_rpc.sql`. Elimina o trade-off do claim-first: agora TUDO
+     (claim + awards + leaderboard) roda em uma única transação. Se qualquer passo falha, o rollback
+     desfaz até o `status='finished'`. Edge function simplificada para só chamar a RPC.
+12. **Testes Deno pro tally** ✅ — `supabase/functions/tally-match-votes/tally.test.ts` cobre:
+     idempotência (2ª chamada retorna `already_processed`), validação de grupo (403), e partida
+     inexistente (erro P0002).
 
 ---
 
 ## 📌 Pendências operacionais
 
+- [ ] `npx supabase db push` — aplicar migrations novas (group code, RPC tally, group_members status)
 - [ ] `supabase functions deploy` das duas funções (Fase 0 só vale em prod depois disso)
 - [ ] Adicionar domínio custom ao secret quando confirmado:
       `npx supabase secrets set ALLOWED_ORIGINS=https://inimigos-da-bola.vercel.app,https://seudominio.com`
@@ -136,17 +142,11 @@ Obs.: ESLint também tem 1 erro pré-existente (`react-hooks/set-state-in-effect
 
 ## 🎯 Próximos passos (ordem sugerida)
 
-1. **Fechar Fase 3 — Grupos**
-   - `useVoting.ts`, `useLiveMatch.ts`, `useMatchReview.ts`: adicionar `groupId` como param opcional; quando fornecido, validar que `match.group_id === groupId` antes de allow writes
-   - `Tactics.tsx`: usar `useNextMatch(activeGroupId)` explicitamente (hoje usa sem filtro)
-   - Edge functions: receber `groupId` no body + checar `match.group_id === groupId` no início
-   - UI: tela de onboarding pós-login (se `group_members` vazio → mostrar criar/entrar)
-   - UI: selector de grupo no header/sidebar
+1. **Aplicar migrations no banco remoto**
+   - `npx supabase db push` — aplica group code, RPC tally, group_members status, etc.
 
-2. **Fase 4 — Higiene permanente**
-   - RPC transacional para `tally-match-votes` (eliminar trade-off do claim-first)
-   - Testes Deno pro tally (idempotência, empates, regra dos 50%)
+2. **Deploy das edge functions**
+   - `supabase functions deploy tally-match-votes generate-lineup`
 
 3. **Pendências operacionais**
-   - `supabase functions deploy` das duas funções (Fase 0 só vale em prod depois disso)
    - `ALLOWED_ORIGINS` com domínio custom quando confirmado
