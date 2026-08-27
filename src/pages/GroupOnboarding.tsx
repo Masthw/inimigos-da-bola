@@ -40,9 +40,22 @@ export default function GroupOnboarding() {
     setSubmitting(true);
     setError(null);
 
+    let code: string;
+    let attempts = 0;
+    do {
+      code = Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+      const { data: existing } = await supabase
+        .from("groups")
+        .select("code")
+        .eq("code", code)
+        .maybeSingle();
+      if (!existing) break;
+      attempts++;
+    } while (attempts < 10);
+
     const { data: group, error: insertError } = await supabase
       .from("groups")
-      .insert({ name: groupName.trim(), description: groupDescription.trim() || null })
+      .insert({ name: groupName.trim(), description: groupDescription.trim() || null, code })
       .select("id")
       .single();
 
@@ -75,7 +88,7 @@ export default function GroupOnboarding() {
     const { data: group, error: fetchError } = await supabase
       .from("groups")
       .select("id")
-      .eq("id", joinCode.trim())
+      .eq("code", joinCode.trim())
       .maybeSingle();
 
     if (fetchError || !group) {
@@ -214,14 +227,17 @@ export default function GroupOnboarding() {
             </button>
             <div>
               <label className="block text-label-sm font-mono text-on-surface-variant mb-1">
-                Código do grupo
+                Código do grupo (6 dígitos)
               </label>
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
                 value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-                placeholder="Cole o código do grupo"
-                className="w-full px-4 py-3 bg-surface-container-high border border-outline-variant font-body text-on-surface focus:border-primary focus:outline-none"
+                onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000"
+                className="w-full px-4 py-3 bg-surface-container-high border border-outline-variant font-body text-on-surface focus:border-primary focus:outline-none tracking-widest text-center text-headline-sm"
                 required
               />
             </div>

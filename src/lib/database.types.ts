@@ -173,6 +173,7 @@ export type Database = {
       }
       groups: {
         Row: {
+          code: string
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -180,6 +181,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          code?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -187,6 +189,7 @@ export type Database = {
           name: string
         }
         Update: {
+          code?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useAuth } from "../hooks/useAuth";
@@ -102,17 +103,19 @@ export default function GroupManagement() {
   }
 
   async function handleCopyCode() {
-    if (!activeGroupId) return;
-    await navigator.clipboard.writeText(activeGroupId);
+    if (!activeGroup?.code) return;
+    await navigator.clipboard.writeText(activeGroup.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <MaterialIcon name="pending" className="w-8 h-8 text-primary animate-spin" />
-      </div>
+      <AppShell>
+        <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
+          <MaterialIcon name="pending" className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      </AppShell>
     );
   }
 
@@ -122,58 +125,101 @@ export default function GroupManagement() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center">
-          <MaterialIcon name="lock" className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
-          <h2 className="text-headline-md font-display font-black text-on-surface">ACESSO RESTRITO</h2>
-          <p className="text-body-md text-on-surface-variant mt-2">
-            Apenas administradores podem gerenciar o grupo.
-          </p>
+      <AppShell>
+        <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center p-4">
+          <div className="text-center">
+            <MaterialIcon name="lock" className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
+            <h2 className="text-headline-md font-display font-black text-on-surface">ACESSO RESTRITO</h2>
+            <p className="text-body-md text-on-surface-variant mt-2">
+              Apenas administradores podem gerenciar o grupo.
+            </p>
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen p-4 max-w-2xl mx-auto">
-      <h1 className="text-headline-lg font-display font-black text-on-surface tracking-tighter mb-6">
-        GERENCIAR GRUPO
-      </h1>
+    <AppShell>
+      <div className="p-4 max-w-2xl mx-auto">
+        <h1 className="text-headline-lg font-display font-black text-on-surface tracking-tighter mb-6">
+          GERENCIAR GRUPO
+        </h1>
 
-      <section className="mb-8 p-4 bg-surface-container-high border border-outline-variant rounded-xl">
-        <h2 className="text-title-md font-mono text-on-surface mb-3">Código do grupo</h2>
-        <p className="text-body-sm text-on-surface-variant mb-3">
-          Compartilhe este código com quem você quer que entre no grupo:
-        </p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 px-3 py-2 bg-surface-container font-mono text-sm text-on-surface border border-outline-variant rounded overflow-x-auto">
-            {activeGroup.id}
-          </code>
-          <button
-            type="button"
-            onClick={handleCopyCode}
-            className="px-4 py-2 bg-primary text-on-primary font-mono text-label-sm brutal-shadow hover:scale-105 transition-transform flex items-center gap-2"
-          >
-            <MaterialIcon name={copied ? "check" : "content_copy"} className="w-4 h-4" />
-            {copied ? "COPIADO!" : "COPIAR"}
-          </button>
-        </div>
-        <p className="text-label-sm text-on-surface-variant mt-2">
-          Nome: <span className="text-on-surface font-bold">{activeGroup.name}</span>
-        </p>
-      </section>
+        <section className="mb-8 p-4 bg-surface-container-high border border-outline-variant rounded-xl">
+          <h2 className="text-title-md font-mono text-on-surface mb-3">Código do grupo</h2>
+          <p className="text-body-sm text-on-surface-variant mb-3">
+            Compartilhe este código com quem você quer que entre no grupo:
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 px-3 py-2 bg-surface-container font-mono text-headline-sm text-on-surface border border-outline-variant rounded text-center tracking-widest">
+              {activeGroup.code}
+            </code>
+            <button
+              type="button"
+              onClick={handleCopyCode}
+              className="px-4 py-2 bg-primary text-on-primary font-mono text-label-sm brutal-shadow hover:scale-105 transition-transform flex items-center gap-2"
+            >
+              <MaterialIcon name={copied ? "check" : "content_copy"} className="w-4 h-4" />
+              {copied ? "COPIADO!" : "COPIAR"}
+            </button>
+          </div>
+          <p className="text-label-sm text-on-surface-variant mt-2">
+            Nome: <span className="text-on-surface font-bold">{activeGroup.name}</span>
+          </p>
+        </section>
 
-      <section className="mb-8">
-        <h2 className="text-title-md font-mono text-on-surface mb-3">
-          Solicitações pendentes ({pending.length})
-        </h2>
-        {pending.length === 0 ? (
-          <p className="text-body-sm text-on-surface-variant">Nenhuma solicitação no momento.</p>
-        ) : (
+        <section className="mb-8">
+          <h2 className="text-title-md font-mono text-on-surface mb-3">
+            Solicitações pendentes ({pending.length})
+          </h2>
+          {pending.length === 0 ? (
+            <p className="text-body-sm text-on-surface-variant">Nenhuma solicitação no momento.</p>
+          ) : (
+            <div className="space-y-2">
+              {pending.map((p) => (
+                <div
+                  key={p.user_id}
+                  className="flex items-center justify-between p-3 bg-surface-container-high border border-outline-variant rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center">
+                      <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
+                    </div>
+                    <span className="font-mono text-label-sm text-on-surface">
+                      {p.users?.name ?? p.user_id}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApprove(p.user_id)}
+                      className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm hover:scale-105 transition-transform"
+                    >
+                      ACEITAR
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleReject(p.user_id)}
+                      className="px-3 py-1 bg-error-container text-on-error-container font-mono text-label-sm hover:scale-105 transition-transform"
+                    >
+                      RECUSAR
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-title-md font-mono text-on-surface mb-3">
+            Membros ({members.length})
+          </h2>
           <div className="space-y-2">
-            {pending.map((p) => (
+            {members.map((m) => (
               <div
-                key={p.user_id}
+                key={m.user_id}
                 className="flex items-center justify-between p-3 bg-surface-container-high border border-outline-variant rounded-lg"
               >
                 <div className="flex items-center gap-3">
@@ -181,60 +227,21 @@ export default function GroupManagement() {
                     <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
                   </div>
                   <span className="font-mono text-label-sm text-on-surface">
-                    {p.users?.name ?? p.user_id}
+                    {m.users?.name ?? m.user_id}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleApprove(p.user_id)}
-                    className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm hover:scale-105 transition-transform"
-                  >
-                    ACEITAR
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleReject(p.user_id)}
-                    className="px-3 py-1 bg-error-container text-on-error-container font-mono text-label-sm hover:scale-105 transition-transform"
-                  >
-                    RECUSAR
-                  </button>
-                </div>
+                <span className={`font-mono text-label-sm px-2 py-0.5 rounded ${
+                  m.role === "admin"
+                    ? "bg-primary-container text-on-primary-container"
+                    : "bg-surface-variant text-on-surface-variant"
+                }`}>
+                  {m.role === "admin" ? "ADMIN" : "MEMBRO"}
+                </span>
               </div>
             ))}
           </div>
-        )}
-      </section>
-
-      <section>
-        <h2 className="text-title-md font-mono text-on-surface mb-3">
-          Membros ({members.length})
-        </h2>
-        <div className="space-y-2">
-          {members.map((m) => (
-            <div
-              key={m.user_id}
-              className="flex items-center justify-between p-3 bg-surface-container-high border border-outline-variant rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center">
-                  <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
-                </div>
-                <span className="font-mono text-label-sm text-on-surface">
-                  {m.users?.name ?? m.user_id}
-                </span>
-              </div>
-              <span className={`font-mono text-label-sm px-2 py-0.5 rounded ${
-                m.role === "admin"
-                  ? "bg-primary-container text-on-primary-container"
-                  : "bg-surface-variant text-on-surface-variant"
-              }`}>
-                {m.role === "admin" ? "ADMIN" : "MEMBRO"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </AppShell>
   );
 }

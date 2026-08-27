@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 export interface GroupInfo {
   id: string;
   name: string;
+  code: string;
   description: string | null;
 }
 
@@ -22,7 +23,7 @@ export function useActiveGroup() {
 
       const { data, error } = await supabase
         .from("group_members")
-        .select("group_id, groups(name, description)")
+        .select("group_id, groups(name, description, code)")
         .eq("status", "approved")
         .order("joined_at", { ascending: true });
 
@@ -37,6 +38,7 @@ export function useActiveGroup() {
       const mapped: GroupInfo[] = (data ?? []).map((row) => ({
         id: row.group_id,
         name: row.groups?.name ?? "Grupo",
+        code: row.groups?.code ?? "",
         description: row.groups?.description ?? null,
       }));
 

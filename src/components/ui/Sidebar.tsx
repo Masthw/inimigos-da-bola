@@ -54,6 +54,15 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
         </div>
       </Link>
 
+      {activeGroup && (
+        <div className="mx-2 mb-2">
+          <div className="flex items-center gap-2 px-3 py-2 bg-primary-container text-on-primary-container rounded-lg">
+            <MaterialIcon name="groups" className="w-5 h-5 shrink-0" />
+            <span className="font-mono text-label-sm truncate">{activeGroup.name}</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 space-y-1">
         {groups.length > 1 && (
           <div className="relative px-2 pb-2">
