@@ -8,6 +8,7 @@ import { FavoritePositionsModal } from "../components/profile/FavoritePositionsM
 import { useUserProfile } from "../hooks/useUserProfile";
 import { useUserRank } from "../hooks/useUserRank";
 import { usePlayerMatchHistory, type HistoryMatch, type HistoryPlayer } from "../hooks/usePlayerMatchHistory";
+import { useFavoritePositions } from "../hooks/useFavoritePositions";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { getFirstName } from "../lib/profile";
 import { PHOTOS } from "../lib/courts";
@@ -165,6 +166,7 @@ export default function Profile() {
   const { activeGroupId } = useActiveGroup();
   const { rank } = useUserRank(userId, activeGroupId);
   const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId, activeGroupId);
+  const { favorites: favoritePositions, positions: allPositions, loading: favPositionsLoading } = useFavoritePositions();
 
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [showPositionsModal, setShowPositionsModal] = useState(false);
@@ -314,6 +316,21 @@ export default function Profile() {
               <p className="font-mono text-label-sm text-on-surface-variant">
                 Defina suas posições favoritas em quadra para o balanceamento automático do sorteio de times.
               </p>
+              {!favPositionsLoading && favoritePositions.size > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {Array.from(favoritePositions.values()).map((fav) => {
+                    const pos = allPositions.find((p) => p.id === fav.position_id);
+                    return (
+                      <span
+                        key={fav.position_id}
+                        className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm rounded"
+                      >
+                        {pos?.name ?? `Posição ${fav.position_id}`}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <button
               type="button"

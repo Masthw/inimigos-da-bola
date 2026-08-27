@@ -146,10 +146,15 @@ export function usePlayerMatchHistory(userId: string | undefined, groupId: strin
 
       const { data: matchesData } = await matchQuery
 
-      const { data: userRows } = await supabase
-        .from('match_players')
-        .select('match_id, goals_scored, assists, team')
-        .eq('user_id', id)
+      const matchIds = (matchesData ?? []).map((m) => m.id)
+
+      const { data: userRows } = matchIds.length > 0
+        ? await supabase
+            .from('match_players')
+            .select('match_id, goals_scored, assists, team')
+            .eq('user_id', id)
+            .in('match_id', matchIds)
+        : { data: [] as { match_id: string; goals_scored: number | null; assists: number | null; team: string }[] }
 
       if (cancelled) return
 

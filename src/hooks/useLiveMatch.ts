@@ -170,7 +170,7 @@ export function useLiveMatch(groupId: string | null = null) {
     [groupId],
   );
 
-  const finishMatch = useCallback(
+  const saveScores = useCallback(
     async (matchId: string, teamAScore: number, teamBScore: number) => {
       setBusy(true);
 
@@ -183,7 +183,6 @@ export function useLiveMatch(groupId: string | null = null) {
       const { error } = await supabase
         .from("matches")
         .update({
-          status: "finished",
           team_a_score: teamAScore,
           team_b_score: teamBScore,
         })
@@ -192,8 +191,8 @@ export function useLiveMatch(groupId: string | null = null) {
       setBusy(false);
 
       if (error) {
-        console.error("Erro ao finalizar partida:", error);
-        return { error: "Erro ao finalizar partida" };
+        console.error("Erro ao salvar placar:", error);
+        return { error: "Erro ao salvar placar" };
       }
 
       return { error: null };
@@ -226,5 +225,5 @@ export function useLiveMatch(groupId: string | null = null) {
     return { error: null };
   }, [groupId]);
 
-  return { busy, addGoal, addOwnGoal, finishMatch, startMatch };
+  return { busy, addGoal, addOwnGoal, saveScores, startMatch };
 }

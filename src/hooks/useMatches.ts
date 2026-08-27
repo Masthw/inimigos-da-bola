@@ -208,21 +208,32 @@ async function fetchMatchesData(userId: string | null, groupId: string | null) {
     matchesQuery.eq("group_id", groupId);
   }
 
-  const [matchesResult, playersResult] = await Promise.all([
-    matchesQuery,
-    supabase.from("match_players").select(
-      "match_id, status, user_id, guest_name, team, users(name, avatar_url)",
-    ),
-  ]);
-
+  const matchesResult = await matchesQuery;
   if (matchesResult.error) throw matchesResult.error;
 
-  const { confirmedCounts, waitlistCounts, playersByMatch, myStatusMap } =
-    processMatchPlayers((playersResult.data ?? []) as PlayerRow[], userId);
+  const matchIds = (matchesResult.data ?? []).map((m) => m.id);
 
-  const finishedMatchIds = (matchesResult.data ?? []).filter((m) =>
-    m.status === "finished"
-  ).map((m) => m.id);
+  let playersResultData: PlayerRow[] = [];
+  let finishedMatchIds: string[] = [];
+
+  if (matchIds.length > 0) {
+    const [playersRes, finishedIds] = await Promise.all([
+      supabase
+        .from("match_players")
+        .select(
+          "match_id, status, user_id, guest_name, team, users(name, avatar_url)",
+        )
+        .in("match_id", matchIds),
+      Promise.resolve(
+        (matchesResult.data ?? []).filter((m) => m.status === "finished").map((m) => m.id),
+      ),
+    ]);
+    playersResultData = playersRes.data ?? [];
+    finishedMatchIds = finishedIds;
+  }
+
+  const { confirmedCounts, waitlistCounts, playersByMatch, myStatusMap } =
+    processMatchPlayers(playersResultData, userId);
 
   const finishedPlayerDetails = await fetchFinishedMatchDetails(
     finishedMatchIds,
@@ -378,10 +389,6 @@ export function useMatches(groupId: string | null = null) {
 
       setBusyMatchId(matchId);
 
-      const { data: existing } = await supabase.from("match_players").select(
-        "id",
-      ).eq("match_id", matchId).eq("user_id", userId).maybeSingle();
-
       const insertPayload: MatchPlayerInsert = {
         match_id: matchId,
         user_id: userId,
@@ -389,12 +396,9 @@ export function useMatches(groupId: string | null = null) {
         team: "A",
       };
 
-      const result = existing
-        ? await supabase.from("match_players").update({ status }).eq(
-          "id",
-          existing.id,
-        )
-        : await supabase.from("match_players").insert(insertPayload);
+      const result = await supabase
+        .from("match_players")
+        .upsert(insertPayload, { onConflict: "match_id,user_id" });
 
       setBusyMatchId(null);
 

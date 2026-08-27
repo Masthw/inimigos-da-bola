@@ -61,6 +61,29 @@ export function GroupContextProvider() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`user-role-${user.id}`)
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "users",
+        filter: `id=eq.${user.id}`,
+      }, (payload) => {
+        const newRole = (payload.new as { role?: string })?.role;
+        if (newRole) {
+          setIsAdmin(newRole === "admin");
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const setActiveGroup = useCallback((groupId: string | null) => {
     setActiveGroupId(groupId);
     if (groupId) {

@@ -5,6 +5,7 @@ import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { LiveMatchView } from "../components/match/LiveMatchView";
 import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useActiveGroup } from "../hooks/useActiveGroup";
+import { useIsAdmin } from "../hooks/useIsAdmin";
 import { supabase } from "../lib/supabaseClient";
 import type { MatchPlayer } from "../hooks/useMatches";
 
@@ -23,7 +24,8 @@ export default function MatchLive() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { activeGroupId } = useActiveGroup();
-  const { addGoal, addOwnGoal, finishMatch, busy } = useLiveMatch(activeGroupId);
+  const { isAdmin } = useIsAdmin();
+  const { addGoal, addOwnGoal, saveScores, busy } = useLiveMatch(activeGroupId);
   const [match, setMatch] = useState<MatchData | null>(null);
   const [players, setPlayers] = useState<MatchPlayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,13 +164,18 @@ export default function MatchLive() {
 
   const handleFinishMatch = async (scoreA: number, scoreB: number) => {
     if (!match) return;
-    await finishMatch(match.id, scoreA, scoreB);
+    await saveScores(match.id, scoreA, scoreB);
     fetchData();
   };
 
   const handleRequestReview = () => {
     if (!match) return;
     navigate(`/matches/${match.id}/review`);
+  };
+
+  const handleManagePlayers = () => {
+    if (!match) return;
+    navigate(`/matches/${match.id}/players`);
   };
 
   return (
@@ -185,8 +192,10 @@ export default function MatchLive() {
         teamBPlayers={teamBPlayers}
         onGoalScored={handleGoalScored}
         onOwnGoal={handleOwnGoal}
-        onFinish={handleFinishMatch}
         onRequestReview={handleRequestReview}
+        onSaveScores={handleFinishMatch}
+        onManagePlayers={handleManagePlayers}
+        isAdmin={isAdmin}
         busy={busy}
       />
     </AppShell>

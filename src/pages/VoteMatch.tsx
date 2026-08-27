@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
@@ -38,21 +38,6 @@ export default function VoteMatch() {
       setEnding(false);
     }
   }, [activeGroupId, matchId, navigate]);
-
-  useEffect(() => {
-    if (!loading && votingData && isAdmin) {
-      const now = Date.now();
-      const endsAt = new Date(votingData.votingEndsAt).getTime();
-
-      if (now > endsAt) {
-        const timeoutId = setTimeout(() => {
-          handleEndVoting();
-        }, 0);
-
-        return () => clearTimeout(timeoutId);
-      }
-    }
-  }, [loading, votingData, navigate, handleEndVoting, isAdmin]);
 
   const goalScorer = useMemo(() => {
     if (!votingData) return null;

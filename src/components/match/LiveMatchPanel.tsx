@@ -18,7 +18,7 @@ type GoalModalMode = "goal" | "own_goal" | null;
 
 export function LiveMatchPanel({ matchId, teamAName, teamBName, teamAScore, teamBScore, players, onRefresh }: Readonly<LiveMatchPanelProps>) {
   const { activeGroupId } = useActiveGroup();
-  const { busy, addGoal, addOwnGoal, finishMatch } = useLiveMatch(activeGroupId);
+  const { busy, addGoal, addOwnGoal, saveScores } = useLiveMatch(activeGroupId);
   const [goalModal, setGoalModal] = useState<GoalModalMode>(null);
   const [finishModalOpen, setFinishModalOpen] = useState(false);
   const [selectedScorer, setSelectedScorer] = useState<string>("");
@@ -69,7 +69,7 @@ export function LiveMatchPanel({ matchId, teamAName, teamBName, teamAScore, team
   };
 
   const handleFinish = async () => {
-    const result = await finishMatch(matchId, editingScore.teamA, editingScore.teamB);
+    const result = await saveScores(matchId, editingScore.teamA, editingScore.teamB);
     if (result.error) {
       setError(result.error);
       return;

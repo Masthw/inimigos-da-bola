@@ -13,6 +13,7 @@ import VoteMatch from "../pages/VoteMatch";
 import Rankings from "../pages/Rankings";
 import GroupOnboarding from "../pages/GroupOnboarding";
 import GroupManagement from "../pages/GroupManagement";
+import MatchPlayersManagement from "../pages/MatchPlayersManagement";
 
 export const protectedRoutes = (
   <Route element={<ProtectedRoute />}>
@@ -25,6 +26,7 @@ export const protectedRoutes = (
         <Route path="/matches/new" element={<NewMatch />} />
         <Route path="/matches/:matchId/review" element={<MatchReview />} />
         <Route path="/matches/:matchId/vote" element={<VoteMatch />} />
+        <Route path="/matches/:matchId/players" element={<MatchPlayersManagement />} />
         <Route path="/matches/:matchId" element={<MatchLive />} />
         <Route path="/matches" element={<Matches />} />
         <Route path="/tactics" element={<Tactics />} />

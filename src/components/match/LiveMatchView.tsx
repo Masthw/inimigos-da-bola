@@ -16,8 +16,10 @@ interface LiveMatchViewProps {
   teamBPlayers: MatchPlayer[];
   onGoalScored: (scorer: MatchPlayer, assist: MatchPlayer | null) => void;
   onOwnGoal: (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => void;
-  onFinish: (scoreA: number, scoreB: number) => void;
   onRequestReview: () => void;
+  onSaveScores?: (scoreA: number, scoreB: number) => void;
+  onManagePlayers?: () => void;
+  isAdmin?: boolean;
   busy?: boolean;
 }
 
@@ -56,8 +58,10 @@ export function LiveMatchView({
   teamBPlayers,
   onGoalScored,
   onOwnGoal,
-  onFinish,
   onRequestReview,
+  onSaveScores,
+  onManagePlayers,
+  isAdmin,
   busy = false,
 }: Readonly<LiveMatchViewProps>) {
   const [sheetPhase, setSheetPhase] = useState<SheetPhase>("closed");
@@ -119,8 +123,11 @@ export function LiveMatchView({
   };
 
   const handleFinishConfirm = () => {
-    onFinish(editScore.teamA, editScore.teamB);
+    if (onSaveScores) {
+      onSaveScores(editScore.teamA, editScore.teamB);
+    }
     closeSheet();
+    onRequestReview();
   };
 
   const closeSheet = () => {
@@ -263,6 +270,16 @@ export function LiveMatchView({
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 py-3 border-t border-outline-variant bg-surface-container flex gap-3">
+        {isAdmin && onManagePlayers && (
+          <button
+            type="button"
+            onClick={onManagePlayers}
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary-container text-on-secondary-container font-mono text-label-bold border border-outline-variant active:bg-surface-variant transition-colors"
+          >
+            <MaterialIcon name="group" className="w-4 h-4" />
+            Jogadores
+          </button>
+        )}
         <button
           type="button"
           disabled={busy}

@@ -375,7 +375,7 @@ export default function Matches() {
   const { activeGroupId } = useActiveGroup();
   const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } = useMatches(activeGroupId);
   const { isAdmin } = useIsAdmin();
-  const { busy: liveBusy, startMatch, addGoal, addOwnGoal, finishMatch } = useLiveMatch(activeGroupId);
+  const { busy: liveBusy, startMatch, addGoal, addOwnGoal, saveScores } = useLiveMatch(activeGroupId);
   const [cancelModalMatch, setCancelModalMatch] = useState<MatchWithMeta | null>(null);
   const [startModalMatch, setStartModalMatch] = useState<MatchWithMeta | null>(null);
   const [expandedFinished, setExpandedFinished] = useState<string | null>(null);
@@ -418,7 +418,7 @@ export default function Matches() {
 
   const handleFinishMatch = async (scoreA: number, scoreB: number) => {
     if (!featured) return;
-    await finishMatch(featured.id, scoreA, scoreB);
+    await saveScores(featured.id, scoreA, scoreB);
     refetch();
   };
 
@@ -437,7 +437,7 @@ export default function Matches() {
           teamBPlayers={featured.confirmedPlayers.filter((p) => p.team === "B")}
           onGoalScored={handleGoalScored}
           onOwnGoal={handleOwnGoal}
-          onFinish={handleFinishMatch}
+          onSaveScores={handleFinishMatch}
           onRequestReview={() => {}}
           busy={liveBusy}
         />
@@ -446,7 +446,6 @@ export default function Matches() {
           <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 border-b border-outline-variant gap-4">
             <div className="min-w-0">
               <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">Partidas</h2>
-              <p className="hidden md:block font-mono text-label-sm text-on-surface-variant">Agenda, presença e placares da equipe</p>
             </div>
 
             {isAdmin && (
