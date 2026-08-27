@@ -13,10 +13,20 @@ Deno.serve(async (req) => {
     // Apenas admins autenticados podem encerrar uma partida
     const { adminClient } = await requireAdmin(req);
 
-    const { matchId } = await req.json().catch(() => ({}));
+    const { matchId, groupId } = await req.json().catch(() => ({}));
 
     if (!matchId) {
       throw new FunctionError(400, 'matchId é obrigatório');
+    }
+
+    const { data: matchRow, error: matchFetchError } = await adminClient
+      .from('matches')
+      .select('group_id')
+      .eq('id', matchId)
+      .single();
+    if (matchFetchError) throw matchFetchError;
+    if (groupId && matchRow?.group_id !== groupId) {
+      throw new FunctionError(403, 'Partida não pertence ao grupo informado');
     }
 
     // Claim atômico: apenas UMA execução consegue mudar o status da partida.
@@ -240,11 +250,13 @@ async function updateLeaderboard(
   }
 
   // Craque winners get +1 bonus point
-  const craqueAwardIds = votingAwards.filter((a) => a.name.toLowerCase().includes('craque')).map(
-    (a) => a.id,
+  const craqueAwardIds = new Set(
+    votingAwards.filter((a) => a.name.toLowerCase().includes('craque')).map(
+      (a) => a.id,
+    ),
   );
   const craqueWinners = new Set(
-    awardsToInsert.filter((aw) => craqueAwardIds.includes(aw.award_id)).map((aw) => aw.user_id),
+    awardsToInsert.filter((aw) => craqueAwardIds.has(aw.award_id)).map((aw) => aw.user_id),
   );
 
   const playerIds = players.map((p) => p.user_id).filter(Boolean) as string[];

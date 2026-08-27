@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import type { Database } from "../lib/database.types";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { validateMatchGroup } from "../lib/groupGuard";
 
 export interface LivePlayer {
   userId: string;
@@ -12,7 +13,7 @@ export interface LivePlayer {
 
 type SupabaseUpdatePromise = PromiseLike<{ error: PostgrestError | null }>;
 
-export function useLiveMatch() {
+export function useLiveMatch(groupId: string | null = null) {
   const [busy, setBusy] = useState(false);
 
   const addGoal = useCallback(
@@ -23,6 +24,12 @@ export function useLiveMatch() {
       assistUserId?: string | null,
     ) => {
       setBusy(true);
+
+      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+      if (!valid) {
+        setBusy(false);
+        return { error: guardError ?? "Validação de grupo falhou" };
+      }
 
       const [scorerRes, matchRes] = await Promise.all([
         supabase.from("match_players").select("id, goals_scored").eq(
@@ -91,7 +98,7 @@ export function useLiveMatch() {
 
       return { error: null };
     },
-    [],
+    [groupId],
   );
 
   const addOwnGoal = useCallback(
@@ -101,6 +108,12 @@ export function useLiveMatch() {
       scorerUserId: string | null,
     ) => {
       setBusy(true);
+
+      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+      if (!valid) {
+        setBusy(false);
+        return { error: guardError ?? "Validação de grupo falhou" };
+      }
 
       const [matchRes, scorerRes] = await Promise.all([
         supabase.from("matches").select("team_a_score, team_b_score").eq(
@@ -154,12 +167,18 @@ export function useLiveMatch() {
 
       return { error: null };
     },
-    [],
+    [groupId],
   );
 
   const finishMatch = useCallback(
     async (matchId: string, teamAScore: number, teamBScore: number) => {
       setBusy(true);
+
+      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+      if (!valid) {
+        setBusy(false);
+        return { error: guardError ?? "Validação de grupo falhou" };
+      }
 
       const { error } = await supabase
         .from("matches")
@@ -179,11 +198,17 @@ export function useLiveMatch() {
 
       return { error: null };
     },
-    [],
+    [groupId],
   );
 
   const startMatch = useCallback(async (matchId: string) => {
     setBusy(true);
+
+    const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+    if (!valid) {
+      setBusy(false);
+      return { error: guardError ?? "Validação de grupo falhou" };
+    }
 
     const { error } = await supabase.from("matches").update({
       status: "in_progress",
@@ -199,7 +224,7 @@ export function useLiveMatch() {
     }
 
     return { error: null };
-  }, []);
+  }, [groupId]);
 
   return { busy, addGoal, addOwnGoal, finishMatch, startMatch };
 }

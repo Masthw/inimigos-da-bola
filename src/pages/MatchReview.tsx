@@ -4,6 +4,7 @@ import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { Avatar } from "../components/ui/Avatar";
 import { useMatchReview } from "../hooks/useMatchReview";
+import { useActiveGroup } from "../hooks/useActiveGroup";
 import type { MatchPlayer } from "../hooks/useMatches";
 
 type SheetPhase = "closed" | "goal_type" | "assist" | "manage";
@@ -11,8 +12,9 @@ type SheetPhase = "closed" | "goal_type" | "assist" | "manage";
 export default function MatchReview() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
+  const { activeGroupId } = useActiveGroup();
   const { match, loading, saving, error, updateScore, startVoting, addGoal, addOwnGoal, removeGoal, removeAssist, removeOwnGoal, addAssistOnly } =
-    useMatchReview(matchId);
+    useMatchReview(matchId, activeGroupId);
 
   const [manualScore, setManualScore] = useState<{ teamA: number; teamB: number } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);

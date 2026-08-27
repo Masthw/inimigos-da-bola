@@ -284,10 +284,20 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { adminClient } = await requireAdmin(req);
-    const { matchId } = await req.json().catch(() => ({}));
+    const { matchId, groupId } = await req.json().catch(() => ({}));
 
     if (!matchId) {
       throw new FunctionError(400, 'matchId é obrigatório');
+    }
+
+    const { data: matchRow, error: matchFetchError } = await adminClient
+      .from('matches')
+      .select('group_id')
+      .eq('id', matchId)
+      .single();
+    if (matchFetchError) throw matchFetchError;
+    if (groupId && matchRow?.group_id !== groupId) {
+      throw new FunctionError(403, 'Partida não pertence ao grupo informado');
     }
 
     const { players, teamSize } = await getDraftData(adminClient, matchId);

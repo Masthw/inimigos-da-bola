@@ -8,6 +8,7 @@ import { VoteCountdown } from "../components/voting/VoteCountdown";
 import { useVoting } from "../hooks/useVoting";
 import { useAuth } from "../hooks/useAuth";
 import { useIsAdmin } from "../hooks/useIsAdmin";
+import { useActiveGroup } from "../hooks/useActiveGroup";
 import { supabase } from "../lib/supabaseClient";
 
 export default function VoteMatch() {
@@ -15,7 +16,8 @@ export default function VoteMatch() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
-  const { votingData, loading, saving, error, submitVote, hasVoted, getVotedPlayers } = useVoting(matchId);
+  const { activeGroupId } = useActiveGroup();
+  const { votingData, loading, saving, error, submitVote, hasVoted, getVotedPlayers } = useVoting(matchId, activeGroupId);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [ending, setEnding] = useState(false);
 
@@ -28,14 +30,14 @@ export default function VoteMatch() {
     setEnding(true);
     try {
       const { error: fnError } = await supabase.functions.invoke("tally-match-votes", {
-        body: { matchId },
+        body: { matchId, groupId: activeGroupId },
       });
       if (fnError) throw fnError;
       navigate("/matches");
     } catch {
       setEnding(false);
     }
-  }, [matchId, navigate]);
+  }, [activeGroupId, matchId, navigate]);
 
   useEffect(() => {
     if (!loading && votingData && isAdmin) {

@@ -4,6 +4,7 @@ import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { LiveMatchView } from "../components/match/LiveMatchView";
 import { useLiveMatch } from "../hooks/useLiveMatch";
+import { useActiveGroup } from "../hooks/useActiveGroup";
 import { supabase } from "../lib/supabaseClient";
 import type { MatchPlayer } from "../hooks/useMatches";
 
@@ -21,7 +22,8 @@ interface MatchData {
 export default function MatchLive() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const { addGoal, addOwnGoal, finishMatch, busy } = useLiveMatch();
+  const { activeGroupId } = useActiveGroup();
+  const { addGoal, addOwnGoal, finishMatch, busy } = useLiveMatch(activeGroupId);
   const [match, setMatch] = useState<MatchData | null>(null);
   const [players, setPlayers] = useState<MatchPlayer[]>([]);
   const [loading, setLoading] = useState(true);

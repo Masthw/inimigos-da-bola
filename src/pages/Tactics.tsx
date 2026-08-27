@@ -3,6 +3,7 @@ import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { useAuth } from "../hooks/useAuth";
 import { useNextMatch } from "../hooks/useNextMatch";
+import { useActiveGroup } from "../hooks/useActiveGroup";
 import { supabase } from "../lib/supabaseClient";
 
 const POSITIONS_FUTSAL = [
@@ -464,7 +465,8 @@ function TacticsUnconfirmed({ courtType, hasMatch }: Readonly<{ courtType: strin
 
 export default function Tactics() {
   const { user } = useAuth();
-  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch();
+  const { activeGroupId } = useActiveGroup();
+  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId);
   const isDesktop = useIsDesktop();
 
   const courtType = nextMatch?.sportName?.toLowerCase().includes("society") ? "society" : "futsal";

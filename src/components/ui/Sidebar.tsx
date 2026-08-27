@@ -1,9 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { MaterialIcon } from "./MaterialIcon";
 import { Avatar } from "./Avatar";
 import { NAV_ITEMS } from "../../navlinks/links";
 import { useAuth } from "../../hooks/useAuth";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
+import { useActiveGroup } from "../../hooks/useActiveGroup";
 import { getAvatarUrl, getDisplayName, getFirstName } from "../../lib/profile";
 
 interface SidebarProps {
@@ -14,9 +16,11 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
   const { logout, user } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { groups, activeGroup, activeGroupId, setActiveGroup } = useActiveGroup();
   const { pathname } = useLocation();
   const name = getFirstName(getDisplayName(user));
   const avatarUrl = getAvatarUrl(user);
+  const [groupDropdownOpen, setGroupDropdownOpen] = useState(false);
 
   const navItems = [...NAV_ITEMS, { icon: "person", label: "Perfil", href: `/profile/${user?.id ?? ""}` }];
 
@@ -51,6 +55,44 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
       </Link>
 
       <div className="flex-1 space-y-1">
+        {groups.length > 1 && (
+          <div className="relative px-2 pb-2">
+            <button
+              type="button"
+              onClick={() => setGroupDropdownOpen(!groupDropdownOpen)}
+              className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-surface-container-high hover:bg-surface-variant transition-colors"
+            >
+              <span className="font-mono text-label-sm text-on-surface truncate">
+                {activeGroup?.name ?? "Sem grupo"}
+              </span>
+              <MaterialIcon
+                name={groupDropdownOpen ? "arrow_drop_up" : "arrow_drop_down"}
+                className="w-5 h-5 text-on-surface-variant shrink-0"
+              />
+            </button>
+            {groupDropdownOpen && (
+              <div className="absolute left-2 right-2 mt-1 bg-surface-container-high border border-outline-variant rounded-lg shadow-lg z-10 overflow-hidden">
+                {groups.map((group) => (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveGroup(group.id);
+                      setGroupDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 font-mono text-label-sm transition-colors ${
+                      group.id === activeGroupId
+                        ? "bg-primary-container text-on-primary-container"
+                        : "text-on-surface hover:bg-surface-variant"
+                    }`}
+                  >
+                    {group.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {navItems.map((item) => (
           <Link
             key={item.icon}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "./useAuth";
+import { validateMatchGroup } from "../lib/groupGuard";
 
 export interface VotingAward {
   id: number;
@@ -38,7 +39,7 @@ export interface VotingData {
   hasVotedCraque: boolean;
 }
 
-export function useVoting(matchId: string | undefined) {
+export function useVoting(matchId: string | undefined, groupId: string | null = null) {
   const { user } = useAuth();
   const [votingData, setVotingData] = useState<VotingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -169,6 +170,13 @@ export function useVoting(matchId: string | undefined) {
       if (!matchId || !user) return false;
       setSaving(true);
 
+      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+      if (!valid) {
+        setError(guardError ?? "Validação de grupo falhou");
+        setSaving(false);
+        return false;
+      }
+
       if (votedUserId === null) {
         const { error } = await supabase
           .from("match_votes")
@@ -203,7 +211,7 @@ export function useVoting(matchId: string | undefined) {
       await fetchVotingData();
       return true;
     },
-    [matchId, user, fetchVotingData],
+    [matchId, groupId, user, fetchVotingData],
   );
 
   const hasVoted = useCallback((awardId: number) => {

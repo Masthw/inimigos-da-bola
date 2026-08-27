@@ -166,7 +166,7 @@ export function NextMatch() {
     setDrawError(null);
 
     const { error } = await supabase.functions.invoke("generate-lineup", {
-      body: { matchId: match.id },
+      body: { matchId: match.id, groupId: activeGroupId },
     });
 
     setDrawing(false);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import type { Database } from "../lib/database.types";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { validateMatchGroup } from "../lib/groupGuard";
 
 export interface MatchGoal {
   id: string;
@@ -42,7 +43,7 @@ export interface MatchReviewData {
 
 type SupabaseUpdatePromise = PromiseLike<{ error: PostgrestError | null }>;
 
-export function useMatchReview(matchId: string | undefined) {
+export function useMatchReview(matchId: string | undefined, groupId: string | null = null) {
   const [match, setMatch] = useState<MatchReviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -159,6 +160,14 @@ export function useMatchReview(matchId: string | undefined) {
   const updateScore = useCallback(async (teamA: number, teamB: number) => {
     if (!matchId) return;
     setSaving(true);
+
+    const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+    if (!valid) {
+      setError(guardError ?? "Validação de grupo falhou");
+      setSaving(false);
+      return false;
+    }
+
     const { error } = await supabase
       .from("matches")
       .update({ team_a_score: teamA, team_b_score: teamB })
@@ -172,11 +181,19 @@ export function useMatchReview(matchId: string | undefined) {
       prev ? { ...prev, teamAScore: teamA, teamBScore: teamB } : null
     );
     return true;
-  }, [matchId]);
+  }, [matchId, groupId]);
 
   const startVoting = useCallback(async () => {
     if (!matchId) return;
     setSaving(true);
+
+    const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+    if (!valid) {
+      setError(guardError ?? "Validação de grupo falhou");
+      setSaving(false);
+      return false;
+    }
+
     const votingEndsAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
       .toISOString();
     const { error } = await supabase
@@ -192,7 +209,7 @@ export function useMatchReview(matchId: string | undefined) {
       return false;
     }
     return true;
-  }, [matchId]);
+  }, [matchId, groupId]);
 
   const addGoal = useCallback(
     async (
@@ -202,6 +219,13 @@ export function useMatchReview(matchId: string | undefined) {
     ) => {
       if (!matchId) return false;
       setSaving(true);
+
+      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+      if (!valid) {
+        setError(guardError ?? "Validação de grupo falhou");
+        setSaving(false);
+        return false;
+      }
 
       const [scorerRes, matchRes] = await Promise.all([
         supabase
@@ -277,13 +301,20 @@ export function useMatchReview(matchId: string | undefined) {
       await fetchReviewData();
       return true;
     },
-    [matchId, fetchReviewData],
+    [matchId, groupId, fetchReviewData],
   );
 
   const addOwnGoal = useCallback(
     async (scorerUserId: string | null, scorerTeam: string | null) => {
       if (!matchId) return false;
       setSaving(true);
+
+      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+      if (!valid) {
+        setError(guardError ?? "Validação de grupo falhou");
+        setSaving(false);
+        return false;
+      }
 
       const [matchRes, scorerRes] = await Promise.all([
         supabase
@@ -346,12 +377,19 @@ export function useMatchReview(matchId: string | undefined) {
       await fetchReviewData();
       return true;
     },
-    [matchId, fetchReviewData],
+    [matchId, groupId, fetchReviewData],
   );
 
   const removeGoal = useCallback(async (userId: string) => {
     if (!matchId) return false;
     setSaving(true);
+
+    const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+    if (!valid) {
+      setError(guardError ?? "Validação de grupo falhou");
+      setSaving(false);
+      return false;
+    }
 
     const playerRes = await supabase
       .from("match_players")
@@ -395,11 +433,18 @@ export function useMatchReview(matchId: string | undefined) {
     setSaving(false);
     await fetchReviewData();
     return true;
-  }, [matchId, fetchReviewData]);
+  }, [matchId, groupId, fetchReviewData]);
 
   const removeAssist = useCallback(async (userId: string) => {
     if (!matchId) return false;
     setSaving(true);
+
+    const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+    if (!valid) {
+      setError(guardError ?? "Validação de grupo falhou");
+      setSaving(false);
+      return false;
+    }
 
     const playerRes = await supabase
       .from("match_players")
@@ -421,11 +466,18 @@ export function useMatchReview(matchId: string | undefined) {
     setSaving(false);
     await fetchReviewData();
     return true;
-  }, [matchId, fetchReviewData]);
+  }, [matchId, groupId, fetchReviewData]);
 
   const removeOwnGoal = useCallback(async (userId: string) => {
     if (!matchId) return false;
     setSaving(true);
+
+    const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+    if (!valid) {
+      setError(guardError ?? "Validação de grupo falhou");
+      setSaving(false);
+      return false;
+    }
 
     const playerRes = await supabase
       .from("match_players")
@@ -470,11 +522,18 @@ export function useMatchReview(matchId: string | undefined) {
     setSaving(false);
     await fetchReviewData();
     return true;
-  }, [matchId, fetchReviewData]);
+  }, [matchId, groupId, fetchReviewData]);
 
   const addAssistOnly = useCallback(async (userId: string) => {
     if (!matchId) return false;
     setSaving(true);
+
+    const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+    if (!valid) {
+      setError(guardError ?? "Validação de grupo falhou");
+      setSaving(false);
+      return false;
+    }
 
     const playerRes = await supabase
       .from("match_players")
@@ -494,7 +553,7 @@ export function useMatchReview(matchId: string | undefined) {
     setSaving(false);
     await fetchReviewData();
     return true;
-  }, [matchId, fetchReviewData]);
+  }, [matchId, groupId, fetchReviewData]);
 
   return {
     match,

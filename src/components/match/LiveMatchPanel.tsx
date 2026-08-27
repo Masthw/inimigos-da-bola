@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MaterialIcon } from "../ui/MaterialIcon";
 import { Modal } from "../ui/Modal";
 import { useLiveMatch, type LivePlayer } from "../../hooks/useLiveMatch";
+import { useActiveGroup } from "../../hooks/useActiveGroup";
 
 interface LiveMatchPanelProps {
   matchId: string;
@@ -16,7 +17,8 @@ interface LiveMatchPanelProps {
 type GoalModalMode = "goal" | "own_goal" | null;
 
 export function LiveMatchPanel({ matchId, teamAName, teamBName, teamAScore, teamBScore, players, onRefresh }: Readonly<LiveMatchPanelProps>) {
-  const { busy, addGoal, addOwnGoal, finishMatch } = useLiveMatch();
+  const { activeGroupId } = useActiveGroup();
+  const { busy, addGoal, addOwnGoal, finishMatch } = useLiveMatch(activeGroupId);
   const [goalModal, setGoalModal] = useState<GoalModalMode>(null);
   const [finishModalOpen, setFinishModalOpen] = useState(false);
   const [selectedScorer, setSelectedScorer] = useState<string>("");

@@ -375,7 +375,7 @@ export default function Matches() {
   const { activeGroupId } = useActiveGroup();
   const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } = useMatches(activeGroupId);
   const { isAdmin } = useIsAdmin();
-  const { busy: liveBusy, startMatch, addGoal, addOwnGoal, finishMatch } = useLiveMatch();
+  const { busy: liveBusy, startMatch, addGoal, addOwnGoal, finishMatch } = useLiveMatch(activeGroupId);
   const [cancelModalMatch, setCancelModalMatch] = useState<MatchWithMeta | null>(null);
   const [startModalMatch, setStartModalMatch] = useState<MatchWithMeta | null>(null);
   const [expandedFinished, setExpandedFinished] = useState<string | null>(null);
