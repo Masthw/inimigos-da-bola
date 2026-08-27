@@ -13,7 +13,7 @@ export function GroupGuard() {
   }
 
   if (!activeGroup) {
-    return <Navigate to="/grupo" replace />;
+    return <Navigate to="/group" replace />;
   }
 
   return <Outlet />;
