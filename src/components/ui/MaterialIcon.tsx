@@ -52,8 +52,9 @@ import {
   Utensils,
   CircleStar,
   Crown,
+  Users,
   type LucideIcon,
-} from 'lucide-react'
+} from "lucide-react";
 
 const iconRegistry: Record<string, LucideIcon> = {
   home: Home,
@@ -105,19 +106,20 @@ const iconRegistry: Record<string, LucideIcon> = {
   ghost: Ghost,
   play_arrow: Play,
   flag: Flag,
-  'brain-circuit': BrainCircuit,
+  "brain-circuit": BrainCircuit,
   utensils: Utensils,
-  'circle-star': CircleStar,
+  "circle-star": CircleStar,
   crown: Crown,
-}
+  group: Users,
+};
 
 interface MaterialIconProps {
-  name: string
-  className?: string
+  name: string;
+  className?: string;
 }
 
-export function MaterialIcon({ name, className = '' }: Readonly<MaterialIconProps>) {
-  const Icon = iconRegistry[name]
-  if (!Icon) return null
-  return <Icon className={className} />
+export function MaterialIcon({ name, className = "" }: Readonly<MaterialIconProps>) {
+  const Icon = iconRegistry[name];
+  if (!Icon) return null;
+  return <Icon className={className} />;
 }
