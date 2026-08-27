@@ -217,9 +217,7 @@ export function NextMatch() {
             )}
 
             {!loading && !match && (
-              <p className="mt-4 text-on-surface-variant font-body max-w-sm">
-                Nenhuma pelada agendada ainda. Assim que tiver um jogo marcado, ele aparece aqui.
-              </p>
+              <p className="mt-4 text-on-surface-variant font-body max-w-sm">Assim que tiver um jogo marcado, ele aparece aqui.</p>
             )}
           </div>
 
@@ -245,9 +243,7 @@ export function NextMatch() {
               </button>
             )}
 
-            {drawError && (
-              <p className="text-error font-body text-sm">{drawError}</p>
-            )}
+            {drawError && <p className="text-error font-body text-sm">{drawError}</p>}
           </div>
         </div>
       </div>
