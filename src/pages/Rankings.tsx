@@ -4,6 +4,7 @@ import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../hooks/useAuth";
+import { useActiveGroup } from "../hooks/useActiveGroup";
 
 interface PlayerRank {
   id: string;
@@ -24,16 +25,45 @@ const getFirstName = (name: string) => name.trim().split(" ")[0] ?? name;
 
 // HELPERS DE BUSCA
 
-async function fetchRankingData(userId?: string): Promise<PlayerRank[]> {
-  const [{ data: users }, { data: leaderboard }, { data: matchPlayers }, { data: awards }] = await Promise.all([
-    supabase.from("users").select("id, name, avatar_url").is("deleted_at", null),
-    supabase.from("season_leaderboards").select("*"),
+async function fetchRankingData(userId?: string, groupId?: string | null): Promise<PlayerRank[]> {
+  if (!groupId) return [];
+
+  const { data: season } = await supabase
+    .from("group_seasons")
+    .select("id")
+    .eq("group_id", groupId)
+    .lte("start_date", new Date().toISOString())
+    .gte("end_date", new Date().toISOString())
+    .maybeSingle();
+
+  if (!season) return [];
+
+  const { data: members } = await supabase
+    .from("group_members")
+    .select("user_id")
+    .eq("group_id", groupId)
+    .eq("status", "approved");
+
+  const memberIds = (members ?? []).map((m) => m.user_id);
+  if (memberIds.length === 0) return [];
+
+  const [{ data: leaderboard }, { data: matchPlayers }, { data: awards }] = await Promise.all([
+    supabase
+      .from("season_leaderboards")
+      .select("*")
+      .eq("season_id", season.id)
+      .in("user_id", memberIds),
     supabase
       .from("match_players")
-      .select("user_id, goals_scored, assists, matches!inner(status, team_a_score, team_b_score, date_time)")
+      .select("user_id, goals_scored, assists, matches!inner(status, team_a_score, team_b_score, date_time, group_id)")
       .eq("matches.status", "finished")
-      .is("matches.deleted_at", null),
-    supabase.from("match_awards").select("user_id, awards(name)"),
+      .is("matches.deleted_at", null)
+      .eq("matches.group_id", groupId)
+      .in("user_id", memberIds),
+    supabase
+      .from("match_awards")
+      .select("user_id, awards(name)")
+      .in("user_id", memberIds),
   ]);
 
   const statsMap = new Map<string, { goals: number; assists: number; matchesPlayed: number; wins: number; draws: number; losses: number }>();
@@ -85,6 +115,20 @@ async function fetchRankingData(userId?: string): Promise<PlayerRank[]> {
     lossesMap.set(row.user_id, row.losses ?? 0);
   }
 
+  const allUserIds = new Set([
+    ...memberIds,
+    ...Array.from(pointsMap.keys()),
+    ...Array.from(statsMap.keys()),
+  ]);
+
+  const { data: users } = allUserIds.size > 0
+    ? await supabase
+        .from("users")
+        .select("id, name, avatar_url")
+        .in("id", Array.from(allUserIds))
+        .is("deleted_at", null)
+    : { data: [] as { id: string; name: string | null; avatar_url: string | null }[] };
+
   return (users ?? [])
     .map((u) => {
       const stats = statsMap.get(u.id) ?? { goals: 0, assists: 0, matchesPlayed: 0, wins: 0, draws: 0, losses: 0 };
@@ -114,6 +158,7 @@ async function fetchRankingData(userId?: string): Promise<PlayerRank[]> {
 
 export default function Rankings() {
   const { user } = useAuth();
+  const { activeGroup } = useActiveGroup();
   const [entries, setEntries] = useState<PlayerRank[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -122,7 +167,7 @@ export default function Rankings() {
 
     (async () => {
       setLoading(true);
-      const result = await fetchRankingData(user?.id);
+      const result = await fetchRankingData(user?.id, activeGroup?.id);
 
       if (!cancelled) {
         setEntries(result);
@@ -133,7 +178,7 @@ export default function Rankings() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, activeGroup]);
 
   const getPositionColor = (pos: number) => {
     if (pos === 1) return "border-tertiary/60";

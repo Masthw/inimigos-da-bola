@@ -52,11 +52,29 @@ export function useLeaderboard(groupId: string | null = null) {
         return
       }
 
+      const { data: members } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', groupIdString)
+        .eq('status', 'approved')
+
+      if (cancelled) return
+
+      const memberIds = (members ?? []).map((m) => m.user_id)
+
+      if (memberIds.length === 0) {
+        setEntries([])
+        setSeasonStarted(true)
+        setLoading(false)
+        return
+      }
+
       const [{ data: leaderboard }] = await Promise.all([
         supabase
           .from('season_leaderboards')
           .select('user_id, points')
-          .eq('season_id', season.id),
+          .eq('season_id', season.id)
+          .in('user_id', memberIds),
       ])
 
       if (cancelled) return
