@@ -62,13 +62,8 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
               onClick={() => setGroupDropdownOpen(!groupDropdownOpen)}
               className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-surface-container-high hover:bg-surface-variant transition-colors"
             >
-              <span className="font-mono text-label-sm text-on-surface truncate">
-                {activeGroup?.name ?? "Sem grupo"}
-              </span>
-              <MaterialIcon
-                name={groupDropdownOpen ? "arrow_drop_up" : "arrow_drop_down"}
-                className="w-5 h-5 text-on-surface-variant shrink-0"
-              />
+              <span className="font-mono text-label-sm text-on-surface truncate">{activeGroup?.name ?? "Sem grupo"}</span>
+              <MaterialIcon name={groupDropdownOpen ? "arrow_drop_up" : "arrow_drop_down"} className="w-5 h-5 text-on-surface-variant shrink-0" />
             </button>
             {groupDropdownOpen && (
               <div className="absolute left-2 right-2 mt-1 bg-surface-container-high border border-outline-variant rounded-lg shadow-lg z-10 overflow-hidden">
@@ -81,9 +76,7 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
                       setGroupDropdownOpen(false);
                     }}
                     className={`w-full text-left px-3 py-2 font-mono text-label-sm transition-colors ${
-                      group.id === activeGroupId
-                        ? "bg-primary-container text-on-primary-container"
-                        : "text-on-surface hover:bg-surface-variant"
+                      group.id === activeGroupId ? "bg-primary-container text-on-primary-container" : "text-on-surface hover:bg-surface-variant"
                     }`}
                   >
                     {group.name}
@@ -108,6 +101,20 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
             <span className="font-mono text-label-bold">{item.label}</span>
           </Link>
         ))}
+        {isAdmin && (
+          <Link
+            to="/group/management"
+            onClick={onClose}
+            className={`flex items-center gap-3 py-3 px-4 rounded-lg mx-2 transition-all ${
+              isActive("/group/management")
+                ? "bg-primary-container text-on-primary-container translate-x-1"
+                : "text-on-surface-variant hover:bg-surface-variant"
+            }`}
+          >
+            <MaterialIcon name="settings" className="w-5 h-5" />
+            <span className="font-mono text-label-bold">Grupo</span>
+          </Link>
+        )}
       </div>
 
       <div className="px-4 mt-auto space-y-1">

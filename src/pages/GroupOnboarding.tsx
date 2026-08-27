@@ -18,6 +18,7 @@ export default function GroupOnboarding() {
   const [joinCode, setJoinCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [joined, setJoined] = useState(false);
 
   if (groupLoading) {
     return (
@@ -85,7 +86,7 @@ export default function GroupOnboarding() {
 
     const { error: memberError } = await supabase
       .from("group_members")
-      .insert({ group_id: group.id, user_id: user.id, role: "member" });
+      .insert({ group_id: group.id, user_id: user.id, role: "member", status: "pending" });
 
     if (memberError) {
       setError("Erro ao entrar no grupo. Talvez você já seja membro.");
@@ -93,7 +94,23 @@ export default function GroupOnboarding() {
       return;
     }
 
-    window.location.reload();
+    setJoined(true);
+  }
+
+  if (joined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-surface">
+        <div className="w-full max-w-md text-center">
+          <MaterialIcon name="schedule" className="w-16 h-16 text-primary mx-auto mb-4" />
+          <h1 className="text-headline-lg font-display font-black text-on-surface tracking-tighter">
+            AGUARDANDO APROVAÇÃO
+          </h1>
+          <p className="text-body-md text-on-surface-variant mt-2">
+            Sua entrada foi solicitada. O administrador do grupo precisa aprovar sua participação.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -97,6 +97,7 @@ export type Database = {
           joined_at: string
           role: string
           skill_level: number | null
+          status: string
           user_id: string
         }
         Insert: {
@@ -104,6 +105,7 @@ export type Database = {
           joined_at?: string
           role: string
           skill_level?: number | null
+          status?: string
           user_id: string
         }
         Update: {
@@ -111,6 +113,7 @@ export type Database = {
           joined_at?: string
           role?: string
           skill_level?: number | null
+          status?: string
           user_id?: string
         }
         Relationships: [

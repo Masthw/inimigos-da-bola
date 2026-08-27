@@ -23,6 +23,7 @@ export function useActiveGroup() {
       const { data, error } = await supabase
         .from("group_members")
         .select("group_id, groups(name, description)")
+        .eq("status", "approved")
         .order("joined_at", { ascending: true });
 
       if (error) {
