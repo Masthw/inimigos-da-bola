@@ -34,6 +34,11 @@ export function useLeaderboard(groupId: string | null = null) {
 
     let cancelled = false
 
+    // Clear stale data immediately when group changes
+    setEntries([])
+    setSeasonStarted(false)
+    setLoading(true)
+
     async function load() {
       const { data: season } = await supabase
         .from('group_seasons')

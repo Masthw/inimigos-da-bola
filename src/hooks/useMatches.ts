@@ -333,6 +333,10 @@ export function useMatches(groupId: string | null = null) {
   }, [userId, groupId, applyData]);
 
   useEffect(() => {
+    // Clear stale data immediately when group changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGroups(EMPTY_GROUPS);
+    setLoading(true);
     refetch();
   }, [refetch]);
 

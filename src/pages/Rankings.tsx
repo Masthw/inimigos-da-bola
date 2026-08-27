@@ -165,8 +165,12 @@ export default function Rankings() {
   useEffect(() => {
     let cancelled = false;
 
+    // Clear stale data immediately when group changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEntries([]);
+    setLoading(true);
+
     (async () => {
-      setLoading(true);
       const result = await fetchRankingData(user?.id, activeGroup?.id);
 
       if (!cancelled) {

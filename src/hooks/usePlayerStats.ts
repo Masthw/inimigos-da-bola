@@ -27,6 +27,11 @@ export function usePlayerStats(userId: string | null, groupId: string | null = n
     let cancelled = false;
     const id = userId;
 
+    // Clear stale data immediately when group changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStats(EMPTY_STATS);
+    setLoaded(false);
+
     async function load() {
       setLoaded(false);
 

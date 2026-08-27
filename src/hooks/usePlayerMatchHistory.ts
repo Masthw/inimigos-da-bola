@@ -124,6 +124,12 @@ export function usePlayerMatchHistory(userId: string | undefined, groupId: strin
     const id = userId
     let cancelled = false
 
+    // Clear stale data immediately when group changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMatches([]);
+    setBadgeCounts({});
+    setLoading(true);
+
     async function load() {
       setLoading(true)
 

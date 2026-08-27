@@ -102,6 +102,11 @@ export function useNextMatch(groupId: string | null = null) {
   useEffect(() => {
     let cancelled = false;
 
+    // Clear stale data immediately when group changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMatch(null);
+    setLoading(true);
+
     fetchNextMatch(userId, groupId)
       .then((data) => {
         if (cancelled) return;
