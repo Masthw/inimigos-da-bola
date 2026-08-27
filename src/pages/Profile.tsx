@@ -166,7 +166,7 @@ export default function Profile() {
   const { activeGroupId } = useActiveGroup();
   const { rank } = useUserRank(userId, activeGroupId);
   const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId, activeGroupId);
-  const { favorites: favoritePositions, positions: allPositions, loading: favPositionsLoading } = useFavoritePositions();
+  const { loading: favPositionsLoading, getFavoritesByGameType } = useFavoritePositions();
 
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [showPositionsModal, setShowPositionsModal] = useState(false);
@@ -316,21 +316,27 @@ export default function Profile() {
               <p className="font-mono text-label-sm text-on-surface-variant">
                 Defina suas posições favoritas em quadra para o balanceamento automático do sorteio de times.
               </p>
-              {!favPositionsLoading && favoritePositions.size > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {Array.from(favoritePositions.values()).map((fav) => {
-                    const pos = allPositions.find((p) => p.id === fav.position_id);
-                    return (
-                      <span
-                        key={fav.position_id}
-                        className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm rounded"
-                      >
-                        {pos?.name ?? `Posição ${fav.position_id}`}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
+              {!favPositionsLoading && (() => {
+                const grouped = getFavoritesByGameType()
+                if (grouped.length === 0) return null
+                return (
+                  <div className="flex flex-col gap-3 mt-3">
+                    {grouped.map((group) => (
+                      <div key={group.gameType} className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-on-surface-variant mr-1">{group.label}:</span>
+                        {group.positions.map((pos) => (
+                          <span
+                            key={pos.id}
+                            className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm rounded"
+                          >
+                            {pos.name}
+                          </span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
             </div>
             <button
               type="button"

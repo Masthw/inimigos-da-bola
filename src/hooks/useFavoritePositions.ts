@@ -19,6 +19,7 @@ export function useFavoritePositions() {
   const [positions, setPositions] = useState<Position[]>([])
   const [favorites, setFavorites] = useState<Map<number, FavoritePosition>>(new Map())
   const [gameTypeIds, setGameTypeIds] = useState<{ futsal: number | null; society: number | null }>({ futsal: null, society: null })
+  const [gameTypeNames, setGameTypeNames] = useState<{ futsal: string; society: string }>({ futsal: 'Futsal', society: 'Society' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,9 +50,10 @@ export function useFavoritePositions() {
       }
       setFavorites(favMap)
 
-      const futsal = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'futsal')?.id ?? null
-      const society = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'society')?.id ?? null
-      setGameTypeIds({ futsal, society })
+      const futsal = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'futsal')
+      const society = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'society')
+      setGameTypeIds({ futsal: futsal?.id ?? null, society: society?.id ?? null })
+      setGameTypeNames({ futsal: futsal?.name ?? 'Futsal', society: society?.name ?? 'Society' })
 
       setLoading(false)
     }
@@ -119,6 +121,20 @@ export function useFavoritePositions() {
     return positions.filter((p) => p.game_type_id === id)
   }
 
+  const getFavoritesByGameType = () => {
+    const groups: { gameType: 'futsal' | 'society'; label: string; positions: Position[] }[] = []
+    for (const gameType of ['futsal', 'society'] as const) {
+      const gameTypeId = gameTypeIds[gameType]
+      if (!gameTypeId) continue
+      const positionsInType = positions.filter((p) => p.game_type_id === gameTypeId)
+      const favPositions = positionsInType.filter((p) => favorites.has(p.id))
+      if (favPositions.length > 0) {
+        groups.push({ gameType, label: gameTypeNames[gameType], positions: favPositions })
+      }
+    }
+    return groups
+  }
+
   const isFavorite = (positionId: number) => {
     return favorites.has(positionId)
   }
@@ -127,11 +143,13 @@ export function useFavoritePositions() {
     positions,
     favorites,
     gameTypeIds,
+    gameTypeNames,
     loading,
     saving,
     error,
     toggleFavorite,
     getPositionsByGameType,
+    getFavoritesByGameType,
     isFavorite,
   }
 }

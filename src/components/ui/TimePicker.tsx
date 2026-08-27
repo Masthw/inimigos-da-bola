@@ -69,7 +69,7 @@ export function TimePicker({ hour, minute, onHourChange, onMinuteChange }: Reado
       </button>
 
       {open && (
-        <div className="absolute z-30 mt-1 w-64 bg-surface-container-high border border-outline-variant shadow-lg">
+         <div className="absolute z-30 mt-1 w-full min-w-[200px] bg-surface-container-high border border-outline-variant shadow-lg">
           {step === 'hour' && (
             <div className="p-3">
               <p className="font-mono text-label-sm text-on-surface-variant uppercase tracking-widest mb-3">

@@ -151,16 +151,16 @@ export default function NewMatch() {
 
   return (
     <AppShell>
-      <header className="flex items-center px-margin-mobile md:px-margin-desktop w-full h-16 border-b border-outline-variant">
-        <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase">Novo Jogo</h2>
+      <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 border-b border-outline-variant gap-4">
+        <div className="flex items-center gap-3">
+          <MaterialIcon name="add_circle" className="w-6 h-6 text-primary" />
+          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase">Novo Jogo</h2>
+        </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop pt-8">
+      <div className="max-w-3xl mx-auto px-4 md:px-margin-desktop pt-8">
         <div className="bg-surface-container rounded-2xl p-6 md:p-8 border border-outline-variant">
-          <div className="flex items-center gap-3 mb-8">
-            <MaterialIcon name="add_circle" className="w-6 h-6 text-primary" />
-            <h3 className="text-headline-md font-display uppercase text-on-surface">Agendar Partida</h3>
-          </div>
+          <h3 className="text-headline-md font-display uppercase text-on-surface mb-8">Agendar Partida</h3>
 
           <div className="space-y-6">
             <div className="flex flex-col gap-2">
@@ -179,8 +179,8 @@ export default function NewMatch() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
-              <div className="flex flex-col gap-2 sm:col-span-1">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
                 <label className={labelClass} htmlFor="date">
                   Data
                 </label>
@@ -196,7 +196,7 @@ export default function NewMatch() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 sm:col-span-2">
+              <div className="flex flex-col gap-2">
                 <label className={labelClass} htmlFor="time">
                   Hora
                 </label>
