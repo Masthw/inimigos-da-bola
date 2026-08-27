@@ -13,6 +13,7 @@ interface GroupContextType {
   activeGroupId: string | null;
   setActiveGroup: (groupId: string | null) => void;
   loading: boolean;
+  isAdmin: boolean;
   refresh: () => void;
 }
 

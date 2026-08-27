@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../hooks/useAuth";
 import { GroupContext, type GroupInfo } from "./GroupContext";
 
 const GROUP_STORAGE_KEY = "inimigos-da-bola:active-group-id";
 
 export function GroupContextProvider() {
+  const { user } = useAuth();
   const [groups, setGroups] = useState<GroupInfo[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -15,16 +18,30 @@ export function GroupContextProvider() {
 
     const stored = localStorage.getItem(GROUP_STORAGE_KEY);
 
-    const { data, error } = await supabase
-      .from("group_members")
-      .select("group_id, groups(name, description, code)")
-      .eq("status", "approved")
-      .order("joined_at", { ascending: true });
+    const [{ data, error }, { data: rpcResult, error: rpcError }] = await Promise.all([
+      supabase
+        .from("group_members")
+        .select("group_id, groups(name, description, code)")
+        .eq("status", "approved")
+        .order("joined_at", { ascending: true }),
+      user ? supabase.rpc("is_admin") : { data: false, error: null },
+    ]);
 
     if (error) {
       console.error("Erro ao buscar grupos:", error);
       setLoading(false);
       return;
+    }
+
+    if (!rpcError && typeof rpcResult === "boolean") {
+      setIsAdmin(rpcResult);
+    } else if (user) {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      setIsAdmin(userData?.role === "admin");
     }
 
     const mapped: GroupInfo[] = (data ?? []).map((row) => ({
@@ -37,7 +54,7 @@ export function GroupContextProvider() {
     setGroups(mapped);
     setActiveGroupId(stored ?? mapped[0]?.id ?? null);
     setLoading(false);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -56,7 +73,7 @@ export function GroupContextProvider() {
   const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
 
   return (
-    <GroupContext.Provider value={{ groups, activeGroup, activeGroupId, setActiveGroup, loading, refresh: load }}>
+    <GroupContext.Provider value={{ groups, activeGroup, activeGroupId, setActiveGroup, loading, isAdmin, refresh: load }}>
       <Outlet />
     </GroupContext.Provider>
   );

@@ -4,7 +4,6 @@ import { MaterialIcon } from "./MaterialIcon";
 import { Avatar } from "./Avatar";
 import { NAV_ITEMS } from "../../navlinks/links";
 import { useAuth } from "../../hooks/useAuth";
-import { useIsAdmin } from "../../hooks/useIsAdmin";
 import { useActiveGroup } from "../../hooks/useActiveGroup";
 import { getAvatarUrl, getDisplayName, getFirstName } from "../../lib/profile";
 
@@ -15,8 +14,7 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
   const { logout, user } = useAuth();
-  const { isAdmin } = useIsAdmin();
-  const { groups, activeGroup, activeGroupId, setActiveGroup } = useActiveGroup();
+  const { groups, activeGroup, activeGroupId, setActiveGroup, isAdmin } = useActiveGroup();
   const { pathname } = useLocation();
   const name = getFirstName(getDisplayName(user));
   const avatarUrl = getAvatarUrl(user);
