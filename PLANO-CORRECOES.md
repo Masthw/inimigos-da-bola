@@ -112,15 +112,90 @@ Obs.: ESLint também tem 1 erro pré-existente (`react-hooks/set-state-in-effect
 ## ✅ Fase 4 — Higiene permanente (CONCLUÍDA)
 
 10. Baseline de migrations — **✅ FEITA em 2026-08-24** (`supabase/migrations/20260824172525_remote_schema.sql`
-     via `db pull`; CLI linkado ao projeto `muulctiwnhasitajaam`). Faltam: policies novas versionadas
-     daqui pra frente e auditoria do RLS existente (todo write direto do client depende delas).
+      via `db pull`; CLI linkado ao projeto `muulctiwnhasitajaam`). Faltam: policies novas versionadas
+      daqui pra frente e auditoria do RLS existente (todo write direto do client depende delas).
 11. **RPC transacional para o tally** ✅ — `tally_match_votes(match_id, group_id)` migration
-     `20260827105000_tally_match_votes_rpc.sql`. Elimina o trade-off do claim-first: agora TUDO
-     (claim + awards + leaderboard) roda em uma única transação. Se qualquer passo falha, o rollback
-     desfaz até o `status='finished'`. Edge function simplificada para só chamar a RPC.
+      `20260827105000_tally_match_votes_rpc.sql`. Elimina o trade-off do claim-first: agora TUDO
+      (claim + awards + leaderboard) roda em uma única transação. Se qualquer passo falha, o rollback
+      desfaz até o `status='finished'`. Edge function simplificada para só chamar a RPC.
 12. **Testes Deno pro tally** ✅ — `supabase/functions/tally-match-votes/tally.test.ts` cobre:
-     idempotência (2ª chamada retorna `already_processed`), validação de grupo (403), e partida
-     inexistente (erro P0002).
+      idempotência (2ª chamada retorna `already_processed`), validação de grupo (403), e partida
+      inexistente (erro P0002).
+
+---
+
+## ⚪ Fase 5 — Ajustes e Correções Pós-Auditoria (NÃO INICIADA)
+
+> Criado em 2026-08-27, a partir da auditoria completa do app (sessão atual).
+> Foco: corrigir problemas de UX, segurança e performance identificados após conclusão das Fases 0–4.
+
+### 🔴 Alta Prioridade
+
+#### 1. Corrigir filtros `group_id` (vazamento de dados entre grupos)
+
+- **Problema**: `useMatches.ts:211-215` busca TODOS os `match_players` sem filtro de `group_id` ou `match_id`.
+  Mesma falha em `usePlayerMatchHistory.ts:149-152` (busca `match_players` do usuário em todos os grupos).
+- **Impacto**: Requisições desnecessárias + potencial vazamento de dados entre grupos.
+- **Correção**:
+  - `useMatches.ts`: adicionar filtro `.in('match_id', filteredMatchIds)` na query de `match_players`.
+  - `usePlayerMatchHistory.ts`: adicionar filtro `.eq('matches.group_id', groupId)` via join com matches.
+
+#### 2. Criar tela de gerenciar jogadores da partida
+
+- **Problema**: Não existe tela onde o admin pode ver lista de jogadores, remover jogador ou adicionar convidado (guest).
+- **Impacto**: Admin não tem controle sobre quem está na partida.
+- **Correção**:
+  - Criar componente/página `MatchPlayersManagement` acessível ao admin.
+  - Funcionalidades: lista de confirmados, remover jogador, adicionar convidado (usa coluna `guest_name` existente).
+  - Acesso: botão em `MatchLive.tsx` ou `Matches.tsx` visível apenas para admins.
+
+#### 3. Corrigir fluxo de partida (live → review → voting → finished)
+
+- **Problema**: "Finalizar" no `MatchLive.tsx` pula a fase de votação. `onRequestReview` é noop.
+- **Impacto**: Fluxo quebrado — partida pode ser encerrada sem votação.
+- **Correção**:
+  - `MatchLive.tsx`: "Finalizar" deve navegar para `MatchReview` em vez de encerrar direto.
+  - `MatchReview.tsx`: garantir que admin pode iniciar votação.
+  - Garantir sequência: live → review → voting → tally → finished.
+
+### 🟡 Média Prioridade
+
+#### 4. Exibir posição favorita no perfil
+
+- **Problema**: Após salvar posição favorita, usuário precisa reabrir modal para ver o que selecionou.
+- **Impacto**: UX confusa — dados salvos não são visíveis.
+- **Correção**:
+  - `Profile.tsx:307-326`: exibir posição favorita atual na seção "Preferências Táticas" em vez de só botão "CONFIGURAR".
+  - Usar `useFavoritePositions` para ler `favorites` e renderizar inline.
+
+#### 5. Otimizar requisições N+1
+
+- **Problema**: `useLiveMatch.ts` e `useMatchReview.ts` fazem query separada para buscar assistente a cada gol.
+  `useNextMatch.ts` faz fetch duplicado (mount + realtime).
+- **Impacto**: Performance — requisições desnecessárias ao banco.
+- **Correção**:
+  - `useLiveMatch.ts` / `useMatchReview.ts`: buscar dados dos jogadores de uma vez e fazer lookup em memória.
+  - `useNextMatch.ts`: remover fetch duplicado no mount effect.
+
+#### 6. Corrigir auto-end no VoteMatch
+
+- **Problema**: `VoteMatch.tsx:42-54` usa `setTimeout(..., 0)` sem flag de cancelamento.
+- **Impacto**: Possível dupla invocação do tally.
+- **Correção**: Adicionar flag `active` (pattern usado em outros hooks) para prevenir double-fire.
+
+### 🟢 Baixa Prioridade
+
+#### 7. Admin guards no server
+
+- **Problema**: `startMatch`, `cancelMatch`, `setAttendance` não verificam admin no server (só RLS).
+- **Impacto**: Segurança — depender apenas de RLS é frágil.
+- **Correção**: Adicionar verificação de admin nas mutations client-side ou criar RLS policies mais restritivas.
+
+#### 8. `isAdmin` stale após mudança de papel
+
+- **Problema**: Se papel do usuário muda durante a sessão, só atualiza após reload.
+- **Impacto**: Admin pode perder acesso ou membro ganhar acesso indevido temporariamente.
+- **Correção**: Adicionar realtime listener no `GroupContext` para role changes ou refresh periódico.
 
 ---
 
@@ -136,7 +211,7 @@ Obs.: ESLint também tem 1 erro pré-existente (`react-hooks/set-state-in-effect
 
 1. Ler este arquivo.
 2. Checar `npx tsc -b --pretty false 2>&1 | grep -c "error TS"` — se > 0, Etapa 0.5 pendente.
-3. Se 0, seguir para Fase 1 (itens 1–2 acima).
+3. Se 0, seguir para Fase 5 (itens 1–8 acima, em ordem de prioridade).
 
 ---
 
@@ -148,5 +223,9 @@ Obs.: ESLint também tem 1 erro pré-existente (`react-hooks/set-state-in-effect
 2. **Deploy das edge functions**
    - `supabase functions deploy tally-match-votes generate-lineup`
 
-3. **Pendências operacionais**
+3. **Iniciar Fase 5**
+   - Começar pelo item 1 (filtros group_id) — é o mais crítico e menos esforço.
+   - Seguir para item 2 (tela gerenciar jogadores) e item 3 (fluxo de partida).
+
+4. **Pendências operacionais**
    - `ALLOWED_ORIGINS` com domínio custom quando confirmado
