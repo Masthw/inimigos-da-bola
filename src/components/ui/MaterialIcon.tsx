@@ -6,7 +6,6 @@ import {
   History,
   BarChart3,
   LayoutDashboard,
-  Volleyball,
   Swords,
   Medal,
   User,
@@ -34,8 +33,28 @@ import {
   CircleAlert,
   Eye,
   EyeOff,
+  Goal,
+  Star,
+  Zap,
+  Menu,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Shield,
+  ThumbsDown,
+  Footprints,
+  Egg,
+  Turtle,
+  Ghost,
+  Play,
+  Flag,
+  BrainCircuit,
+  Utensils,
+  CircleStar,
+  Crown,
+  Users,
   type LucideIcon,
-} from 'lucide-react'
+} from "lucide-react";
 
 const iconRegistry: Record<string, LucideIcon> = {
   home: Home,
@@ -45,7 +64,6 @@ const iconRegistry: Record<string, LucideIcon> = {
   history: History,
   analytics: BarChart3,
   dashboard: LayoutDashboard,
-  sports_soccer: Volleyball,
   strategy: Swords,
   leaderboard: Medal,
   person: User,
@@ -73,15 +91,35 @@ const iconRegistry: Record<string, LucideIcon> = {
   error: CircleAlert,
   visibility: Eye,
   visibility_off: EyeOff,
-}
+  sports_soccer: Goal,
+  star: Star,
+  bolt: Zap,
+  menu: Menu,
+  close: X,
+  expand_more: ChevronDown,
+  expand_less: ChevronUp,
+  shield: Shield,
+  thumb_down: ThumbsDown,
+  footprints: Footprints,
+  egg: Egg,
+  turtle: Turtle,
+  ghost: Ghost,
+  play_arrow: Play,
+  flag: Flag,
+  "brain-circuit": BrainCircuit,
+  utensils: Utensils,
+  "circle-star": CircleStar,
+  crown: Crown,
+  group: Users,
+};
 
 interface MaterialIconProps {
-  name: string
-  className?: string
+  name: string;
+  className?: string;
 }
 
-export function MaterialIcon({ name, className = '' }: Readonly<MaterialIconProps>) {
-  const Icon = iconRegistry[name]
-  if (!Icon) return null
-  return <Icon className={className} />
+export function MaterialIcon({ name, className = "" }: Readonly<MaterialIconProps>) {
+  const Icon = iconRegistry[name];
+  if (!Icon) return null;
+  return <Icon className={className} />;
 }

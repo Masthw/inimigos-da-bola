@@ -1,16 +1,21 @@
 import { MaterialIcon } from './MaterialIcon'
-import { AVATARS } from '../../data/mockData'
 
-export function MobileTopBar() {
+interface MobileTopBarProps {
+  onMenuClick: () => void
+}
+
+export function MobileTopBar({ onMenuClick }: Readonly<MobileTopBarProps>) {
   return (
-    <header className="md:hidden flex justify-between items-center px-4 w-full h-16 z-50 bg-surface border-b border-outline-variant sticky top-0">
-      <h1 className="text-headline-md font-display font-black tracking-tighter text-primary">STRIKER HQ</h1>
-      <div className="flex items-center gap-4">
-        <MaterialIcon name="notifications" className="w-5 h-5 text-on-surface-variant" />
-        <div className="w-8 h-8 rounded-full overflow-hidden border border-primary">
-          <img className="w-full h-full object-cover" src={AVATARS.mobile} alt="Avatar mobile" />
-        </div>
-      </div>
+    <header className="md:hidden flex items-center justify-between px-4 w-full h-16 z-40 bg-surface border-b border-outline-variant sticky top-0">
+      <button
+        type="button"
+        onClick={onMenuClick}
+        aria-label="Abrir menu"
+        className="p-2 -ml-2 text-on-surface-variant hover:text-primary transition-colors"
+      >
+        <MaterialIcon name="menu" className="w-6 h-6" />
+      </button>
+      <h1 className="text-headline-md font-display font-black tracking-tighter text-primary">INIMIGOS DA BOLA</h1>
     </header>
   )
 }

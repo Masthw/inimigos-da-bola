@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -97,6 +97,7 @@ export type Database = {
           joined_at: string
           role: string
           skill_level: number | null
+          status: string
           user_id: string
         }
         Insert: {
@@ -104,6 +105,7 @@ export type Database = {
           joined_at?: string
           role: string
           skill_level?: number | null
+          status?: string
           user_id: string
         }
         Update: {
@@ -111,6 +113,7 @@ export type Database = {
           joined_at?: string
           role?: string
           skill_level?: number | null
+          status?: string
           user_id?: string
         }
         Relationships: [
@@ -170,6 +173,7 @@ export type Database = {
       }
       groups: {
         Row: {
+          code: string
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -177,6 +181,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          code?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -184,6 +189,7 @@ export type Database = {
           name: string
         }
         Update: {
+          code?: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -191,6 +197,86 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      lineup_players: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_sub: boolean | null
+          lineup_id: string
+          position: string
+          team: string
+          user_id: string
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_sub?: boolean | null
+          lineup_id: string
+          position: string
+          team: string
+          user_id: string
+          x: number
+          y: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_sub?: boolean | null
+          lineup_id?: string
+          position?: string
+          team?: string
+          user_id?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lineup_players_lineup_id_fkey"
+            columns: ["lineup_id"]
+            isOneToOne: false
+            referencedRelation: "lineups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lineup_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lineups: {
+        Row: {
+          created_at: string | null
+          id: string
+          match_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          match_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          match_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lineups_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       match_awards: {
         Row: {
@@ -245,9 +331,10 @@ export type Database = {
           guest_name: string | null
           id: string
           match_id: string
+          own_goals_scored: number | null
           status: Database["public"]["Enums"]["player_status_enum"]
           tactical_position: string | null
-          team: string | null
+          team: string
           user_id: string | null
         }
         Insert: {
@@ -256,9 +343,10 @@ export type Database = {
           guest_name?: string | null
           id?: string
           match_id: string
+          own_goals_scored?: number | null
           status?: Database["public"]["Enums"]["player_status_enum"]
           tactical_position?: string | null
-          team?: string | null
+          team: string
           user_id?: string | null
         }
         Update: {
@@ -267,9 +355,10 @@ export type Database = {
           guest_name?: string | null
           id?: string
           match_id?: string
+          own_goals_scored?: number | null
           status?: Database["public"]["Enums"]["player_status_enum"]
           tactical_position?: string | null
-          team?: string | null
+          team?: string
           user_id?: string | null
         }
         Relationships: [
@@ -358,10 +447,14 @@ export type Database = {
           max_waitlist: number
           organizer_id: string
           status: Database["public"]["Enums"]["match_status_enum"]
+          team_a_color: string | null
           team_a_name: string | null
           team_a_score: number | null
+          team_b_color: string | null
           team_b_name: string | null
           team_b_score: number | null
+          voting_closed_by: string | null
+          voting_ends_at: string | null
         }
         Insert: {
           created_at?: string
@@ -375,10 +468,14 @@ export type Database = {
           max_waitlist: number
           organizer_id: string
           status?: Database["public"]["Enums"]["match_status_enum"]
+          team_a_color?: string | null
           team_a_name?: string | null
           team_a_score?: number | null
+          team_b_color?: string | null
           team_b_name?: string | null
           team_b_score?: number | null
+          voting_closed_by?: string | null
+          voting_ends_at?: string | null
         }
         Update: {
           created_at?: string
@@ -392,10 +489,14 @@ export type Database = {
           max_waitlist?: number
           organizer_id?: string
           status?: Database["public"]["Enums"]["match_status_enum"]
+          team_a_color?: string | null
           team_a_name?: string | null
           team_a_score?: number | null
+          team_b_color?: string | null
           team_b_name?: string | null
           team_b_score?: number | null
+          voting_closed_by?: string | null
+          voting_ends_at?: string | null
         }
         Relationships: [
           {
@@ -415,6 +516,13 @@ export type Database = {
           {
             foreignKeyName: "matches_organizer_id_fkey"
             columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_voting_closed_by_fkey"
+            columns: ["voting_closed_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -496,6 +604,60 @@ export type Database = {
           },
         ]
       }
+      season_leaderboards: {
+        Row: {
+          created_at: string
+          draws: number | null
+          id: number
+          losses: number | null
+          matches_played: number | null
+          points: number | null
+          season_id: number
+          updated_at: string
+          user_id: string
+          wins: number | null
+        }
+        Insert: {
+          created_at?: string
+          draws?: number | null
+          id?: never
+          losses?: number | null
+          matches_played?: number | null
+          points?: number | null
+          season_id: number
+          updated_at?: string
+          user_id: string
+          wins?: number | null
+        }
+        Update: {
+          created_at?: string
+          draws?: number | null
+          id?: never
+          losses?: number | null
+          matches_played?: number | null
+          points?: number | null
+          season_id?: number
+          updated_at?: string
+          user_id?: string
+          wins?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_leaderboards_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "group_seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_leaderboards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sports: {
         Row: {
           id: number
@@ -552,7 +714,7 @@ export type Database = {
           email: string
           id: string
           name: string
-          role: string
+          role: Database["public"]["Enums"]["user_role_enum"]
         }
         Insert: {
           avatar_url?: string | null
@@ -561,7 +723,7 @@ export type Database = {
           email: string
           id?: string
           name: string
-          role?: string
+          role?: Database["public"]["Enums"]["user_role_enum"]
         }
         Update: {
           avatar_url?: string | null
@@ -570,7 +732,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
-          role?: string
+          role?: Database["public"]["Enums"]["user_role_enum"]
         }
         Relationships: []
       }
@@ -579,11 +741,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      close_expired_votings: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      match_status_enum: "open" | "in_progress" | "finished" | "cancelled"
+      match_status_enum:
+        | "open"
+        | "in_progress"
+        | "finished"
+        | "cancelled"
+        | "voting"
       player_status_enum: "confirmed" | "waitlist" | "cancelled"
+      user_role_enum: "admin" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -708,11 +877,4 @@ export type CompositeTypes<
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
-export const Constants = {
-  public: {
-    Enums: {
-      match_status_enum: ["open", "in_progress", "finished", "cancelled"],
-      player_status_enum: ["confirmed", "waitlist", "cancelled"],
-    },
-  },
-} as const
+

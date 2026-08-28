@@ -11,6 +11,7 @@ interface InputFieldProps {
   error?: string;
   rightIcon?: string;
   onRightIconClick?: () => void;
+  rightIconAriaLabel?: string;
 }
 
 function getBorderColor(focused: boolean, error?: string) {
@@ -19,7 +20,7 @@ function getBorderColor(focused: boolean, error?: string) {
   return "border-outline-variant";
 }
 
-export function InputField({ label, type = "text", placeholder, icon, value, onChange, error, rightIcon, onRightIconClick }: Readonly<InputFieldProps>) {
+export function InputField({ label, type = "text", placeholder, icon, value, onChange, error, rightIcon, onRightIconClick, rightIconAriaLabel }: Readonly<InputFieldProps>) {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -39,7 +40,7 @@ export function InputField({ label, type = "text", placeholder, icon, value, onC
           className="flex-1 bg-transparent text-on-surface font-body placeholder:text-on-surface-variant/50 focus:outline-none"
         />
         {rightIcon && (
-          <button type="button" onClick={onRightIconClick} className="text-on-surface-variant hover:text-primary hover:cursor-pointer transition-colors">
+          <button type="button" onClick={onRightIconClick} className="text-on-surface-variant hover:text-primary hover:cursor-pointer transition-colors" aria-label={rightIconAriaLabel}>
             <MaterialIcon name={rightIcon} className="w-5 h-5" />
           </button>
         )}

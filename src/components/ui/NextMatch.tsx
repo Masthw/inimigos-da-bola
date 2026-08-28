@@ -1,69 +1,254 @@
-import { useState } from 'react'
-import { MaterialIcon } from './MaterialIcon'
-import { NEXT_MATCH } from '../../data/mockData'
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { MaterialIcon } from "./MaterialIcon";
+import { useNextMatch, type NextMatchData } from "../../hooks/useNextMatch";
+import { useIsAdmin } from "../../hooks/useIsAdmin";
+import { useActiveGroup } from "../../hooks/useActiveGroup";
+import { useAuth } from "../../hooks/useAuth";
+import { supabase } from "../../lib/supabaseClient";
+import { ATMOSPHERE_PHOTOS, getCourtPhotos } from "../../lib/courts";
+import type { Database } from "../../lib/database.types";
+
+type ConfirmStatus = "idle" | "confirming" | "confirmed" | "error";
+type MatchPlayerInsert = Database["public"]["Tables"]["match_players"]["Insert"];
+
+interface MatchActionsProps {
+  status: ConfirmStatus;
+  loading: boolean;
+  hasMatch: boolean;
+  isAdmin: boolean;
+  onConfirm: () => void;
+  onRetry: () => void;
+}
+
+function MatchActions({ status, loading, hasMatch, isAdmin, onConfirm, onRetry }: Readonly<MatchActionsProps>) {
+  if (status === "confirmed") {
+    return (
+      <button
+        type="button"
+        disabled
+        className="w-full md:w-auto bg-green-800 text-white px-10 py-4 font-mono text-label-bold rounded-none transition-transform flex items-center justify-center gap-3"
+      >
+        <MaterialIcon name="verified" className="w-5 h-5 text-white" />
+        PRESENÇA CONFIRMADA!
+      </button>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        className="w-full md:w-auto bg-error-container text-on-error-container px-10 py-4 font-mono text-label-bold rounded-none transition-transform flex items-center justify-center gap-3"
+      >
+        <MaterialIcon name="error" className="w-5 h-5" />
+        TENTAR NOVAMENTE
+      </button>
+    );
+  }
+
+  if (loading) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="w-full md:w-auto bg-surface-variant text-on-surface-variant px-10 py-4 font-mono text-label-bold rounded-none flex items-center justify-center gap-3 cursor-not-allowed"
+      >
+        <MaterialIcon name="pending" className="w-5 h-5" />
+        CARREGANDO...
+      </button>
+    );
+  }
+
+  if (!hasMatch) {
+    if (!isAdmin) return null;
+
+    return (
+      <Link
+        to="/matches/new"
+        className="inline-flex w-full md:w-auto bg-primary text-on-primary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform items-center justify-center gap-3"
+      >
+        <MaterialIcon name="add_circle" className="w-5 h-5" />
+        Novo Jogo
+      </Link>
+    );
+  }
+
+  const confirming = status === "confirming";
+
+  return (
+    <button
+      type="button"
+      onClick={onConfirm}
+      className="w-full md:w-auto bg-primary-container text-primary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
+    >
+      <MaterialIcon name={confirming ? "pending" : "check_circle"} className="w-5 h-5" />
+      {confirming ? "CONFIRMANDO..." : "EU VOU!"}
+    </button>
+  );
+}
+
+function getCardMeta(loading: boolean, match: NextMatchData | null): { title: string; subtitle: string } {
+  if (loading) {
+    return { title: "Carregando...", subtitle: "Buscando o próximo jogo" };
+  }
+  if (match) {
+    return { title: match.title, subtitle: "Próxima Pelada" };
+  }
+  return { title: "Nenhuma partida marcada", subtitle: "Ainda não há jogo agendado" };
+}
+
+function getImageSrc(match: NextMatchData | null, photoIndex: number): string | null {
+  const pool = match ? getCourtPhotos(match.sportName, match.hour) : [...ATMOSPHERE_PHOTOS];
+  return pool.length > 0 ? pool[photoIndex % pool.length] : null;
+}
+
+function resolveConfirmStatus(busy: boolean, hasError: boolean, isConfirmed: boolean): ConfirmStatus {
+  if (busy) return "confirming";
+  if (hasError) return "error";
+  if (isConfirmed) return "confirmed";
+  return "idle";
+}
 
 export function NextMatch() {
-  const [status, setStatus] = useState<'idle' | 'confirming' | 'confirmed'>('idle')
+  const { activeGroupId } = useActiveGroup();
+  const { match, loading } = useNextMatch(activeGroupId);
+  const { user } = useAuth();
+  const { isAdmin } = useIsAdmin();
+  const [busy, setBusy] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [drawing, setDrawing] = useState(false);
+  const [drawError, setDrawError] = useState<string | null>(null);
+  const [photoIndex] = useState(() => {
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    return array[0] % Math.max(ATMOSPHERE_PHOTOS.length, 1);
+  });
 
-  function handleConfirm() {
-    if (status !== 'idle') return
-    setStatus('confirming')
-    setTimeout(() => setStatus('confirmed'), 1200)
+  const imageSrc = getImageSrc(match, photoIndex);
+  const { title, subtitle } = getCardMeta(loading, match);
+  const isConfirmed = match?.myStatus === "confirmed";
+
+  const status: ConfirmStatus = resolveConfirmStatus(busy, hasError, isConfirmed);
+
+  async function handleConfirm() {
+    if (!match || !user || busy) return;
+
+    setBusy(true);
+    setHasError(false);
+
+    try {
+      const { data: existing } = await supabase.from("match_players").select("id").eq("match_id", match.id).eq("user_id", user.id).maybeSingle();
+
+      const insertPayload: MatchPlayerInsert = {
+        match_id: match.id,
+        user_id: user.id,
+        status: "confirmed",
+        team: "A",
+      };
+
+      const result = existing
+        ? await supabase.from("match_players").update({ status: "confirmed" }).eq("id", existing.id)
+        : await supabase.from("match_players").insert(insertPayload);
+
+      if (result.error) {
+        console.error("Erro ao confirmar presença:", result.error);
+        setHasError(true);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDrawTeams() {
+    if (!match || drawing) return;
+
+    setDrawing(true);
+    setDrawError(null);
+
+    const { error } = await supabase.functions.invoke("generate-lineup", {
+      body: { matchId: match.id, groupId: activeGroupId },
+    });
+
+    setDrawing(false);
+
+    if (error) {
+      console.error("Erro ao sortear times:", error);
+      setDrawError("Não foi possível sortear os times. Tente novamente.");
+    }
   }
 
   return (
-    <section className="md:col-span-8 group">
-      <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-outline-variant h-full flex flex-col md:flex-row transition-colors hover:border-primary/50">
-        <div className="relative w-full md:w-1/2 h-48 md:h-full min-h-50">
-          <img className="w-full h-full object-cover" src={NEXT_MATCH.imageUrl} alt="Quadra de futsal" />
+    <section className="md:col-span-8 group md:h-120">
+      <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-outline-variant h-full md:h-full flex flex-col md:flex-row transition-colors hover:border-primary/50">
+        <div className="relative w-full md:w-1/2 h-56 md:h-full shrink-0">
+          {imageSrc && <img key={imageSrc} className="absolute inset-0 w-full h-full object-cover photo-fade" src={imageSrc} alt="Quadra" />}
           <div className="absolute inset-0 bg-linear-to-t md:bg-linear-to-r from-surface-container-high via-transparent to-transparent" />
         </div>
 
-        <div className="p-stack-lg flex flex-col justify-between flex-1 relative z-10">
+        <div className="p-stack-lg flex flex-col justify-between flex-1 relative z-10 overflow-y-auto">
           <div>
             <span className="inline-block px-3 py-1 bg-secondary-container text-on-secondary-container font-mono text-label-sm mb-4 uppercase tracking-widest">
-              Próxima Pelada
+              {subtitle}
             </span>
-            <h3 className="text-headline-md font-display text-on-surface mb-stack-sm">{NEXT_MATCH.title}</h3>
-            <div className="space-y-3 mt-4">
-              <div className="flex items-center gap-3 text-on-surface-variant">
-                <MaterialIcon name="calendar_today" className="w-5 h-5 text-primary" />
-                <span className="font-body">{NEXT_MATCH.date}</span>
+            <h3 className="text-headline-md font-display text-on-surface mb-stack-sm">{title}</h3>
+
+            {loading && (
+              <div className="space-y-3 mt-4">
+                <div className="h-5 w-2/3 bg-surface-variant animate-pulse rounded" />
+                <div className="h-5 w-1/3 bg-surface-variant animate-pulse rounded" />
               </div>
-              <div className="flex items-center gap-3 text-on-surface-variant">
-                <MaterialIcon name="schedule" className="w-5 h-5 text-primary" />
-                <span className="font-body">{NEXT_MATCH.time}</span>
+            )}
+
+            {!loading && match && (
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center gap-3 text-on-surface-variant">
+                  <MaterialIcon name="calendar_today" className="w-5 h-5 text-primary" />
+                  <span className="font-body">{match.date}</span>
+                </div>
+                <div className="flex items-center gap-3 text-on-surface-variant">
+                  <MaterialIcon name="schedule" className="w-5 h-5 text-primary" />
+                  <span className="font-body">{match.time}</span>
+                </div>
+                <div className="flex items-center gap-3 text-on-surface-variant">
+                  <MaterialIcon name="location_on" className="w-5 h-5 text-primary" />
+                  <span className="font-body">{match.location}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-on-surface-variant">
-                <MaterialIcon name="location_on" className="w-5 h-5 text-primary" />
-                <span className="font-body">{NEXT_MATCH.location}</span>
-              </div>
-            </div>
+            )}
+
+            {!loading && !match && (
+              <p className="mt-4 text-on-surface-variant font-body max-w-sm">Assim que tiver um jogo marcado, ele aparece aqui.</p>
+            )}
           </div>
 
-          <div className="mt-stack-lg">
-            {status === 'confirmed' ? (
+          <div className="mt-stack-lg flex flex-col gap-3">
+            <MatchActions
+              status={status}
+              loading={loading}
+              hasMatch={Boolean(match)}
+              isAdmin={isAdmin}
+              onConfirm={handleConfirm}
+              onRetry={() => setHasError(false)}
+            />
+
+            {isAdmin && match && (
               <button
                 type="button"
-                disabled
-                className="w-full md:w-auto bg-green-800 text-white px-10 py-4 font-mono text-label-bold rounded-none transition-transform flex items-center justify-center gap-3"
+                onClick={handleDrawTeams}
+                disabled={drawing}
+                className="w-full md:w-auto bg-secondary text-on-secondary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
               >
-                <MaterialIcon name="verified" className="w-5 h-5 text-white" />
-                PRESENÇA CONFIRMADA!
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className="w-full md:w-auto bg-primary text-on-primary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
-              >
-                <MaterialIcon name={status === 'confirming' ? 'pending' : 'check_circle'} className="w-5 h-5" />
-                {status === 'confirming' ? 'CONFIRMANDO...' : 'EU VOU!'}
+                <MaterialIcon name="shuffle" className="w-5 h-5" />
+                {drawing ? "SORTEANDO..." : "SORTEAR TIMES"}
               </button>
             )}
+
+            {drawError && <p className="text-error font-body text-sm">{drawError}</p>}
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }
