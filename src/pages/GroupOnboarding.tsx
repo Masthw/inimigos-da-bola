@@ -42,9 +42,9 @@ export default function GroupOnboarding() {
       let code: string;
       let attempts = 0;
       do {
-        code = Math.floor(Math.random() * 1000000)
-          .toString()
-          .padStart(6, "0");
+        const array = new Uint32Array(1);
+        window.crypto.getRandomValues(array);
+        code = (array[0] % 1000000).toString().padStart(6, "0");
         const { data: existing } = await supabase.from("groups").select("code").eq("code", code).maybeSingle();
         if (!existing) break;
         attempts++;

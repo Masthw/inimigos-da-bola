@@ -12,6 +12,7 @@ export default function MatchReview() {
     loading,
     saving,
     error,
+    isAdmin,
     setManualScore,
     showConfirm,
     setShowConfirm,
@@ -102,7 +103,8 @@ export default function MatchReview() {
                     const val = e.target.value;
                     setManualScore({ teamA: val === "" ? 0 : Number(val) || 0, teamB: currentScoreB });
                   }}
-                  className="w-20 bg-surface-variant border border-outline-variant px-3 py-2 font-display text-headline-md text-on-surface text-center appearance-none"
+                  disabled={!isAdmin}
+                  className="w-20 bg-surface-variant border border-outline-variant px-3 py-2 font-display text-headline-md text-on-surface text-center appearance-none disabled:opacity-50"
                   aria-label={`Placar do ${match.teamAName}`}
                 />
               </div>
@@ -120,12 +122,20 @@ export default function MatchReview() {
                     const val = e.target.value;
                     setManualScore({ teamA: currentScoreA, teamB: val === "" ? 0 : Number(val) || 0 });
                   }}
-                  className="w-20 bg-surface-variant border border-outline-variant px-3 py-2 font-display text-headline-md text-on-surface text-center appearance-none"
+                  disabled={!isAdmin}
+                  className="w-20 bg-surface-variant border border-outline-variant px-3 py-2 font-display text-headline-md text-on-surface text-center appearance-none disabled:opacity-50"
                   aria-label={`Placar do ${match.teamBName}`}
                 />
               </div>
             </div>
           </div>
+
+          {!isAdmin && (
+            <div className="bg-secondary-container/30 border border-secondary/30 rounded-xl p-3 flex items-center gap-2">
+              <MaterialIcon name="visibility" className="w-4 h-4 text-secondary shrink-0" />
+              <p className="font-mono text-label-sm text-secondary">Modo visualização — apenas admins podem editar</p>
+            </div>
+          )}
 
           <MatchEventList
             iconColor={match.teamAColor}
@@ -224,9 +234,9 @@ export default function MatchReview() {
         <div className="px-4 py-4 border-t border-outline-variant bg-surface-container">
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || !isAdmin}
             onClick={() => setShowConfirm(true)}
-            className="w-full py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover transition-transform"
+            className="w-full py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover transition-transform disabled:opacity-50"
           >
             {saving ? "Salvando..." : "Confirmar e Abrir Votação"}
           </button>

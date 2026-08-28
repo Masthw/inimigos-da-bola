@@ -418,8 +418,8 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       if (matchRes.data) {
         type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
         const scoreUpdatePayload: MatchUpdate = team === "A"
-          ? { team_a_score: Math.max(0, (matchRes.data.team_a_score ?? 1) - 1) }
-          : { team_b_score: Math.max(0, (matchRes.data.team_b_score ?? 1) - 1) };
+          ? { team_a_score: Math.max(0, (matchRes.data.team_a_score ?? 0) - 1) }
+          : { team_b_score: Math.max(0, (matchRes.data.team_b_score ?? 0) - 1) };
 
         await supabase.from("matches").update(scoreUpdatePayload).eq(
           "id",
@@ -507,8 +507,8 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       if (matchRes.data) {
         type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
         const scoreUpdatePayload: MatchUpdate = teamBenefited === "A"
-          ? { team_a_score: Math.max(0, (matchRes.data.team_a_score ?? 1) - 1) }
-          : { team_b_score: Math.max(0, (matchRes.data.team_b_score ?? 1) - 1) };
+          ? { team_a_score: Math.max(0, (matchRes.data.team_a_score ?? 0) - 1) }
+          : { team_b_score: Math.max(0, (matchRes.data.team_b_score ?? 0) - 1) };
 
         await supabase.from("matches").update(scoreUpdatePayload).eq(
           "id",

@@ -30,6 +30,7 @@ export default function GroupManagement() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!activeGroupId || !user) return;
@@ -84,22 +85,32 @@ export default function GroupManagement() {
 
   async function handleApprove(userId: string) {
     if (!activeGroupId) return;
-    await supabase
-      .from("group_members")
-      .update({ status: "approved" })
-      .eq("group_id", activeGroupId)
-      .eq("user_id", userId);
-    fetchData();
+    setBusyUserId(userId);
+    try {
+      await supabase
+        .from("group_members")
+        .update({ status: "approved" })
+        .eq("group_id", activeGroupId)
+        .eq("user_id", userId);
+      fetchData();
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   async function handleReject(userId: string) {
     if (!activeGroupId) return;
-    await supabase
-      .from("group_members")
-      .delete()
-      .eq("group_id", activeGroupId)
-      .eq("user_id", userId);
-    fetchData();
+    setBusyUserId(userId);
+    try {
+      await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", activeGroupId)
+        .eq("user_id", userId);
+      fetchData();
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   async function handleCopyCode() {
@@ -193,15 +204,17 @@ export default function GroupManagement() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      disabled={busyUserId === p.user_id}
                       onClick={() => handleApprove(p.user_id)}
-                      className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm hover:scale-105 transition-transform"
+                      className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm hover:scale-105 transition-transform disabled:opacity-50"
                     >
-                      ACEITAR
+                      {busyUserId === p.user_id ? "..." : "ACEITAR"}
                     </button>
                     <button
                       type="button"
+                      disabled={busyUserId === p.user_id}
                       onClick={() => handleReject(p.user_id)}
-                      className="px-3 py-1 bg-error-container text-on-error-container font-mono text-label-sm hover:scale-105 transition-transform"
+                      className="px-3 py-1 bg-error-container text-on-error-container font-mono text-label-sm hover:scale-105 transition-transform disabled:opacity-50"
                     >
                       RECUSAR
                     </button>

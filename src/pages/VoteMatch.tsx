@@ -21,6 +21,7 @@ export default function VoteMatch() {
   const { votingData, loading, saving, error, submitVote, hasVoted, getVotedPlayers } = useVoting(matchId, activeGroupId);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [endingError, setEndingError] = useState<string | null>(null);
 
   useEffect(() => {
     const id = matchId ?? "";
@@ -64,6 +65,7 @@ export default function VoteMatch() {
   const handleEndVoting = useCallback(async () => {
     if (!matchId) return;
     setEnding(true);
+    setEndingError(null);
     try {
       const { error: fnError } = await supabase.functions.invoke("tally-match-votes", {
         body: { matchId, groupId: activeGroupId },
@@ -71,6 +73,7 @@ export default function VoteMatch() {
       if (fnError) throw fnError;
       navigate(`/matches/${matchId}/results`);
     } catch {
+      setEndingError("Erro ao encerrar votação. Tente novamente.");
       setEnding(false);
     }
   }, [activeGroupId, matchId, navigate]);
@@ -225,6 +228,22 @@ export default function VoteMatch() {
                   Ver Resultados
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {endingError && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <div className="bg-surface-container-high rounded-2xl p-6 max-w-sm w-full border border-outline-variant">
+              <MaterialIcon name="error" className="w-10 h-10 text-error mx-auto mb-4" />
+              <p className="font-mono text-label-bold text-on-surface text-center">{endingError}</p>
+              <button
+                type="button"
+                onClick={() => setEndingError(null)}
+                className="mt-4 w-full py-3 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant"
+              >
+                Fechar
+              </button>
             </div>
           </div>
         )}
