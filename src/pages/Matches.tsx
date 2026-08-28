@@ -258,7 +258,7 @@ function FeaturedCard({
               </span>
             </div>
             <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
-              <div className="h-full bg-primary transition-all duration-700 stat-bar" style={{ width: `${progress}%` }} />
+              <div className="h-full bg-primary transition-[width] duration-700 stat-bar" style={{ width: `${progress}%` }} />
             </div>
           </div>
 

@@ -82,7 +82,7 @@ interface PlayerRow {
 }
 
 function sortByDate(rows: MatchWithMeta[], ascending: boolean) {
-  return [...rows].sort((a, b) => {
+  return rows.toSorted((a, b) => {
     const diff = new Date(a.dateTime).getTime() -
       new Date(b.dateTime).getTime();
     return ascending ? diff : -diff;

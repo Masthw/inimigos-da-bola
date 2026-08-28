@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../hooks/useAuth";
@@ -95,8 +95,18 @@ export function GroupContextProvider() {
 
   const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
 
+  const contextValue = useMemo(() => ({
+    groups,
+    activeGroup,
+    activeGroupId,
+    setActiveGroup,
+    loading,
+    isAdmin,
+    refresh: load,
+  }), [groups, activeGroup, activeGroupId, setActiveGroup, loading, isAdmin, load]);
+
   return (
-    <GroupContext.Provider value={{ groups, activeGroup, activeGroupId, setActiveGroup, loading, isAdmin, refresh: load }}>
+    <GroupContext.Provider value={contextValue}>
       <Outlet />
     </GroupContext.Provider>
   );

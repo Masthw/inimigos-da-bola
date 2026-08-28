@@ -256,7 +256,7 @@ export default function Rankings() {
                     <td className="px-4 py-3 font-label-bold text-center text-primary">{rank.toString().padStart(2, "0")}</td>
                     <td className="px-4 py-3">
                       <Link to={`/profile/${player.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-variant border-2 border-transparent group-hover:border-primary/50 transition-all shrink-0">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-variant border-2 border-transparent group-hover:border-primary/50 transition-colors shrink-0">
                           {player.avatarUrl ? (
                             <img className="w-full h-full object-cover" src={player.avatarUrl} alt={player.name} referrerPolicy="no-referrer" />
                           ) : (
@@ -394,7 +394,7 @@ export default function Rankings() {
                             <span className={`px-3 py-1 text-label-bold rounded-sm ${badge.className}`}>{badge.label}</span>
                           </div>
                           <div className="flex items-center gap-3 mt-4">
-                            <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-variant border-2 border-transparent group-hover:border-primary/50 transition-all shrink-0">
+                            <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-variant border-2 border-transparent group-hover:border-primary/50 transition-colors shrink-0">
                               {player.avatarUrl ? (
                                 <img className="w-full h-full object-cover" src={player.avatarUrl} alt={player.name} referrerPolicy="no-referrer" />
                               ) : (

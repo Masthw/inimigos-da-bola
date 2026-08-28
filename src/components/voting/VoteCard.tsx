@@ -39,7 +39,7 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
   }, [players, award.voteCounts]);
 
   const sortedPlayers = useMemo(() => {
-    return [...eligiblePlayers].sort((a, b) => (allVoteCounts[b.userId] || 0) - (allVoteCounts[a.userId] || 0));
+    return eligiblePlayers.toSorted((a, b) => (allVoteCounts[b.userId] || 0) - (allVoteCounts[a.userId] || 0));
   }, [eligiblePlayers, allVoteCounts]);
 
   const maxVotes = Math.max(...Object.values(allVoteCounts), 1);

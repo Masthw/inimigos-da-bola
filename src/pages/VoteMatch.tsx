@@ -69,13 +69,13 @@ export default function VoteMatch() {
 
   const goalScorer = useMemo(() => {
     if (!votingData) return null;
-    const sorted = [...votingData.players].sort((a, b) => b.goalsScored - a.goalsScored);
+    const sorted = votingData.players.toSorted((a, b) => b.goalsScored - a.goalsScored);
     return sorted[0]?.goalsScored > 0 ? sorted[0] : null;
   }, [votingData]);
 
   const assistKing = useMemo(() => {
     if (!votingData) return null;
-    const sorted = [...votingData.players].sort((a, b) => b.assists - a.assists);
+    const sorted = votingData.players.toSorted((a, b) => b.assists - a.assists);
     return sorted[0]?.assists > 0 ? sorted[0] : null;
   }, [votingData]);
 

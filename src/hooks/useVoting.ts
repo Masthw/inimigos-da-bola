@@ -226,11 +226,11 @@ export function useVoting(matchId: string | undefined, groupId: string | null = 
   const getVotedPlayers = useCallback((awardId: number) => {
     const votes = votingData?.votes;
     if (!votes) return [];
-    const players = votingData?.players ?? [];
+    const playerMap = new Map(votingData?.players.map((p) => [p.userId, p]));
     const result: VotingPlayer[] = [];
     for (const v of votes) {
       if (v.awardId === awardId && v.votedUserId) {
-        const player = players.find((p) => p.userId === v.votedUserId);
+        const player = playerMap.get(v.votedUserId);
         if (player) result.push(player);
       }
     }
