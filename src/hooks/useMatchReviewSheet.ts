@@ -101,7 +101,7 @@ export function useMatchReviewSheet() {
     await removeOwnGoal(selectedPlayer.userId);
   }, [selectedPlayer, removeOwnGoal]);
 
-  const handleAssistSelect = useCallback(async (assist: { userId: string } | null) => {
+  const handleAssistSelect = useCallback(async (assist: MatchPlayer | null) => {
     if (!selectedPlayer?.userId || !selectedPlayer.team) return;
     await addGoal(selectedPlayer.userId, selectedPlayer.team, assist?.userId || null);
     closeSheet();

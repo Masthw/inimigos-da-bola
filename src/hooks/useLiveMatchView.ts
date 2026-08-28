@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { MatchPlayer } from "../../hooks/useMatches";
+import type { MatchPlayer } from "./useMatches";
 
 type SheetPhase = "closed" | "goal_type" | "assist" | "finish";
 

@@ -38,7 +38,7 @@ export interface MatchReviewData {
   goals: MatchGoal[];
   assists: MatchAssist[];
   ownGoals: OwnGoal[];
-  players: { userId: string; name: string; team: "A" | "B" }[];
+  players: { userId: string; name: string; team: "A" | "B"; avatarUrl: string | null }[];
 }
 
 type SupabaseUpdatePromise = PromiseLike<{ error: PostgrestError | null }>;
@@ -85,6 +85,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       userId: row.user_id ?? `guest-${row.guest_name}`,
       name: row.users?.name ?? row.guest_name ?? "Convidado",
       team: row.team as "A" | "B",
+      avatarUrl: null,
     }));
 
     const goals: MatchGoal[] = [];
@@ -346,7 +347,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
         const scoreUpdatePayload: MatchUpdate = teamBenefited === "A"
           ? { team_a_score: currentScore + 1 }
-          : { team_b_score: currentTeamScore + 1 };
+          : { team_b_score: currentScore + 1 };
 
         const updates: SupabaseUpdatePromise[] = [
           supabase.from("matches").update(scoreUpdatePayload).eq("id", matchId),

@@ -1,7 +1,7 @@
 import { MaterialIcon } from "../ui/MaterialIcon";
 import { Avatar } from "../ui/Avatar";
-import type { MatchReviewData } from "../hooks/useMatchReview";
-import type { MatchPlayer } from "../hooks/useMatches";
+import type { MatchReviewData } from "../../hooks/useMatchReview";
+import type { MatchPlayer } from "../../hooks/useMatches";
 
 interface MatchReviewSheetProps {
   match: MatchReviewData;
@@ -16,7 +16,7 @@ interface MatchReviewSheetProps {
   onRemoveGoal: () => void;
   onRemoveAssist: () => void;
   onRemoveOwnGoal: () => void;
-  onAssistSelect: (player: { userId: string } | null) => void;
+  onAssistSelect: (player: MatchPlayer | null) => void;
 }
 
 export function MatchReviewSheet({
@@ -36,9 +36,9 @@ export function MatchReviewSheet({
 }: MatchReviewSheetProps) {
   if (!selectedPlayer) return null;
 
-  const goalCount = match.goals.filter((g) => g.playerId === selectedPlayer.userId).length;
-  const assistCount = match.assists.filter((a) => a.assistPlayerId === selectedPlayer.userId).length;
-  const ownGoalCount = match.ownGoals.filter((og) => og.playerId === selectedPlayer.userId).length;
+  const goalCount = match.goals.filter((g: { playerId: string }) => g.playerId === selectedPlayer.userId).length;
+  const assistCount = match.assists.filter((a: { assistPlayerId: string }) => a.assistPlayerId === selectedPlayer.userId).length;
+  const ownGoalCount = match.ownGoals.filter((og: { playerId: string }) => og.playerId === selectedPlayer.userId).length;
   const hasAny = goalCount > 0 || assistCount > 0 || ownGoalCount > 0;
 
   return (
