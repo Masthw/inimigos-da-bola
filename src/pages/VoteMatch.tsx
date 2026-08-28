@@ -26,12 +26,16 @@ export default function VoteMatch() {
     const id = matchId ?? "";
     if (!id) return;
 
+    let cancelled = false;
+
     async function checkStatus() {
       const { data } = await supabase
         .from("matches")
         .select("status")
         .eq("id", id)
         .single();
+
+      if (cancelled) return;
 
       if (data && data.status !== "voting") {
         setStatusCheck("ended");
@@ -41,6 +45,10 @@ export default function VoteMatch() {
     }
 
     void checkStatus();
+
+    return () => {
+      cancelled = true;
+    };
   }, [matchId]);
 
   useEffect(() => {

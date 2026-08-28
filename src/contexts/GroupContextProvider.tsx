@@ -15,45 +15,46 @@ export function GroupContextProvider() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    try {
+      const stored = localStorage.getItem(GROUP_STORAGE_KEY);
 
-    const stored = localStorage.getItem(GROUP_STORAGE_KEY);
+      const [{ data, error }, { data: rpcResult, error: rpcError }] = await Promise.all([
+        supabase
+          .from("group_members")
+          .select("group_id, groups(name, description, code)")
+          .eq("status", "approved")
+          .order("joined_at", { ascending: true }),
+        user ? supabase.rpc("is_admin") : { data: false, error: null },
+      ]);
 
-    const [{ data, error }, { data: rpcResult, error: rpcError }] = await Promise.all([
-      supabase
-        .from("group_members")
-        .select("group_id, groups(name, description, code)")
-        .eq("status", "approved")
-        .order("joined_at", { ascending: true }),
-      user ? supabase.rpc("is_admin") : { data: false, error: null },
-    ]);
+      if (error) {
+        console.error("Erro ao buscar grupos:", error);
+        return;
+      }
 
-    if (error) {
-      console.error("Erro ao buscar grupos:", error);
+      if (!rpcError && typeof rpcResult === "boolean") {
+        setIsAdmin(rpcResult);
+      } else if (user) {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        setIsAdmin(userData?.role === "admin");
+      }
+
+      const mapped: GroupInfo[] = (data ?? []).map((row) => ({
+        id: row.group_id,
+        name: row.groups?.name ?? "Grupo",
+        code: row.groups?.code ?? "",
+        description: row.groups?.description ?? null,
+      }));
+
+      setGroups(mapped);
+      setActiveGroupId(stored ?? mapped[0]?.id ?? null);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (!rpcError && typeof rpcResult === "boolean") {
-      setIsAdmin(rpcResult);
-    } else if (user) {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      setIsAdmin(userData?.role === "admin");
-    }
-
-    const mapped: GroupInfo[] = (data ?? []).map((row) => ({
-      id: row.group_id,
-      name: row.groups?.name ?? "Grupo",
-      code: row.groups?.code ?? "",
-      description: row.groups?.description ?? null,
-    }));
-
-    setGroups(mapped);
-    setActiveGroupId(stored ?? mapped[0]?.id ?? null);
-    setLoading(false);
   }, [user]);
 
   useEffect(() => {

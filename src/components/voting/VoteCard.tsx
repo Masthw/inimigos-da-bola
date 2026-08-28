@@ -56,18 +56,21 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
 
   const handleConfirm = async () => {
     setSubmitting(true);
-    if (isMvp) {
-      const playerId = selectedPlayerIds[0] || null;
-      await onVote(playerId);
-    } else {
-      const currentIds = new Set(votedPlayers.map((vp) => vp.userId));
-      const selectedIds = new Set(selectedPlayerIds);
-      const toAdd = selectedPlayerIds.filter((id) => !currentIds.has(id));
-      const toRemove = Array.from(currentIds).filter((id) => !selectedIds.has(id));
+    try {
+      if (isMvp) {
+        const playerId = selectedPlayerIds[0] || null;
+        await onVote(playerId);
+      } else {
+        const currentIds = new Set(votedPlayers.map((vp) => vp.userId));
+        const selectedIds = new Set(selectedPlayerIds);
+        const toAdd = selectedPlayerIds.filter((id) => !currentIds.has(id));
+        const toRemove = Array.from(currentIds).filter((id) => !selectedIds.has(id));
 
-      await Promise.all([...toAdd.map((playerId) => onVote(playerId)), ...toRemove.map((playerId) => onVote(playerId))]);
+        await Promise.all([...toAdd.map((playerId) => onVote(playerId)), ...toRemove.map((playerId) => onVote(playerId))]);
+      }
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
     handleClose();
   };
 

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, useCallback, type ReactNode } from "react";
+import { useLayoutEffect, useState, useCallback, useEffectEvent, type ReactNode } from "react";
 import { MaterialIcon } from "../../components/ui/MaterialIcon";
 import { useFavoritePositions, type Position } from "../../hooks/useFavoritePositions";
 
@@ -42,6 +42,8 @@ export function FavoritePositionsModal({ open, onClose }: Readonly<FavoritePosit
     }, CLOSE_ANIMATION_MS);
   }, [onClose]);
 
+  const handleCloseEvent = useEffectEvent(() => handleClose());
+
   useLayoutEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -54,11 +56,11 @@ export function FavoritePositionsModal({ open, onClose }: Readonly<FavoritePosit
   useLayoutEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
+      if (e.key === "Escape") handleCloseEvent();
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open, handleClose]);
+  }, [open]);
 
   const handleSelect = async (position: Position) => {
     if (saving) return;

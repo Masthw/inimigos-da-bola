@@ -30,9 +30,9 @@ export function VoteResult({ teamAName, teamBName, teamAScore, teamBScore, resul
       </div>
 
       <div className="space-y-3">
-        {results.map((result, i) => (
+        {results.map((result) => (
           <div
-            key={`${result.awardName}-${i}`}
+            key={result.awardName}
             className={`rounded-2xl p-4 border ${
               result.winnerName
                 ? 'bg-primary/5 border-primary/20'

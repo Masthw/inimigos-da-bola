@@ -174,43 +174,43 @@ export function useVoting(matchId: string | undefined, groupId: string | null = 
     async (awardId: number, votedUserId: string | null) => {
       if (!matchId || !user) return false;
       setSaving(true);
-
-      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
-      if (!valid) {
-        setError(guardError ?? "Validação de grupo falhou");
-        setSaving(false);
-        return false;
-      }
-
-      if (votedUserId === null) {
-        const { error } = await supabase
-          .from("match_votes")
-          .delete()
-          .eq("match_id", matchId)
-          .eq("voter_user_id", user.id)
-          .eq("award_id", awardId);
-        setSaving(false);
-        if (error) {
-          setError("Erro ao remover voto");
+      try {
+        const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+        if (!valid) {
+          setError(guardError ?? "Validação de grupo falhou");
           return false;
         }
-      } else {
-        const { error } = await supabase
-          .from("match_votes")
-          .upsert(
-            {
-              match_id: matchId,
-              award_id: awardId,
-              voter_user_id: user.id,
-              voted_user_id: votedUserId,
-            },
-            { onConflict: "match_id,voter_user_id,award_id" },
-          );
-        setSaving(false);
-        if (error) {
-          setError("Erro ao registrar voto");
-          return false;
+
+        if (votedUserId === null) {
+          const { error } = await supabase
+            .from("match_votes")
+            .delete()
+            .eq("match_id", matchId)
+            .eq("voter_user_id", user.id)
+            .eq("award_id", awardId);
+          if (error) {
+            setError("Erro ao remover voto");
+            return false;
+          }
+        } else {
+          const { error } = await supabase
+            .from("match_votes")
+            .upsert(
+              {
+                match_id: matchId,
+                award_id: awardId,
+                voter_user_id: user.id,
+                voted_user_id: votedUserId,
+              },
+              { onConflict: "match_id,voter_user_id,award_id" },
+            );
+          if (error) {
+            setError("Erro ao registrar voto");
+            return false;
+          }
         }
+      } finally {
+        setSaving(false);
       }
 
       await fetchVotingData();

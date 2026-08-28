@@ -155,6 +155,27 @@ async function fetchRankingData(userId?: string, groupId?: string | null): Promi
 
 // COMPONENTE PRINCIPAL
 
+function getPositionColor(pos: number) {
+  if (pos === 1) return "border-tertiary/60";
+  if (pos === 2) return "border-secondary/60";
+  if (pos === 3) return "border-outline-variant";
+  return "border-outline-variant/30";
+}
+
+function getPositionBadge(pos: number) {
+  if (pos === 1) return { label: "RANK #1", className: "bg-tertiary text-on-tertiary" };
+  if (pos === 2) return { label: "RANK #2", className: "bg-secondary text-on-secondary" };
+  if (pos === 3) return { label: "RANK #3", className: "bg-outline-variant text-on-surface" };
+  return { label: `#${pos}`, className: "bg-primary text-on-primary" };
+}
+
+function getRankAccent(pos: number) {
+  if (pos === 1) return "from-tertiary/20 to-transparent";
+  if (pos === 2) return "from-secondary/20 to-transparent";
+  if (pos === 3) return "from-outline-variant/30 to-transparent";
+  return "from-surface-variant/10 to-transparent";
+}
+
 export default function Rankings() {
   const { user } = useAuth();
   const { activeGroup } = useActiveGroup();
@@ -182,27 +203,6 @@ export default function Rankings() {
       cancelled = true;
     };
   }, [user, activeGroup]);
-
-  const getPositionColor = (pos: number) => {
-    if (pos === 1) return "border-tertiary/60";
-    if (pos === 2) return "border-secondary/60";
-    if (pos === 3) return "border-outline-variant";
-    return "border-outline-variant/30";
-  };
-
-  const getPositionBadge = (pos: number) => {
-    if (pos === 1) return { label: "RANK #1", className: "bg-tertiary text-on-tertiary" };
-    if (pos === 2) return { label: "RANK #2", className: "bg-secondary text-on-secondary" };
-    if (pos === 3) return { label: "RANK #3", className: "bg-outline-variant text-on-surface" };
-    return { label: `#${pos}`, className: "bg-primary text-on-primary" };
-  };
-
-  const getRankAccent = (pos: number) => {
-    if (pos === 1) return "from-tertiary/20 to-transparent";
-    if (pos === 2) return "from-secondary/20 to-transparent";
-    if (pos === 3) return "from-outline-variant/30 to-transparent";
-    return "from-surface-variant/10 to-transparent";
-  };
 
   const renderContent = () => {
     if (loading) {

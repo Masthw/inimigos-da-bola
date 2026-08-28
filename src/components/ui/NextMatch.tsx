@@ -138,24 +138,26 @@ export function NextMatch() {
     setBusy(true);
     setHasError(false);
 
-    const { data: existing } = await supabase.from("match_players").select("id").eq("match_id", match.id).eq("user_id", user.id).maybeSingle();
+    try {
+      const { data: existing } = await supabase.from("match_players").select("id").eq("match_id", match.id).eq("user_id", user.id).maybeSingle();
 
-    const insertPayload: MatchPlayerInsert = {
-      match_id: match.id,
-      user_id: user.id,
-      status: "confirmed",
-      team: "A",
-    };
+      const insertPayload: MatchPlayerInsert = {
+        match_id: match.id,
+        user_id: user.id,
+        status: "confirmed",
+        team: "A",
+      };
 
-    const result = existing
-      ? await supabase.from("match_players").update({ status: "confirmed" }).eq("id", existing.id)
-      : await supabase.from("match_players").insert(insertPayload);
+      const result = existing
+        ? await supabase.from("match_players").update({ status: "confirmed" }).eq("id", existing.id)
+        : await supabase.from("match_players").insert(insertPayload);
 
-    setBusy(false);
-
-    if (result.error) {
-      console.error("Erro ao confirmar presença:", result.error);
-      setHasError(true);
+      if (result.error) {
+        console.error("Erro ao confirmar presença:", result.error);
+        setHasError(true);
+      }
+    } finally {
+      setBusy(false);
     }
   }
 

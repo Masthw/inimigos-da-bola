@@ -133,88 +133,91 @@ export function usePlayerMatchHistory(userId: string | undefined, groupId: strin
     async function load() {
       setLoading(true)
 
-      const matchQuery = supabase
-        .from('matches')
-        .select('id, date_time, team_a_name, team_a_score, team_b_name, team_b_score, game_types(name)')
-        .eq('status', 'finished')
-        .is('deleted_at', null)
-        .order('date_time', { ascending: false })
+      try {
+        const matchQuery = supabase
+          .from('matches')
+          .select('id, date_time, team_a_name, team_a_score, team_b_name, team_b_score, game_types(name)')
+          .eq('status', 'finished')
+          .is('deleted_at', null)
+          .order('date_time', { ascending: false })
 
-      if (groupId) {
-        matchQuery.eq('group_id', groupId)
-      }
-
-      const { data: matchesData } = await matchQuery
-
-      const matchIds = (matchesData ?? []).map((m) => m.id)
-
-      const { data: userRows } = matchIds.length > 0
-        ? await supabase
-            .from('match_players')
-            .select('match_id, goals_scored, assists, team')
-            .eq('user_id', id)
-            .in('match_id', matchIds)
-        : { data: [] as { match_id: string; goals_scored: number | null; assists: number | null; team: string }[] }
-
-      if (cancelled) return
-
-      const playedMatchIds = new Set((userRows ?? []).map((row) => row.match_id))
-      const playedMatches = (matchesData ?? []).filter((match) => playedMatchIds.has(match.id))
-      const playedIds = playedMatches.map((match) => match.id)
-
-      const [playersRes, awardsRes] = await Promise.all([
-        supabase
-          .from('match_players')
-          .select('match_id, user_id, guest_name, goals_scored, assists, team, users(name)')
-          .in('match_id', playedIds),
-        supabase
-          .from('match_awards')
-          .select('match_id, user_id, awards(name)')
-          .in('match_id', playedIds),
-      ])
-
-      if (cancelled) return
-
-      const awardRows = awardsRes.data ?? []
-      const playerAwards = buildAwardMap(awardRows)
-      const playersByMatch = buildPlayersByMatch(playersRes.data ?? [], playerAwards)
-
-      const myRows = new Map((userRows ?? []).map((row) => [row.match_id, row]))
-
-      const result: HistoryMatch[] = playedMatches.map((match) => {
-        const mine = myRows.get(match.id)
-        const homeScore = match.team_a_score ?? 0
-        const awayScore = match.team_b_score ?? 0
-        const team = mine?.team === 'B' ? 'B' : 'A'
-        const outcome = getOutcome(team, homeScore, awayScore)
-        const awards = playerAwards.get(`${match.id}:${id}`) ?? []
-        const points = basePoints(outcome) + (awards.some(isCraqueAward) ? 1 : 0)
-        const players = playersByMatch.get(match.id) ?? { home: [], away: [] }
-
-        return {
-          id: match.id,
-          outcome,
-          modality: match.game_types?.name ?? '',
-          date: formatDay(match.date_time),
-          home: match.team_a_name ?? 'Time A',
-          homeScore,
-          away: match.team_b_name ?? 'Time B',
-          awayScore,
-          goals: mine?.goals_scored ?? 0,
-          assists: mine?.assists ?? 0,
-          points,
-          awards,
-          homePlayers: players.home,
-          awayPlayers: players.away,
+        if (groupId) {
+          matchQuery.eq('group_id', groupId)
         }
-      })
 
-      const counts = countUserAwards(awardRows, id)
+        const { data: matchesData } = await matchQuery
 
-      if (cancelled) return
-      setMatches(result)
-      setBadgeCounts(counts)
-      setLoading(false)
+        const matchIds = (matchesData ?? []).map((m) => m.id)
+
+        const { data: userRows } = matchIds.length > 0
+          ? await supabase
+              .from('match_players')
+              .select('match_id, goals_scored, assists, team')
+              .eq('user_id', id)
+              .in('match_id', matchIds)
+          : { data: [] as { match_id: string; goals_scored: number | null; assists: number | null; team: string }[] }
+
+        if (cancelled) return
+
+        const playedMatchIds = new Set((userRows ?? []).map((row) => row.match_id))
+        const playedMatches = (matchesData ?? []).filter((match) => playedMatchIds.has(match.id))
+        const playedIds = playedMatches.map((match) => match.id)
+
+        const [playersRes, awardsRes] = await Promise.all([
+          supabase
+            .from('match_players')
+            .select('match_id, user_id, guest_name, goals_scored, assists, team, users(name)')
+            .in('match_id', playedIds),
+          supabase
+            .from('match_awards')
+            .select('match_id, user_id, awards(name)')
+            .in('match_id', playedIds),
+        ])
+
+        if (cancelled) return
+
+        const awardRows = awardsRes.data ?? []
+        const playerAwards = buildAwardMap(awardRows)
+        const playersByMatch = buildPlayersByMatch(playersRes.data ?? [], playerAwards)
+
+        const myRows = new Map((userRows ?? []).map((row) => [row.match_id, row]))
+
+        const result: HistoryMatch[] = playedMatches.map((match) => {
+          const mine = myRows.get(match.id)
+          const homeScore = match.team_a_score ?? 0
+          const awayScore = match.team_b_score ?? 0
+          const team = mine?.team === 'B' ? 'B' : 'A'
+          const outcome = getOutcome(team, homeScore, awayScore)
+          const awards = playerAwards.get(`${match.id}:${id}`) ?? []
+          const points = basePoints(outcome) + (awards.some(isCraqueAward) ? 1 : 0)
+          const players = playersByMatch.get(match.id) ?? { home: [], away: [] }
+
+          return {
+            id: match.id,
+            outcome,
+            modality: match.game_types?.name ?? '',
+            date: formatDay(match.date_time),
+            home: match.team_a_name ?? 'Time A',
+            homeScore,
+            away: match.team_b_name ?? 'Time B',
+            awayScore,
+            goals: mine?.goals_scored ?? 0,
+            assists: mine?.assists ?? 0,
+            points,
+            awards,
+            homePlayers: players.home,
+            awayPlayers: players.away,
+          }
+        })
+
+        const counts = countUserAwards(awardRows, id)
+
+        if (cancelled) return
+        setMatches(result)
+        setBadgeCounts(counts)
+      } finally {
+        setLoading(false)
+      }
     }
 
     load()

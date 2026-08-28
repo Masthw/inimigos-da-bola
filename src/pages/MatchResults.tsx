@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useReducer } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
@@ -14,16 +14,54 @@ interface AwardResult {
   givesPoints: boolean;
 }
 
+interface MatchResultsState {
+  teamAName: string;
+  teamBName: string;
+  teamAScore: number;
+  teamBScore: number;
+  results: AwardResult[];
+  loading: boolean;
+  error: string | null;
+}
+
+type MatchResultsAction =
+  | { type: "fetchStart" }
+  | { type: "fetchSuccess"; payload: Omit<MatchResultsState, "loading" | "error"> }
+  | { type: "fetchError"; payload: string };
+
+const initialState: MatchResultsState = {
+  teamAName: "",
+  teamBName: "",
+  teamAScore: 0,
+  teamBScore: 0,
+  results: [],
+  loading: true,
+  error: null,
+};
+
+function reducer(state: MatchResultsState, action: MatchResultsAction): MatchResultsState {
+  switch (action.type) {
+    case "fetchStart":
+      return { ...state, loading: true, error: null };
+    case "fetchSuccess":
+      return { ...state, ...action.payload, loading: false };
+    case "fetchError":
+      return { ...state, loading: false, error: action.payload };
+    default:
+      return state;
+  }
+}
+
 export default function MatchResults() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const [teamAName, setTeamAName] = useState("");
-  const [teamBName, setTeamBName] = useState("");
-  const [teamAScore, setTeamAScore] = useState(0);
-  const [teamBScore, setTeamBScore] = useState(0);
-  const [results, setResults] = useState<AwardResult[]>([]);
-  const [loading, setLoading] = useState(matchId != null);
-  const [error, setError] = useState<string | null>(matchId == null ? "Partida não encontrada" : null);
+  const [state, dispatch] = useReducer(reducer, initialState, (init) => ({
+    ...init,
+    loading: matchId != null,
+    error: matchId == null ? "Partida não encontrada" : null,
+  }));
+
+  const { teamAName, teamBName, teamAScore, teamBScore, results, loading, error } = state;
 
   useEffect(() => {
     const id = matchId ?? "";
@@ -32,6 +70,8 @@ export default function MatchResults() {
     let cancelled = false;
 
     async function fetchResults() {
+      dispatch({ type: "fetchStart" });
+
       const [matchRes, matchAwardsRes, awardsRes, votesRes, playersRes] = await Promise.all([
         supabase
           .from("matches")
@@ -59,15 +99,9 @@ export default function MatchResults() {
       if (cancelled) return;
 
       if (matchRes.error || !matchRes.data) {
-        setError("Partida não encontrada");
-        setLoading(false);
+        dispatch({ type: "fetchError", payload: "Partida não encontrada" });
         return;
       }
-
-      setTeamAName(matchRes.data.team_a_name ?? "Time A");
-      setTeamBName(matchRes.data.team_b_name ?? "Time B");
-      setTeamAScore(matchRes.data.team_a_score ?? 0);
-      setTeamBScore(matchRes.data.team_b_score ?? 0);
 
       const playerMap = new Map<string, string>();
       playersRes.data?.forEach((p) => {
@@ -107,8 +141,16 @@ export default function MatchResults() {
         };
       });
 
-      setResults(awardResults);
-      setLoading(false);
+      dispatch({
+        type: "fetchSuccess",
+        payload: {
+          teamAName: matchRes.data.team_a_name ?? "Time A",
+          teamBName: matchRes.data.team_b_name ?? "Time B",
+          teamAScore: matchRes.data.team_a_score ?? 0,
+          teamBScore: matchRes.data.team_b_score ?? 0,
+          results: awardResults,
+        },
+      });
     }
 
     void fetchResults();

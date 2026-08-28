@@ -78,14 +78,17 @@ export default function MatchPlayersManagement() {
     }
 
     setSubmitting(true);
-    await supabase.from("match_players").insert({
-      match_id: matchId,
-      guest_name: guestName.trim(),
-      team: guestTeam,
-      status: "confirmed",
-    });
-    setGuestName("");
-    setSubmitting(false);
+    try {
+      await supabase.from("match_players").insert({
+        match_id: matchId,
+        guest_name: guestName.trim(),
+        team: guestTeam,
+        status: "confirmed",
+      });
+      setGuestName("");
+    } finally {
+      setSubmitting(false);
+    }
     fetchPlayers();
   }
 
@@ -184,10 +187,11 @@ export default function MatchPlayersManagement() {
           <h2 className="text-title-md font-mono text-on-surface mb-3">Adicionar Convidado</h2>
           <form onSubmit={handleAddGuest} className="space-y-3">
             <div>
-              <label className="block text-label-sm font-mono text-on-surface-variant mb-1">
+              <label htmlFor="guest-name" className="block text-label-sm font-mono text-on-surface-variant mb-1">
                 Nome do convidado
               </label>
               <input
+                id="guest-name"
                 type="text"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
@@ -196,10 +200,10 @@ export default function MatchPlayersManagement() {
                 required
               />
             </div>
-            <div>
-              <label className="block text-label-sm font-mono text-on-surface-variant mb-1">
+            <fieldset>
+              <legend className="block text-label-sm font-mono text-on-surface-variant mb-1">
                 Time
-              </label>
+              </legend>
               <div className="flex gap-2">
                 {["A", "B"].map((team) => (
                   <button
@@ -218,7 +222,7 @@ export default function MatchPlayersManagement() {
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
             <button
               type="submit"
               disabled={submitting || !guestName.trim()}

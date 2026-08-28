@@ -24,79 +24,79 @@ export function useLiveMatch(groupId: string | null = null) {
       assistUserId?: string | null,
     ) => {
       setBusy(true);
-
-      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
-      if (!valid) {
-        setBusy(false);
-        return { error: guardError ?? "Validação de grupo falhou" };
-      }
-
-      const [scorerRes, matchRes] = await Promise.all([
-        supabase.from("match_players").select("id, goals_scored").eq(
-          "match_id",
-          matchId,
-        ).eq("user_id", scorerUserId).maybeSingle(),
-        supabase.from("matches").select("team_a_score, team_b_score").eq(
-          "id",
-          matchId,
-        ).single(),
-      ]);
-
-      if (
-        scorerRes.error || matchRes.error || !scorerRes.data || !matchRes.data
-      ) {
-        setBusy(false);
-        return { error: "Erro ao buscar dados da partida" };
-      }
-
-      const currentGoals = scorerRes.data.goals_scored ?? 0;
-      const updateScorer = supabase
-        .from("match_players")
-        .update({ goals_scored: currentGoals + 1 })
-        .eq("id", scorerRes.data.id);
-
-      const currentTeamScore = team === "A"
-        ? (matchRes.data.team_a_score ?? 0)
-        : (matchRes.data.team_b_score ?? 0);
-
-      type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
-      const scoreUpdatePayload: MatchUpdate = team === "A"
-        ? { team_a_score: currentTeamScore + 1 }
-        : { team_b_score: currentTeamScore + 1 };
-
-      const updateScore = supabase.from("matches").update(scoreUpdatePayload)
-        .eq("id", matchId);
-
-      const updates: SupabaseUpdatePromise[] = [updateScorer, updateScore];
-
-      if (assistUserId) {
-        const assistRes = await supabase.from("match_players").select(
-          "id, assists",
-        ).eq("match_id", matchId).eq("user_id", assistUserId).maybeSingle();
-
-        if (assistRes.data) {
-          const currentAssists = assistRes.data.assists ?? 0;
-          updates.push(
-            supabase
-              .from("match_players")
-              .update({ assists: currentAssists + 1 })
-              .eq("id", assistRes.data.id),
-          );
+      try {
+        const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+        if (!valid) {
+          return { error: guardError ?? "Validação de grupo falhou" };
         }
+
+        const [scorerRes, matchRes] = await Promise.all([
+          supabase.from("match_players").select("id, goals_scored").eq(
+            "match_id",
+            matchId,
+          ).eq("user_id", scorerUserId).maybeSingle(),
+          supabase.from("matches").select("team_a_score, team_b_score").eq(
+            "id",
+            matchId,
+          ).single(),
+        ]);
+
+        if (
+          scorerRes.error || matchRes.error || !scorerRes.data || !matchRes.data
+        ) {
+          return { error: "Erro ao buscar dados da partida" };
+        }
+
+        const currentGoals = scorerRes.data.goals_scored ?? 0;
+        const updateScorer = supabase
+          .from("match_players")
+          .update({ goals_scored: currentGoals + 1 })
+          .eq("id", scorerRes.data.id);
+
+        const currentTeamScore = team === "A"
+          ? (matchRes.data.team_a_score ?? 0)
+          : (matchRes.data.team_b_score ?? 0);
+
+        type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
+        const scoreUpdatePayload: MatchUpdate = team === "A"
+          ? { team_a_score: currentTeamScore + 1 }
+          : { team_b_score: currentTeamScore + 1 };
+
+        const updateScore = supabase.from("matches").update(scoreUpdatePayload)
+          .eq("id", matchId);
+
+        const updates: SupabaseUpdatePromise[] = [updateScorer, updateScore];
+
+        if (assistUserId) {
+          const assistRes = await supabase.from("match_players").select(
+            "id, assists",
+          ).eq("match_id", matchId).eq("user_id", assistUserId).maybeSingle();
+
+          if (assistRes.data) {
+            const currentAssists = assistRes.data.assists ?? 0;
+            updates.push(
+              supabase
+                .from("match_players")
+                .update({ assists: currentAssists + 1 })
+                .eq("id", assistRes.data.id),
+            );
+          }
+        }
+
+        const results = await Promise.all(updates);
+
+        const errorResult = results.find((r) =>
+          r.error
+        );
+        if (errorResult?.error) {
+          console.error("Erro ao registrar gol:", errorResult.error);
+          return { error: "Erro ao registrar gol" };
+        }
+
+        return { error: null };
+      } finally {
+        setBusy(false);
       }
-
-      const results = await Promise.all(updates);
-      setBusy(false);
-
-      const errorResult = results.find((r) =>
-        r.error
-      );
-      if (errorResult?.error) {
-        console.error("Erro ao registrar gol:", errorResult.error);
-        return { error: "Erro ao registrar gol" };
-      }
-
-      return { error: null };
     },
     [groupId],
   );
@@ -108,64 +108,64 @@ export function useLiveMatch(groupId: string | null = null) {
       scorerUserId: string | null,
     ) => {
       setBusy(true);
+      try {
+        const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+        if (!valid) {
+          return { error: guardError ?? "Validação de grupo falhou" };
+        }
 
-      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
-      if (!valid) {
-        setBusy(false);
-        return { error: guardError ?? "Validação de grupo falhou" };
-      }
-
-      const [matchRes, scorerRes] = await Promise.all([
-        supabase.from("matches").select("team_a_score, team_b_score").eq(
-          "id",
-          matchId,
-        ).single(),
-        scorerUserId
-          ? supabase.from("match_players").select("id, own_goals_scored").eq(
-            "match_id",
+        const [matchRes, scorerRes] = await Promise.all([
+          supabase.from("matches").select("team_a_score, team_b_score").eq(
+            "id",
             matchId,
-          ).eq("user_id", scorerUserId).maybeSingle()
-          : null,
-      ]);
+          ).single(),
+          scorerUserId
+            ? supabase.from("match_players").select("id, own_goals_scored").eq(
+              "match_id",
+              matchId,
+            ).eq("user_id", scorerUserId).maybeSingle()
+            : null,
+        ]);
 
-      if (matchRes.error || !matchRes.data) {
+        if (matchRes.error || !matchRes.data) {
+          return { error: "Erro ao buscar placar" };
+        }
+
+        const currentScore = teamBenefited === "A"
+          ? (matchRes.data.team_a_score ?? 0)
+          : (matchRes.data.team_b_score ?? 0);
+
+        type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
+        const scoreUpdatePayload: MatchUpdate = teamBenefited === "A"
+          ? { team_a_score: currentScore + 1 }
+          : { team_b_score: currentScore + 1 };
+
+        const updates: SupabaseUpdatePromise[] = [
+          supabase.from("matches").update(scoreUpdatePayload).eq("id", matchId),
+        ];
+
+        if (scorerRes?.data) {
+          const currentOwnGoals = scorerRes.data.own_goals_scored ?? 0;
+          updates.push(
+            supabase
+              .from("match_players")
+              .update({ own_goals_scored: currentOwnGoals + 1 })
+              .eq("id", scorerRes.data.id),
+          );
+        }
+
+        const results = await Promise.all(updates);
+
+        const errorResult = results.find((r) => r.error);
+        if (errorResult?.error) {
+          console.error("Erro ao registrar gol contra:", errorResult.error);
+          return { error: "Erro ao registrar gol contra" };
+        }
+
+        return { error: null };
+      } finally {
         setBusy(false);
-        return { error: "Erro ao buscar placar" };
       }
-
-      const currentScore = teamBenefited === "A"
-        ? (matchRes.data.team_a_score ?? 0)
-        : (matchRes.data.team_b_score ?? 0);
-
-      type MatchUpdate = Database["public"]["Tables"]["matches"]["Update"];
-      const scoreUpdatePayload: MatchUpdate = teamBenefited === "A"
-        ? { team_a_score: currentScore + 1 }
-        : { team_b_score: currentScore + 1 };
-
-      const updates: SupabaseUpdatePromise[] = [
-        supabase.from("matches").update(scoreUpdatePayload).eq("id", matchId),
-      ];
-
-      if (scorerRes?.data) {
-        const currentOwnGoals = scorerRes.data.own_goals_scored ?? 0;
-        updates.push(
-          supabase
-            .from("match_players")
-            .update({ own_goals_scored: currentOwnGoals + 1 })
-            .eq("id", scorerRes.data.id),
-        );
-      }
-
-      const results = await Promise.all(updates);
-      setBusy(false);
-
-      const errorResult = results.find((r) => r.error);
-      if (errorResult?.error) {
-        console.error("Erro ao registrar gol contra:", errorResult.error);
-        return { error: "Erro ao registrar gol contra" };
-      }
-
-      return { error: null };
     },
     [groupId],
   );
@@ -173,56 +173,56 @@ export function useLiveMatch(groupId: string | null = null) {
   const saveScores = useCallback(
     async (matchId: string, teamAScore: number, teamBScore: number) => {
       setBusy(true);
+      try {
+        const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+        if (!valid) {
+          return { error: guardError ?? "Validação de grupo falhou" };
+        }
 
-      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
-      if (!valid) {
+        const { error } = await supabase
+          .from("matches")
+          .update({
+            team_a_score: teamAScore,
+            team_b_score: teamBScore,
+          })
+          .eq("id", matchId);
+
+        if (error) {
+          console.error("Erro ao salvar placar:", error);
+          return { error: "Erro ao salvar placar" };
+        }
+
+        return { error: null };
+      } finally {
         setBusy(false);
-        return { error: guardError ?? "Validação de grupo falhou" };
       }
-
-      const { error } = await supabase
-        .from("matches")
-        .update({
-          team_a_score: teamAScore,
-          team_b_score: teamBScore,
-        })
-        .eq("id", matchId);
-
-      setBusy(false);
-
-      if (error) {
-        console.error("Erro ao salvar placar:", error);
-        return { error: "Erro ao salvar placar" };
-      }
-
-      return { error: null };
     },
     [groupId],
   );
 
   const startMatch = useCallback(async (matchId: string) => {
     setBusy(true);
+    try {
+      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+      if (!valid) {
+        return { error: guardError ?? "Validação de grupo falhou" };
+      }
 
-    const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
-    if (!valid) {
+      const { error } = await supabase.from("matches").update({
+        status: "in_progress",
+        team_a_score: 0,
+        team_b_score: 0,
+      }).eq("id", matchId);
+
+      if (error) {
+        console.error("Erro ao iniciar partida:", error);
+        return { error: "Erro ao iniciar partida" };
+      }
+
+      return { error: null };
+    } finally {
       setBusy(false);
-      return { error: guardError ?? "Validação de grupo falhou" };
     }
-
-    const { error } = await supabase.from("matches").update({
-      status: "in_progress",
-      team_a_score: 0,
-      team_b_score: 0,
-    }).eq("id", matchId);
-
-    setBusy(false);
-
-    if (error) {
-      console.error("Erro ao iniciar partida:", error);
-      return { error: "Erro ao iniciar partida" };
-    }
-
-    return { error: null };
   }, [groupId]);
 
   return { busy, addGoal, addOwnGoal, saveScores, startMatch };

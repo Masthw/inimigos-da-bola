@@ -8,6 +8,20 @@ export interface ConquistaBadge {
   className: string
 }
 
+function pill(badge: ConquistaBadge) {
+  return (
+    <div
+      key={badge.title}
+      title={badge.title}
+      className={`flex items-center gap-2.5 rounded-full px-4 py-2.5 shrink-0 mr-3 brutal-shadow ${badge.className}`}
+    >
+      <MaterialIcon name={badge.icon} className="w-5 h-5" />
+      <span className="font-mono text-sm font-black uppercase tracking-wide whitespace-nowrap">{badge.title}</span>
+      <span className="font-mono text-sm font-black opacity-80">x{badge.count}</span>
+    </div>
+  )
+}
+
 export function ConquistasCarousel({ badges }: Readonly<{ badges: readonly ConquistaBadge[] }>) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -33,18 +47,6 @@ export function ConquistasCarousel({ badges }: Readonly<{ badges: readonly Conqu
       window.removeEventListener('resize', check)
     }
   }, [overflows])
-
-  const pill = (badge: ConquistaBadge) => (
-    <div
-      key={badge.title}
-      title={badge.title}
-      className={`flex items-center gap-2.5 rounded-full px-4 py-2.5 shrink-0 mr-3 brutal-shadow ${badge.className}`}
-    >
-      <MaterialIcon name={badge.icon} className="w-5 h-5" />
-      <span className="font-mono text-sm font-black uppercase tracking-wide whitespace-nowrap">{badge.title}</span>
-      <span className="font-mono text-sm font-black opacity-80">×{badge.count}</span>
-    </div>
-  )
 
   return (
     <div ref={viewportRef} className="group overflow-hidden">

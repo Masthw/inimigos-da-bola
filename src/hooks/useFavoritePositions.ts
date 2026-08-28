@@ -34,28 +34,30 @@ export function useFavoritePositions() {
       setLoading(true)
       setError(null)
 
-      const [{ data: positionsData }, { data: favoritesData }, { data: gameTypesData }] = await Promise.all([
-        supabase.from('positions').select('id, name, code, game_type_id').order('name', { ascending: true }),
-        supabase.from('user_favorite_positions').select('position_id, is_primary').eq('user_id', userId),
-        supabase.from('game_types').select('id, name'),
-      ])
+      try {
+        const [{ data: positionsData }, { data: favoritesData }, { data: gameTypesData }] = await Promise.all([
+          supabase.from('positions').select('id, name, code, game_type_id').order('name', { ascending: true }),
+          supabase.from('user_favorite_positions').select('position_id, is_primary').eq('user_id', userId),
+          supabase.from('game_types').select('id, name'),
+        ])
 
-      if (cancelled) return
+        if (cancelled) return
 
-      setPositions(positionsData ?? [])
+        setPositions(positionsData ?? [])
 
-      const favMap = new Map<number, FavoritePosition>()
-      for (const fav of favoritesData ?? []) {
-        favMap.set(fav.position_id, { position_id: fav.position_id, is_primary: fav.is_primary })
+        const favMap = new Map<number, FavoritePosition>()
+        for (const fav of favoritesData ?? []) {
+          favMap.set(fav.position_id, { position_id: fav.position_id, is_primary: fav.is_primary })
+        }
+        setFavorites(favMap)
+
+        const futsal = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'futsal')
+        const society = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'society')
+        setGameTypeIds({ futsal: futsal?.id ?? null, society: society?.id ?? null })
+        setGameTypeNames({ futsal: futsal?.name ?? 'Futsal', society: society?.name ?? 'Society' })
+      } finally {
+        setLoading(false)
       }
-      setFavorites(favMap)
-
-      const futsal = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'futsal')
-      const society = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'society')
-      setGameTypeIds({ futsal: futsal?.id ?? null, society: society?.id ?? null })
-      setGameTypeNames({ futsal: futsal?.name ?? 'Futsal', society: society?.name ?? 'Society' })
-
-      setLoading(false)
     }
 
     load()

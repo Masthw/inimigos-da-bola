@@ -96,34 +96,36 @@ export default function NewMatch() {
 
     setSubmitting(true);
 
-    const dateTimeLocal = new Date(`${date}T${timeHour}:${timeMinute}`);
-    if (Number.isNaN(dateTimeLocal.getTime())) {
-      setError("Data ou hora inválidas");
-      return;
+    try {
+      const dateTimeLocal = new Date(`${date}T${timeHour}:${timeMinute}`);
+      if (Number.isNaN(dateTimeLocal.getTime())) {
+        setError("Data ou hora inválidas");
+        return;
+      }
+
+      const { error: insertError } = await supabase.from("matches").insert({
+        date_time: dateTimeLocal.toISOString(),
+        location: location.trim(),
+        game_type_id: Number(gameTypeId),
+        max_players: Math.max(1, Number(maxPlayers) || 10),
+        max_waitlist: Math.max(0, Number(maxWaitlist) || 0),
+        organizer_id: user?.id ?? "",
+        status: "open",
+        team_a_name: teamAName.trim() || null,
+        team_b_name: teamBName.trim() || null,
+        group_id: activeGroupId,
+      });
+
+      if (insertError) {
+        console.error("Erro ao criar partida:", insertError);
+        setError(insertError.message);
+        return;
+      }
+
+      navigate("/");
+    } finally {
+      setSubmitting(false);
     }
-
-    const { error: insertError } = await supabase.from("matches").insert({
-      date_time: dateTimeLocal.toISOString(),
-      location: location.trim(),
-      game_type_id: Number(gameTypeId),
-      max_players: Math.max(1, Number(maxPlayers) || 10),
-      max_waitlist: Math.max(0, Number(maxWaitlist) || 0),
-      organizer_id: user?.id ?? "",
-      status: "open",
-      team_a_name: teamAName.trim() || null,
-      team_b_name: teamBName.trim() || null,
-      group_id: activeGroupId,
-    });
-
-    setSubmitting(false);
-
-    if (insertError) {
-      console.error("Erro ao criar partida:", insertError);
-      setError(insertError.message);
-      return;
-    }
-
-    navigate("/");
   }
 
   if (adminLoading) {
