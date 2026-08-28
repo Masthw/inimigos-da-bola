@@ -24,9 +24,14 @@ type PositionId = (typeof POSITIONS_FUTSAL)[number]["id"] | (typeof POSITIONS_SO
 
 const FUTSAL_IDS = new Set<string>(POSITIONS_FUTSAL.map((p) => p.id));
 
+const SOCIETY_ONLY_ENTRIES: [string, string][] = [];
+for (const p of POSITIONS_SOCIETY) {
+  if (!FUTSAL_IDS.has(p.id)) SOCIETY_ONLY_ENTRIES.push([p.id, p.label]);
+}
+
 const POSITION_LABELS: Record<string, string> = Object.fromEntries([
   ...POSITIONS_FUTSAL.map((p) => [p.id, p.label]),
-  ...POSITIONS_SOCIETY.filter((p) => !FUTSAL_IDS.has(p.id)).map((p) => [p.id, p.label]),
+  ...SOCIETY_ONLY_ENTRIES,
 ]) as Record<string, string>;
 
 const DB_POSITION_TO_LOCAL: Record<string, PositionId> = {
