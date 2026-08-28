@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
+import { Skeleton, SkeletonPlayerRow } from "../components/ui/Skeleton";
 import { useAuth } from "../hooks/useAuth";
 import { useNextMatch } from "../hooks/useNextMatch";
 import { useActiveGroup } from "../hooks/useActiveGroup";
@@ -406,11 +407,18 @@ function useTacticsBoard(
 function TacticsLoading() {
   return (
     <AppShell>
-      <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
-        <div className="text-center">
-          <MaterialIcon name="pending" className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-          <p className="font-mono text-label-sm text-on-surface-variant">Carregando escalação...</p>
+      <div className="min-h-[calc(100svh-4rem)] p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-6 w-20" />
         </div>
+        <Skeleton className="h-4 w-40" />
+        <div className="relative aspect-video bg-surface-container rounded-xl border border-outline-variant">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <MaterialIcon name="sports_soccer" className="w-12 h-12 text-surface-variant" />
+          </div>
+        </div>
+        <SkeletonPlayerRow count={5} />
       </div>
     </AppShell>
   );

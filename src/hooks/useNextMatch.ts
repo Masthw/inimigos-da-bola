@@ -98,14 +98,14 @@ export function useNextMatch(groupId: string | null = null) {
 
   const [match, setMatch] = useState<NextMatchData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    // Clear stale data immediately when group changes
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMatch(null);
     setLoading(true);
+    setError(null);
 
     fetchNextMatch(userId, groupId)
       .then((data) => {
@@ -116,6 +116,7 @@ export function useNextMatch(groupId: string | null = null) {
       .catch((error) => {
         if (cancelled) return;
         console.error("Erro ao buscar próxima partida:", error);
+        setError("Erro ao carregar próxima partida");
         setLoading(false);
       });
 
@@ -150,5 +151,5 @@ export function useNextMatch(groupId: string | null = null) {
     };
   }, [userId, groupId]);
 
-  return { match, loading };
+  return { match, loading, error };
 }

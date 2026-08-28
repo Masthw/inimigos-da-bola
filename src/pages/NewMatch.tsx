@@ -93,6 +93,8 @@ export default function NewMatch() {
       setError("Informe o local da partida");
       return;
     }
+    const maxP = Math.max(1, Math.min(99, Number(maxPlayers) || 10));
+    const maxW = Math.max(0, Math.min(50, Number(maxWaitlist) || 0));
 
     setSubmitting(true);
 
@@ -107,8 +109,8 @@ export default function NewMatch() {
         date_time: dateTimeLocal.toISOString(),
         location: location.trim(),
         game_type_id: Number(gameTypeId),
-        max_players: Math.max(1, Number(maxPlayers) || 10),
-        max_waitlist: Math.max(0, Number(maxWaitlist) || 0),
+        max_players: maxP,
+        max_waitlist: maxW,
         organizer_id: user?.id ?? "",
         status: "open",
         team_a_name: teamAName.trim() || null,
