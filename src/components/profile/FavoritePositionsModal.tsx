@@ -152,7 +152,7 @@ export function FavoritePositionsModal({ open, onClose }: Readonly<FavoritePosit
               <MaterialIcon name="sports_soccer" className="w-6 h-6 text-primary" />
               <p className="font-mono text-label-bold text-on-surface uppercase">Posições Favoritas</p>
             </div>
-            <button type="button" onClick={handleClose} className="p-2 hover:bg-surface-variant rounded-lg transition-colors">
+            <button type="button" onClick={handleClose} className="p-2 hover:bg-surface-variant rounded-lg transition-colors" aria-label="Fechar">
               <MaterialIcon name="close" className="w-5 h-5 text-on-surface-variant" />
             </button>
           </div>

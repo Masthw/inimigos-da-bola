@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
@@ -17,9 +17,37 @@ export default function VoteMatch() {
   const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
   const { activeGroupId } = useActiveGroup();
+  const [statusCheck, setStatusCheck] = useState<"checking" | "voting" | "ended">(matchId == null ? "ended" : "checking");
   const { votingData, loading, saving, error, submitVote, hasVoted, getVotedPlayers } = useVoting(matchId, activeGroupId);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [ending, setEnding] = useState(false);
+
+  useEffect(() => {
+    const id = matchId ?? "";
+    if (!id) return;
+
+    async function checkStatus() {
+      const { data } = await supabase
+        .from("matches")
+        .select("status")
+        .eq("id", id)
+        .single();
+
+      if (data && data.status !== "voting") {
+        setStatusCheck("ended");
+      } else {
+        setStatusCheck("voting");
+      }
+    }
+
+    void checkStatus();
+  }, [matchId]);
+
+  useEffect(() => {
+    if (statusCheck === "ended" && matchId) {
+      navigate(`/matches/${matchId}/results`);
+    }
+  }, [statusCheck, matchId, navigate]);
 
   const craqueAward = votingData?.awards.find((a) => a.name.toLowerCase().includes("craque"));
   const votingAwards = votingData?.awards.filter((a) => !a.isAutomatic) ?? [];
@@ -33,7 +61,7 @@ export default function VoteMatch() {
         body: { matchId, groupId: activeGroupId },
       });
       if (fnError) throw fnError;
-      navigate("/matches");
+      navigate(`/matches/${matchId}/results`);
     } catch {
       setEnding(false);
     }
@@ -51,7 +79,7 @@ export default function VoteMatch() {
     return sorted[0]?.assists > 0 ? sorted[0] : null;
   }, [votingData]);
 
-  if (loading) {
+  if (statusCheck === "checking" || loading) {
     return (
       <AppShell>
         <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
@@ -183,10 +211,10 @@ export default function VoteMatch() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/matches")}
+                  onClick={() => navigate(`/matches/${matchId}/results`)}
                   className="flex-1 py-3 bg-primary text-on-primary font-mono text-label-bold active:bg-primary/80 transition-colors"
                 >
-                  Sair
+                  Ver Resultados
                 </button>
               </div>
             </div>

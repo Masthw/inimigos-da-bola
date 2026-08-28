@@ -58,6 +58,7 @@ export function Modal({ open, onClose, title, icon, children, actions }: Readonl
             type="button"
             onClick={onClose}
             className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-lg transition-colors"
+            aria-label="Fechar"
           >
             <MaterialIcon name="close" className="w-5 h-5" />
           </button>

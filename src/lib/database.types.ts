@@ -877,18 +877,4 @@ export type CompositeTypes<
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
-export const Constants = {
-  public: {
-    Enums: {
-      match_status_enum: [
-        "open",
-        "in_progress",
-        "finished",
-        "cancelled",
-        "voting",
-      ],
-      player_status_enum: ["confirmed", "waitlist", "cancelled"],
-      user_role_enum: ["admin", "member"],
-    },
-  },
-} as const
+

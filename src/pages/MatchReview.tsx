@@ -166,6 +166,7 @@ export default function MatchReview() {
                   {match.teamAName}
                 </p>
                 <input
+                  id="review-score-team-a"
                   type="number"
                   min={0}
                   value={currentScoreA}
@@ -179,6 +180,7 @@ export default function MatchReview() {
                   {match.teamBName}
                 </p>
                 <input
+                  id="review-score-team-b"
                   type="number"
                   min={0}
                   value={currentScoreB}

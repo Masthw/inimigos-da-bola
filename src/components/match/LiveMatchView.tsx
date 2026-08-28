@@ -382,10 +382,11 @@ export function LiveMatchView({
               <p className="font-mono text-label-bold text-on-surface">Placar final</p>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                 <div>
-                  <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamAColor }}>
+                  <label htmlFor="live-score-team-a" className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamAColor }}>
                     {teamAName}
                   </label>
                   <input
+                    id="live-score-team-a"
                     type="number"
                     min={0}
                     value={editScore.teamA}
@@ -395,10 +396,11 @@ export function LiveMatchView({
                 </div>
                 <span className="font-mono text-label-bold text-on-surface-variant pt-6">x</span>
                 <div>
-                  <label className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamBColor }}>
+                  <label htmlFor="live-score-team-b" className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamBColor }}>
                     {teamBName}
                   </label>
                   <input
+                    id="live-score-team-b"
                     type="number"
                     min={0}
                     value={editScore.teamB}

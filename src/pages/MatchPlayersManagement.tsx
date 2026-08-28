@@ -127,6 +127,7 @@ export default function MatchPlayersManagement() {
             type="button"
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-surface-variant rounded-lg transition-colors"
+            aria-label="Voltar"
           >
             <MaterialIcon name="arrow_back" className="w-5 h-5 text-on-surface-variant" />
           </button>
