@@ -1,4 +1,5 @@
 import { MaterialIcon } from "../ui/MaterialIcon";
+import { Avatar } from "../ui/Avatar";
 import { PlayerCard } from "./PlayerCard";
 import type { MatchPlayer } from "../../hooks/useMatches";
 import { useLiveMatchView } from "../../hooks/useLiveMatchView";
