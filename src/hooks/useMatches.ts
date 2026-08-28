@@ -225,7 +225,10 @@ async function fetchMatchesData(userId: string | null, groupId: string | null) {
         )
         .in("match_id", matchIds),
       Promise.resolve(
-        (matchesResult.data ?? []).filter((m) => m.status === "finished").map((m) => m.id),
+        (matchesResult.data ?? []).reduce<string[]>((acc, m) => {
+          if (m.status === "finished") acc.push(m.id);
+          return acc;
+        }, []),
       ),
     ]);
     playersResultData = playersRes.data ?? [];

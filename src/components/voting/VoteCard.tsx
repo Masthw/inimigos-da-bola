@@ -52,15 +52,18 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
     }
   };
 
+  const selectedIdsSet = useMemo(() => new Set(selectedPlayerIds), [selectedPlayerIds]);
+
   const handleConfirm = async () => {
     setSubmitting(true);
     if (isMvp) {
       const playerId = selectedPlayerIds[0] || null;
       await onVote(playerId);
     } else {
-      const currentIds = votedPlayers.map((vp) => vp.userId);
-      const toAdd = selectedPlayerIds.filter((id) => !currentIds.includes(id));
-      const toRemove = currentIds.filter((id) => !selectedPlayerIds.includes(id));
+      const currentIds = new Set(votedPlayers.map((vp) => vp.userId));
+      const selectedIds = new Set(selectedPlayerIds);
+      const toAdd = selectedPlayerIds.filter((id) => !currentIds.has(id));
+      const toRemove = Array.from(currentIds).filter((id) => !selectedIds.has(id));
 
       await Promise.all([...toAdd.map((playerId) => onVote(playerId)), ...toRemove.map((playerId) => onVote(playerId))]);
     }
@@ -171,7 +174,7 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {eligiblePlayers.map((player) => {
-                const isSelected = selectedPlayerIds.includes(player.userId);
+                const isSelected = selectedIdsSet.has(player.userId);
                 return (
                   <button
                     key={player.userId}

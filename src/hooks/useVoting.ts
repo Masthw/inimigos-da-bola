@@ -104,23 +104,28 @@ export function useVoting(matchId: string | undefined, groupId: string | null = 
 
     const allVotes = allVotesRes.data ?? [];
 
-    const votingAwards: VotingAward[] = (awardsRes.data ?? [])
-      .filter((a) => a.is_voting_based)
-      .map((a) => {
-        const voteCounts: Record<string, number> = {};
-        allVotes.filter((v) => v.award_id === a.id).forEach((v) => {
-          if (v.voted_user_id) {
-            voteCounts[v.voted_user_id] = (voteCounts[v.voted_user_id] || 0) +
-              1;
-          }
-        });
-        return {
-          id: a.id,
-          name: a.name,
-          isAutomatic: false,
-          voteCounts,
-        };
+    const votesByAward = new Map<number, Map<string, number>>();
+    for (const v of allVotes) {
+      if (!v.voted_user_id) continue;
+      let awardVotes = votesByAward.get(v.award_id);
+      if (!awardVotes) {
+        awardVotes = new Map();
+        votesByAward.set(v.award_id, awardVotes);
+      }
+      awardVotes.set(v.voted_user_id, (awardVotes.get(v.voted_user_id) || 0) + 1);
+    }
+
+    const votingAwards: VotingAward[] = [];
+    for (const a of awardsRes.data ?? []) {
+      if (!a.is_voting_based) continue;
+      const voteCounts = votesByAward.get(a.id);
+      votingAwards.push({
+        id: a.id,
+        name: a.name,
+        isAutomatic: false,
+        voteCounts: voteCounts ? Object.fromEntries(voteCounts) : {},
       });
+    }
 
     const craqueAwards = votingAwards.filter((a) =>
       a.name.toLowerCase().includes("craque")
@@ -219,12 +224,17 @@ export function useVoting(matchId: string | undefined, groupId: string | null = 
   }, [votingData]);
 
   const getVotedPlayers = useCallback((awardId: number) => {
-    const playerIds = votingData?.votes
-      .filter((v) => v.awardId === awardId && v.votedUserId)
-      .map((v) => v.votedUserId!) ?? [];
-    return playerIds.map((id) =>
-      votingData?.players.find((p) => p.userId === id)
-    ).filter(Boolean) as VotingPlayer[];
+    const votes = votingData?.votes;
+    if (!votes) return [];
+    const players = votingData?.players ?? [];
+    const result: VotingPlayer[] = [];
+    for (const v of votes) {
+      if (v.awardId === awardId && v.votedUserId) {
+        const player = players.find((p) => p.userId === v.votedUserId);
+        if (player) result.push(player);
+      }
+    }
+    return result;
   }, [votingData]);
 
   return {

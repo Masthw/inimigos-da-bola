@@ -172,6 +172,7 @@ export default function MatchReview() {
                   value={currentScoreA}
                   onChange={(e) => setManualScore({ teamA: Number(e.target.value), teamB: currentScoreB })}
                   className="w-20 bg-surface-variant border border-outline-variant px-3 py-2 font-display text-headline-md text-on-surface text-center appearance-none"
+                  aria-label={`Placar do ${match.teamAName}`}
                 />
               </div>
               <span className="text-headline-md font-mono text-on-surface-variant pt-6">x</span>
@@ -186,6 +187,7 @@ export default function MatchReview() {
                   value={currentScoreB}
                   onChange={(e) => setManualScore({ teamA: currentScoreA, teamB: Number(e.target.value) })}
                   className="w-20 bg-surface-variant border border-outline-variant px-3 py-2 font-display text-headline-md text-on-surface text-center appearance-none"
+                  aria-label={`Placar do ${match.teamBName}`}
                 />
               </div>
             </div>

@@ -44,12 +44,18 @@ function buildBadgesList(badgeCounts: Record<string, number>) {
     normalizedBadgeCounts[title] = (normalizedBadgeCounts[title] ?? 0) + count;
   }
 
-  return AWARD_BADGES.map((badge) => ({
-    icon: badge.icon,
-    title: badge.name,
-    count: normalizedBadgeCounts[badge.name] ?? 0,
-    className: badge.className,
-  })).filter((badge) => badge.count > 0);
+  return AWARD_BADGES.reduce((acc, badge) => {
+    const count = normalizedBadgeCounts[badge.name] ?? 0;
+    if (count > 0) {
+      acc.push({
+        icon: badge.icon,
+        title: badge.name,
+        count,
+        className: badge.className,
+      });
+    }
+    return acc;
+  }, [] as { icon: string; title: string; count: number; className: string }[]);
 }
 
 // COMPONENTES MENORES

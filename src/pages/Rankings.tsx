@@ -129,29 +129,28 @@ async function fetchRankingData(userId?: string, groupId?: string | null): Promi
         .is("deleted_at", null)
     : { data: [] as { id: string; name: string | null; avatar_url: string | null }[] };
 
-  return (users ?? [])
-    .map((u) => {
-      const stats = statsMap.get(u.id) ?? { goals: 0, assists: 0, matchesPlayed: 0, wins: 0, draws: 0, losses: 0 };
-      const allBadges = badgesMap.get(u.id) ?? [];
-      const uniqueBadges = Array.from(new Set(allBadges));
-
-      return {
-        id: u.id,
-        name: u.name ?? "Jogador",
-        avatarUrl: u.avatar_url,
-        points: pointsMap.get(u.id) ?? 0,
-        matchesPlayed: matchesPlayedMap.get(u.id) ?? stats.matchesPlayed,
-        wins: winsMap.get(u.id) ?? stats.wins,
-        draws: drawsMap.get(u.id) ?? stats.draws,
-        losses: lossesMap.get(u.id) ?? stats.losses,
-        goals: stats.goals,
-        assists: stats.assists,
-        badges: uniqueBadges,
-        isCurrentUser: u.id === userId,
-      };
-    })
-    .filter((p) => p.matchesPlayed > 0 || p.points > 0)
-    .sort((a, b) => b.points - a.points || b.goals - a.goals || b.assists - a.assists);
+  const result = [];
+  for (const u of users ?? []) {
+    const stats = statsMap.get(u.id) ?? { goals: 0, assists: 0, matchesPlayed: 0, wins: 0, draws: 0, losses: 0 };
+    const points = pointsMap.get(u.id) ?? 0;
+    const matchesPlayed = matchesPlayedMap.get(u.id) ?? stats.matchesPlayed;
+    if (matchesPlayed === 0 && points === 0) continue;
+    result.push({
+      id: u.id,
+      name: u.name ?? "Jogador",
+      avatarUrl: u.avatar_url,
+      points,
+      matchesPlayed,
+      wins: winsMap.get(u.id) ?? stats.wins,
+      draws: drawsMap.get(u.id) ?? stats.draws,
+      losses: lossesMap.get(u.id) ?? stats.losses,
+      goals: stats.goals,
+      assists: stats.assists,
+      badges: Array.from(new Set(badgesMap.get(u.id) ?? [])),
+      isCurrentUser: u.id === userId,
+    });
+  }
+  return result.sort((a, b) => b.points - a.points || b.goals - a.goals || b.assists - a.assists);
 }
 
 // COMPONENTE PRINCIPAL
