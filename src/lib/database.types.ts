@@ -743,6 +743,7 @@ export type Database = {
     Functions: {
       close_expired_votings: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
+      join_group_by_code: { Args: { p_code: string }; Returns: string }
     }
     Enums: {
       match_status_enum:

@@ -18,6 +18,7 @@ export default function GroupOnboarding() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
+  const [navigateTo, setNavigateTo] = useState<string | null>(null);
 
   if (groupLoading) {
     return (
@@ -30,6 +31,8 @@ export default function GroupOnboarding() {
   if (activeGroup) {
     return <Navigate to="/" replace />;
   }
+
+  if (navigateTo) return <Navigate to={navigateTo} replace />;
 
   async function handleCreateGroup(e: React.FormEvent) {
     e.preventDefault();
@@ -68,7 +71,7 @@ export default function GroupOnboarding() {
         return;
       }
 
-      window.location.reload();
+      setNavigateTo("/");
     } finally {
       setSubmitting(false);
     }
@@ -82,19 +85,12 @@ export default function GroupOnboarding() {
     setError(null);
 
     try {
-      const { data: group, error: fetchError } = await supabase.from("groups").select("id").eq("code", joinCode.trim()).maybeSingle();
+      const { error: rpcError } = await supabase.rpc("join_group_by_code", {
+        p_code: joinCode.trim(),
+      });
 
-      if (fetchError || !group) {
-        setError("Grupo não encontrado. Verifique o código.");
-        return;
-      }
-
-      const { error: memberError } = await supabase
-        .from("group_members")
-        .insert({ group_id: group.id, user_id: user.id, role: "member", status: "pending" });
-
-      if (memberError) {
-        setError("Erro ao entrar no grupo. Talvez você já seja membro.");
+      if (rpcError) {
+        setError("Erro ao entrar no grupo. Verifique o código ou tente novamente.");
         return;
       }
 

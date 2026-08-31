@@ -1,3 +1,4 @@
+import React from "react";
 import { MaterialIcon } from "../ui/MaterialIcon";
 import { getAwardMeta } from "../../lib/awards";
 
@@ -47,7 +48,7 @@ function formatShortDate(iso: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function PlayerTable({ title, players }: Readonly<{ title: string; players: FinishedPlayer[] }>) {
+const PlayerTable = React.memo(function PlayerTable({ title, players }: Readonly<{ title: string; players: FinishedPlayer[] }>) {
   return (
     <div>
       <p className="font-mono text-label-sm uppercase text-on-surface mb-2">{title}</p>
@@ -86,9 +87,9 @@ function PlayerTable({ title, players }: Readonly<{ title: string; players: Fini
       </div>
     </div>
   );
-}
+});
 
-export function FinishedMatchCard({
+export const FinishedMatchCard = React.memo(function FinishedMatchCard({
   dateTime,
   gameTypeName,
   teamAName,
@@ -159,4 +160,4 @@ export function FinishedMatchCard({
       )}
     </div>
   );
-}
+});

@@ -5,6 +5,7 @@ import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../hooks/useAuth";
 import { useActiveGroup } from "../hooks/useActiveGroup";
+import { getFirstName } from "../lib/profile";
 
 interface PlayerRank {
   id: string;
@@ -20,8 +21,6 @@ interface PlayerRank {
   badges: string[];
   isCurrentUser: boolean;
 }
-
-const getFirstName = (name: string) => name.trim().split(" ")[0] ?? name;
 
 // HELPERS DE BUSCA
 

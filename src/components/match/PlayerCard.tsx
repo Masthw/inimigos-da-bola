@@ -1,3 +1,4 @@
+import React from "react";
 import { Avatar } from "../ui/Avatar";
 import type { MatchPlayer } from "../../hooks/useMatches";
 
@@ -33,7 +34,7 @@ interface PlayerCardProps {
   onClick: () => void;
 }
 
-export function PlayerCard({ player, teamColor, stats, disabled, onClick }: PlayerCardProps) {
+export const PlayerCard = React.memo(function PlayerCard({ player, teamColor, stats, disabled, onClick }: PlayerCardProps) {
   return (
     <button
       key={player.userId ?? player.name}
@@ -73,4 +74,4 @@ export function PlayerCard({ player, teamColor, stats, disabled, onClick }: Play
       </div>
     </button>
   );
-}
+});

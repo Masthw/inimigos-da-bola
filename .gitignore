@@ -31,3 +31,5 @@ graphify-out
 
 #Claude
 CLAUDE.md
+.env.local
+.env*.local
