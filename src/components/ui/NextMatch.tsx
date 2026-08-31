@@ -115,7 +115,7 @@ export function NextMatch() {
   const { activeGroupId } = useActiveGroup();
   const { match, loading } = useNextMatch(activeGroupId);
   const { user } = useAuth();
-  const { isAdmin } = useIsAdmin();
+  const { isGroupAdmin } = useIsAdmin();
   const [busy, setBusy] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [drawing, setDrawing] = useState(false);
@@ -228,12 +228,12 @@ export function NextMatch() {
               status={status}
               loading={loading}
               hasMatch={Boolean(match)}
-              isAdmin={isAdmin}
+              isAdmin={isGroupAdmin}
               onConfirm={handleConfirm}
               onRetry={() => setHasError(false)}
             />
 
-            {isAdmin && match && (
+            {isGroupAdmin && match && (
               <button
                 type="button"
                 onClick={handleDrawTeams}

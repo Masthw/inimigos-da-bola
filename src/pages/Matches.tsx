@@ -374,7 +374,7 @@ const UpcomingRow = React.memo(function UpcomingRow({
 export default function Matches() {
   const { activeGroupId } = useActiveGroup();
   const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } = useMatches(activeGroupId);
-  const { isAdmin } = useIsAdmin();
+  const { isGroupAdmin } = useIsAdmin();
   const { busy: liveBusy, startMatch, addGoal, addOwnGoal, saveScores } = useLiveMatch(activeGroupId);
   const [cancelModalMatch, setCancelModalMatch] = useState<MatchWithMeta | null>(null);
   const [startModalMatch, setStartModalMatch] = useState<MatchWithMeta | null>(null);
@@ -448,7 +448,7 @@ export default function Matches() {
               <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">Partidas</h2>
             </div>
 
-            {isAdmin && (
+            {isGroupAdmin && (
               <Link
                 to="/matches/new"
                 className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
@@ -477,7 +477,7 @@ export default function Matches() {
                     match={featured}
                     myStatus={myStatus[featured.id]}
                     busy={busyMatchId === featured.id}
-                    isAdmin={isAdmin}
+                    isAdmin={isGroupAdmin}
                     onConfirm={() => handleConfirm(featured)}
                     onDesist={() => handleDesist(featured)}
                     onCancel={() => setCancelModalMatch(featured)}
@@ -542,7 +542,7 @@ export default function Matches() {
                     <p className="font-body text-on-surface-variant max-w-sm mb-6">
                       Assim que uma pelada for agendada, ela aparece aqui com status e contagem de presença em tempo real.
                     </p>
-                    {isAdmin && (
+                    {isGroupAdmin && (
                       <div className="flex items-center flex-col sm:flex-row gap-3">
                         <Link
                           to="/matches/new"

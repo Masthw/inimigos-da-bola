@@ -14,7 +14,7 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
   const { logout, user } = useAuth();
-  const { groups, activeGroup, activeGroupId, setActiveGroup, isAdmin, isGroupAdmin, groupRole } = useActiveGroup();
+  const { groups, activeGroup, activeGroupId, setActiveGroup, isGroupAdmin, groupRole } = useActiveGroup();
   const { pathname } = useLocation();
   const name = getFirstName(getDisplayName(user));
   const avatarUrl = getAvatarUrl(user);
@@ -53,8 +53,8 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
       </Link>
 
       {activeGroup && (
-        <div className="mx-2 mb-2">
-          <div className="flex items-center justify-between gap-2 px-3 py-2 text-on-surface-variant">
+        <div className="mx-2 mb-1">
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 text-on-surface-variant">
             <div className="flex items-center gap-2 min-w-0">
               <MaterialIcon name="groups" className="w-4 h-4 shrink-0" />
               <span className="font-mono text-label-sm truncate">{activeGroup.name}</span>
@@ -137,8 +137,8 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
         )}
       </div>
 
-      <div className="px-4 mt-auto space-y-1">
-        {isAdmin && (
+      <div className="px-4 mt-auto pt-4 space-y-1">
+        {isGroupAdmin && (
           <Link
             to="/matches/new"
             onClick={onClose}
