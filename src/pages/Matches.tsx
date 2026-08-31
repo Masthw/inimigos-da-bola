@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
@@ -286,7 +286,7 @@ function FeaturedCard({
   );
 }
 
-function UpcomingRow({
+const UpcomingRow = React.memo(function UpcomingRow({
   match,
   myStatus,
   busy,
@@ -369,7 +369,7 @@ function UpcomingRow({
       </div>
     </div>
   );
-}
+});
 
 export default function Matches() {
   const { activeGroupId } = useActiveGroup();

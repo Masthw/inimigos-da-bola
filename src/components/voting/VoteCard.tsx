@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import { MaterialIcon } from "../ui/MaterialIcon";
 import { Avatar } from "../ui/Avatar";
 import { getAwardMeta } from "../../lib/awards";
@@ -14,7 +14,7 @@ interface VoteCardProps {
   disabled?: boolean;
 }
 
-export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted, onVote, disabled }: Readonly<VoteCardProps>) {
+export const VoteCard = memo(function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted, onVote, disabled }: Readonly<VoteCardProps>) {
   const [showModal, setShowModal] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
@@ -226,4 +226,4 @@ export function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted
       )}
     </>
   );
-}
+});

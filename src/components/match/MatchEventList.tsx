@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import React from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { memo } from "react";
 import { MaterialIcon } from "../ui/MaterialIcon";
 
 interface MatchEventListProps {
@@ -27,10 +27,10 @@ interface MatchEventListItemProps {
   iconClassName: string;
   name: string;
   secondary?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
-export function MatchEventListItem({ icon, iconClassName, name, secondary, style }: MatchEventListItemProps) {
+export const MatchEventListItem = memo(function MatchEventListItem({ icon, iconClassName, name, secondary, style }: MatchEventListItemProps) {
   return (
     <div className="flex items-center gap-3 p-2 bg-surface-variant/50 rounded-lg">
       <span className={iconClassName} style={style}>
@@ -40,7 +40,7 @@ export function MatchEventListItem({ icon, iconClassName, name, secondary, style
       {secondary && <span className="font-mono text-[10px] text-on-surface-variant">{secondary}</span>}
     </div>
   );
-}
+});
 
 export function MatchEventEmpty({ text }: { text: string }) {
   return <p className="font-mono text-label-sm text-on-surface-variant py-2">{text}</p>;
