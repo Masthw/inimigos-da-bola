@@ -24,30 +24,18 @@ interface Member {
 
 export default function GroupManagement() {
   const { user } = useAuth();
-  const { activeGroup, activeGroupId } = useActiveGroup();
+  const { activeGroup, activeGroupId, isGroupAdmin, refresh: refreshGroup } = useActiveGroup();
   const [pending, setPending] = useState<PendingMember[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!activeGroupId || !user) return;
-
-    const { data: membership } = await supabase
-      .from("group_members")
-      .select("role")
-      .eq("group_id", activeGroupId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (membership?.role !== "admin") {
-      setIsAdmin(false);
+    if (!activeGroupId || !user) {
       setLoading(false);
       return;
     }
-    setIsAdmin(true);
 
     const [pendingRes, membersRes] = await Promise.all([
       supabase
@@ -87,12 +75,9 @@ export default function GroupManagement() {
     if (!activeGroupId) return;
     setBusyUserId(userId);
     try {
-      await supabase
-        .from("group_members")
-        .update({ status: "approved" })
-        .eq("group_id", activeGroupId)
-        .eq("user_id", userId);
-      fetchData();
+      await supabase.from("group_members").update({ status: "approved" }).eq("group_id", activeGroupId).eq("user_id", userId);
+      await fetchData();
+      refreshGroup();
     } finally {
       setBusyUserId(null);
     }
@@ -102,12 +87,21 @@ export default function GroupManagement() {
     if (!activeGroupId) return;
     setBusyUserId(userId);
     try {
-      await supabase
-        .from("group_members")
-        .delete()
-        .eq("group_id", activeGroupId)
-        .eq("user_id", userId);
-      fetchData();
+      await supabase.from("group_members").delete().eq("group_id", activeGroupId).eq("user_id", userId);
+      await fetchData();
+      refreshGroup();
+    } finally {
+      setBusyUserId(null);
+    }
+  }
+
+  async function handleSetRole(userId: string, role: "admin" | "member") {
+    if (!activeGroupId) return;
+    setBusyUserId(userId);
+    try {
+      await supabase.from("group_members").update({ role }).eq("group_id", activeGroupId).eq("user_id", userId);
+      await fetchData();
+      refreshGroup();
     } finally {
       setBusyUserId(null);
     }
@@ -134,16 +128,14 @@ export default function GroupManagement() {
     return null;
   }
 
-  if (!isAdmin) {
+  if (!isGroupAdmin) {
     return (
       <AppShell>
         <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center p-4">
           <div className="text-center">
             <MaterialIcon name="lock" className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
             <h2 className="text-headline-md font-display font-black text-on-surface">ACESSO RESTRITO</h2>
-            <p className="text-body-md text-on-surface-variant mt-2">
-              Apenas administradores podem gerenciar o grupo.
-            </p>
+            <p className="text-body-md text-on-surface-variant mt-2">Apenas administradores deste grupo podem gerenciá-lo.</p>
           </div>
         </div>
       </AppShell>
@@ -153,15 +145,11 @@ export default function GroupManagement() {
   return (
     <AppShell>
       <div className="p-4 max-w-2xl mx-auto">
-        <h1 className="text-headline-lg font-display font-black text-on-surface tracking-tighter mb-6">
-          GERENCIAR GRUPO
-        </h1>
+        <h1 className="text-headline-lg font-display font-black text-on-surface tracking-tighter mb-6">GERENCIAR GRUPO</h1>
 
         <section className="mb-8 p-4 bg-surface-container-high border border-outline-variant rounded-xl">
           <h2 className="text-title-md font-mono text-on-surface mb-3">Código do grupo</h2>
-          <p className="text-body-sm text-on-surface-variant mb-3">
-            Compartilhe este código com quem você quer que entre no grupo:
-          </p>
+          <p className="text-body-sm text-on-surface-variant mb-3">Compartilhe este código com quem você quer que entre no grupo:</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 px-3 py-2 bg-surface-container font-mono text-headline-sm text-on-surface border border-outline-variant rounded text-center tracking-widest">
               {activeGroup.code}
@@ -181,9 +169,7 @@ export default function GroupManagement() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-title-md font-mono text-on-surface mb-3">
-            Solicitações pendentes ({pending.length})
-          </h2>
+          <h2 className="text-title-md font-mono text-on-surface mb-3">Solicitações pendentes ({pending.length})</h2>
           {pending.length === 0 ? (
             <p className="text-body-sm text-on-surface-variant">Nenhuma solicitação no momento.</p>
           ) : (
@@ -197,9 +183,7 @@ export default function GroupManagement() {
                     <div className="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center">
                       <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
                     </div>
-                    <span className="font-mono text-label-sm text-on-surface">
-                      {p.users?.name ?? p.user_id}
-                    </span>
+                    <span className="font-mono text-label-sm text-on-surface">{p.users?.name ?? p.user_id}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -226,9 +210,7 @@ export default function GroupManagement() {
         </section>
 
         <section>
-          <h2 className="text-title-md font-mono text-on-surface mb-3">
-            Membros ({members.length})
-          </h2>
+          <h2 className="text-title-md font-mono text-on-surface mb-3">Membros ({members.length})</h2>
           <div className="space-y-2">
             {members.map((m) => (
               <div
@@ -239,17 +221,31 @@ export default function GroupManagement() {
                   <div className="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center">
                     <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
                   </div>
-                  <span className="font-mono text-label-sm text-on-surface">
-                    {m.users?.name ?? m.user_id}
-                  </span>
+                  <span className="font-mono text-label-sm text-on-surface">{m.users?.name ?? m.user_id}</span>
                 </div>
-                <span className={`font-mono text-label-sm px-2 py-0.5 rounded ${
-                  m.role === "admin"
-                    ? "bg-primary-container text-on-primary-container"
-                    : "bg-surface-variant text-on-surface-variant"
-                }`}>
-                  {m.role === "admin" ? "ADMIN" : "MEMBRO"}
-                </span>
+                <div className="flex items-center gap-2">
+                  {m.role === "admin" ? (
+                    <button
+                      type="button"
+                      disabled={busyUserId === m.user_id}
+                      onClick={() => handleSetRole(m.user_id, "member")}
+                      className="font-mono text-label-sm px-2 py-0.5 rounded bg-primary-container text-on-primary-container hover:scale-105 transition-transform disabled:opacity-50"
+                      title="Rebaixar para membro"
+                    >
+                      ADMIN
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busyUserId === m.user_id}
+                      onClick={() => handleSetRole(m.user_id, "admin")}
+                      className="font-mono text-label-sm px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant hover:scale-105 transition-transform disabled:opacity-50"
+                      title="Promover a admin do grupo"
+                    >
+                      MEMBRO
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

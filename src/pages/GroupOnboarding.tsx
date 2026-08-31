@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { useAuth } from "../hooks/useAuth";
-import { useIsAdmin } from "../hooks/useIsAdmin";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { supabase } from "../lib/supabaseClient";
 
 export default function GroupOnboarding() {
   const { user } = useAuth();
-  const { isAdmin } = useIsAdmin();
-  const { activeGroup, loading: groupLoading } = useActiveGroup();
+  const { activeGroup, loading: groupLoading, refresh: refreshGroup } = useActiveGroup();
 
   const [mode, setMode] = useState<"join" | "create" | null>(null);
   const [groupName, setGroupName] = useState("");
@@ -34,7 +32,7 @@ export default function GroupOnboarding() {
 
   if (navigateTo) return <Navigate to={navigateTo} replace />;
 
-  async function handleCreateGroup(e: React.FormEvent) {
+  async function handleCreateGroup(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!user || !groupName.trim()) return;
 
@@ -64,20 +62,23 @@ export default function GroupOnboarding() {
         return;
       }
 
-      const { error: memberError } = await supabase.from("group_members").insert({ group_id: group.id, user_id: user.id, role: "admin" });
+      const { error: memberError } = await supabase
+        .from("group_members")
+        .insert({ group_id: group.id, user_id: user.id, role: "admin", status: "approved" });
 
       if (memberError) {
         setError("Erro ao associar ao grupo. Tente novamente.");
         return;
       }
 
+      refreshGroup();
       setNavigateTo("/");
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleJoinGroup(e: React.FormEvent) {
+  async function handleJoinGroup(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!user || !joinCode.trim()) return;
 
@@ -94,6 +95,7 @@ export default function GroupOnboarding() {
         return;
       }
 
+      refreshGroup();
       setJoined(true);
     } finally {
       setSubmitting(false);
@@ -125,16 +127,14 @@ export default function GroupOnboarding() {
 
         {!mode && (
           <div className="space-y-3">
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setMode("create")}
-                className="w-full py-4 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
-              >
-                <MaterialIcon name="add_circle" className="w-5 h-5" />
-                CRIAR GRUPO
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setMode("create")}
+              className="w-full py-4 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
+            >
+              <MaterialIcon name="add_circle" className="w-5 h-5" />
+              CRIAR GRUPO
+            </button>
             <button
               type="button"
               onClick={() => setMode("join")}
@@ -157,7 +157,9 @@ export default function GroupOnboarding() {
               Voltar
             </button>
             <div>
-              <label htmlFor="group-name" className="block text-label-sm font-mono text-on-surface-variant mb-1">Nome do grupo</label>
+              <label htmlFor="group-name" className="block text-label-sm font-mono text-on-surface-variant mb-1">
+                Nome do grupo
+              </label>
               <input
                 id="group-name"
                 type="text"
@@ -169,7 +171,9 @@ export default function GroupOnboarding() {
               />
             </div>
             <div>
-              <label htmlFor="group-description" className="block text-label-sm font-mono text-on-surface-variant mb-1">Descrição (opcional)</label>
+              <label htmlFor="group-description" className="block text-label-sm font-mono text-on-surface-variant mb-1">
+                Descrição (opcional)
+              </label>
               <input
                 id="group-description"
                 type="text"
@@ -202,7 +206,9 @@ export default function GroupOnboarding() {
               Voltar
             </button>
             <div>
-              <label htmlFor="join-code" className="block text-label-sm font-mono text-on-surface-variant mb-1">Código do grupo (6 dígitos)</label>
+              <label htmlFor="join-code" className="block text-label-sm font-mono text-on-surface-variant mb-1">
+                Código do grupo (6 dígitos)
+              </label>
               <input
                 id="join-code"
                 type="text"

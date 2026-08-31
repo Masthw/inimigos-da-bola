@@ -103,20 +103,25 @@ export function useNextMatch(groupId: string | null = null) {
   useEffect(() => {
     let cancelled = false;
 
-    setMatch(null);
-    setLoading(true);
-    setError(null);
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setLoading(true);
+      setMatch(null);
+      setError(null);
+    });
 
     fetchNextMatch(userId, groupId)
       .then((data) => {
         if (cancelled) return;
         setMatch(data);
         setLoading(false);
+        setError(null);
       })
       .catch((error) => {
         if (cancelled) return;
         console.error("Erro ao buscar próxima partida:", error);
         setError("Erro ao carregar próxima partida");
+        setMatch(null);
         setLoading(false);
       });
 
@@ -134,6 +139,7 @@ export function useNextMatch(groupId: string | null = null) {
         if (cancelled) return;
         setMatch(data);
         setLoading(false);
+        setError(null);
       } catch (error) {
         console.error("Erro ao atualizar próxima partida:", error);
       }

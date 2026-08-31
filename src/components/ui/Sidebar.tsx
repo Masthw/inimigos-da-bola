@@ -14,7 +14,7 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
   const { logout, user } = useAuth();
-  const { groups, activeGroup, activeGroupId, setActiveGroup, isAdmin } = useActiveGroup();
+  const { groups, activeGroup, activeGroupId, setActiveGroup, isAdmin, isGroupAdmin, groupRole } = useActiveGroup();
   const { pathname } = useLocation();
   const name = getFirstName(getDisplayName(user));
   const avatarUrl = getAvatarUrl(user);
@@ -54,9 +54,22 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
 
       {activeGroup && (
         <div className="mx-2 mb-2">
-          <div className="flex items-center gap-2 px-3 py-2 text-on-surface-variant">
-            <MaterialIcon name="groups" className="w-4 h-4 shrink-0" />
-            <span className="font-mono text-label-sm truncate">{activeGroup.name}</span>
+          <div className="flex items-center justify-between gap-2 px-3 py-2 text-on-surface-variant">
+            <div className="flex items-center gap-2 min-w-0">
+              <MaterialIcon name="groups" className="w-4 h-4 shrink-0" />
+              <span className="font-mono text-label-sm truncate">{activeGroup.name}</span>
+            </div>
+            {groupRole && (
+              <span
+                className={`shrink-0 font-mono text-[10px] px-1.5 py-0.5 rounded ${
+                  groupRole === "admin"
+                    ? "bg-primary-container text-on-primary-container"
+                    : "bg-surface-variant text-on-surface-variant"
+                }`}
+              >
+                {groupRole === "admin" ? "ADMIN" : "MEMBRO"}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -108,7 +121,7 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
             <span className="font-mono text-label-bold">{item.label}</span>
           </Link>
         ))}
-        {isAdmin && (
+        {isGroupAdmin && (
           <Link
             to="/group/management"
             onClick={onClose}

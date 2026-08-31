@@ -14,6 +14,8 @@ interface GroupContextType {
   setActiveGroup: (groupId: string | null) => void;
   loading: boolean;
   isAdmin: boolean;
+  isGroupAdmin: boolean;
+  groupRole: "admin" | "member" | null;
   refresh: () => void;
 }
 
