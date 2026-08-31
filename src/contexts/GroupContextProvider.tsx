@@ -23,6 +23,7 @@ export function GroupContextProvider() {
           .from("group_members")
           .select("group_id, groups(name, description, code)")
           .eq("status", "approved")
+          .eq("user_id", user?.id ?? "")
           .order("joined_at", { ascending: true }),
         user ? supabase.rpc("is_admin") : { data: false, error: null },
       ]);
