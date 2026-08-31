@@ -17,7 +17,10 @@ const EMPTY_STATS: PlayerStats = {
   winRate: null,
 };
 
-export function usePlayerStats(userId: string | null, groupId: string | null = null) {
+export function usePlayerStats(
+  userId: string | null,
+  groupId: string | null = null,
+) {
   const [stats, setStats] = useState<PlayerStats>(EMPTY_STATS);
   const [loaded, setLoaded] = useState(false);
 
@@ -51,14 +54,14 @@ export function usePlayerStats(userId: string | null, groupId: string | null = n
       if (cancelled) return;
 
       const rows = data ?? [];
-      const finished = rows.filter((row) => row.matches && typeof row.matches === "object" && "status" in row.matches && (row.matches as { status: string }).status === "finished");
+      const finished = rows.filter((row) => row.matches?.status === "finished");
 
       const goals = rows.reduce((acc, row) => acc + (row.goals_scored ?? 0), 0);
       const assists = rows.reduce((acc, row) => acc + (row.assists ?? 0), 0);
 
       const wins = finished.filter((row) => {
-        const match = row.matches as { team_a_score: number | null; team_b_score: number | null } | null;
-        if (!match || match.team_a_score === null || match.team_b_score === null) {
+        const match = row.matches;
+        if (match?.team_a_score == null || match?.team_b_score == null) {
           return false;
         }
         if (match.team_a_score === match.team_b_score) return false;

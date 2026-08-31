@@ -6,9 +6,21 @@ import { GroupContext, type GroupInfo } from "./GroupContext";
 
 const GROUP_STORAGE_KEY = "inimigos-da-bola:active-group-id";
 
+type RawRow = {
+  group_id: string;
+  role: string | null;
+  groups: { name: string; description: string | null; code: string } | null;
+};
+
+function resolveRole(row: RawRow | undefined): "admin" | "member" | null {
+  if (!row) return null;
+  return row.role === "admin" ? "admin" : "member";
+}
+
 export function GroupContextProvider() {
   const { user } = useAuth();
   const [groups, setGroups] = useState<GroupInfo[]>([]);
+  const [groupsData, setGroupsData] = useState<RawRow[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -21,7 +33,7 @@ export function GroupContextProvider() {
       const [{ data, error }, { data: rpcResult, error: rpcError }] = await Promise.all([
         supabase
           .from("group_members")
-          .select("group_id, groups(name, description, code)")
+          .select("group_id, role, groups(name, description, code)")
           .eq("status", "approved")
           .eq("user_id", user?.id ?? "")
           .order("joined_at", { ascending: true }),
@@ -44,7 +56,8 @@ export function GroupContextProvider() {
         setIsAdmin(userData?.role === "admin");
       }
 
-      const mapped: GroupInfo[] = (data ?? []).map((row) => ({
+      const rows = (data ?? []) as RawRow[];
+      const mapped: GroupInfo[] = rows.map((row) => ({
         id: row.group_id,
         name: row.groups?.name ?? "Grupo",
         code: row.groups?.code ?? "",
@@ -52,7 +65,12 @@ export function GroupContextProvider() {
       }));
 
       setGroups(mapped);
-      setActiveGroupId(stored ?? mapped[0]?.id ?? null);
+      setGroupsData(rows);
+
+      const nextActiveId = stored && mapped.some((g) => g.id === stored)
+        ? stored
+        : mapped[0]?.id ?? null;
+      setActiveGroupId(nextActiveId);
     } finally {
       setLoading(false);
     }
@@ -95,7 +113,16 @@ export function GroupContextProvider() {
     }
   }, []);
 
-  const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
+  const activeGroup = useMemo<GroupInfo | null>(
+    () => groups.find((g) => g.id === activeGroupId) ?? null,
+    [groups, activeGroupId],
+  );
+
+  const groupRole = useMemo<"admin" | "member" | null>(
+    () => resolveRole(groupsData.find((r) => r.group_id === activeGroupId)),
+    [groupsData, activeGroupId],
+  );
+  const isGroupAdmin = groupRole === "admin";
 
   const contextValue = useMemo(() => ({
     groups,
@@ -104,8 +131,10 @@ export function GroupContextProvider() {
     setActiveGroup,
     loading,
     isAdmin,
+    isGroupAdmin,
+    groupRole,
     refresh: load,
-  }), [groups, activeGroup, activeGroupId, setActiveGroup, loading, isAdmin, load]);
+  }), [groups, activeGroup, activeGroupId, setActiveGroup, loading, isAdmin, isGroupAdmin, groupRole, load]);
 
   return (
     <GroupContext.Provider value={contextValue}>
