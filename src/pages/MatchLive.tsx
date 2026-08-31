@@ -24,7 +24,7 @@ export default function MatchLive() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { activeGroupId } = useActiveGroup();
-  const { isAdmin } = useIsAdmin();
+  const { isGroupAdmin } = useIsAdmin();
   const { addGoal, addOwnGoal, saveScores, busy } = useLiveMatch(activeGroupId);
   const [match, setMatch] = useState<MatchData | null>(null);
   const [players, setPlayers] = useState<MatchPlayer[]>([]);
@@ -195,7 +195,7 @@ export default function MatchLive() {
         onRequestReview={handleRequestReview}
         onSaveScores={handleFinishMatch}
         onManagePlayers={handleManagePlayers}
-        isAdmin={isAdmin}
+        isAdmin={isGroupAdmin}
         busy={busy}
       />
     </AppShell>

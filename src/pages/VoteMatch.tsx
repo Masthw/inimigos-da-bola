@@ -15,7 +15,7 @@ export default function VoteMatch() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAdmin } = useIsAdmin();
+  const { isGroupAdmin } = useIsAdmin();
   const { activeGroupId } = useActiveGroup();
   const [statusCheck, setStatusCheck] = useState<"checking" | "voting" | "ended">(matchId == null ? "ended" : "checking");
   const { votingData, loading, saving, error, submitVote, hasVoted, getVotedPlayers } = useVoting(matchId, activeGroupId);
@@ -131,7 +131,7 @@ export default function VoteMatch() {
             <MaterialIcon name="how_to_vote" className="w-5 h-5 text-primary" />
             <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase">Votação</h2>
           </div>
-          <VoteCountdown endsAt={votingData.votingEndsAt} isAdmin={isAdmin} onEndVoting={handleEndVoting} />
+          <VoteCountdown endsAt={votingData.votingEndsAt} isAdmin={isGroupAdmin} onEndVoting={handleEndVoting} />
         </header>
 
         <div className="px-4 py-3 bg-surface-container-high border-b border-outline-variant">

@@ -11,7 +11,7 @@ export function useMatchReviewSheet() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { activeGroupId } = useActiveGroup();
-  const { isAdmin } = useIsAdmin();
+  const { isGroupAdmin } = useIsAdmin();
   const matchReview = useMatchReview(matchId, activeGroupId);
 
   const [manualScore, setManualScore] = useState<{ teamA: number; teamB: number } | null>(null);
@@ -109,7 +109,7 @@ export function useMatchReviewSheet() {
 
   return {
     ...matchReview,
-    isAdmin,
+    isAdmin: isGroupAdmin,
     manualScore,
     setManualScore,
     showConfirm,

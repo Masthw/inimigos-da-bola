@@ -25,7 +25,7 @@ const labelClass = "label-bold text-on-surface-variant uppercase tracking-wider"
 
 export default function NewMatch() {
   const { user } = useAuth();
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { isGroupAdmin, loading: adminLoading } = useIsAdmin();
   const { activeGroupId } = useActiveGroup();
   const navigate = useNavigate();
 
@@ -141,7 +141,7 @@ export default function NewMatch() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isGroupAdmin) {
     return (
       <AppShell>
         <div className="max-w-2xl mx-auto px-margin-mobile md:px-margin-desktop pt-16 text-center">
