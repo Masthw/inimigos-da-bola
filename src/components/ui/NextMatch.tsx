@@ -118,8 +118,6 @@ export function NextMatch() {
   const { isGroupAdmin } = useIsAdmin();
   const [busy, setBusy] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [drawing, setDrawing] = useState(false);
-  const [drawError, setDrawError] = useState<string | null>(null);
   const [photoIndex] = useState(() => {
     const array = new Uint32Array(1);
     window.crypto.getRandomValues(array);
@@ -158,24 +156,6 @@ export function NextMatch() {
       }
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function handleDrawTeams() {
-    if (!match || drawing) return;
-
-    setDrawing(true);
-    setDrawError(null);
-
-    const { error } = await supabase.functions.invoke("generate-lineup", {
-      body: { matchId: match.id, groupId: activeGroupId },
-    });
-
-    setDrawing(false);
-
-    if (error) {
-      console.error("Erro ao sortear times:", error);
-      setDrawError("Não foi possível sortear os times. Tente novamente.");
     }
   }
 
@@ -236,18 +216,6 @@ export function NextMatch() {
               onRetry={() => setHasError(false)}
             />
 
-            {isGroupAdmin && match && match.status !== "preparing" && (
-              <button
-                type="button"
-                onClick={handleDrawTeams}
-                disabled={drawing}
-                className="w-full md:w-auto bg-secondary text-on-secondary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
-              >
-                <MaterialIcon name="shuffle" className="w-5 h-5" />
-                {drawing ? "SORTEANDO..." : "SORTEAR TIMES"}
-              </button>
-            )}
-
             {isGroupAdmin && match?.status === "preparing" && (
               <Link
                 to="/tactics"
@@ -257,8 +225,6 @@ export function NextMatch() {
                 Definir Escalação
               </Link>
             )}
-
-            {drawError && <p className="text-error font-body text-sm">{drawError}</p>}
           </div>
         </div>
       </div>
