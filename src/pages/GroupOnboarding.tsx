@@ -78,6 +78,7 @@ export default function GroupOnboarding() {
             <label htmlFor="join-code" className="block text-label-sm font-mono text-on-surface-variant mb-1">
               Código do grupo
             </label>
+
             <input
               id="join-code"
               type="text"
