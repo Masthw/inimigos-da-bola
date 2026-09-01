@@ -25,7 +25,7 @@ export default function MatchLive() {
   const navigate = useNavigate();
   const { activeGroupId } = useActiveGroup();
   const { isGroupAdmin } = useIsAdmin();
-  const { addGoal, addOwnGoal, saveScores, busy } = useLiveMatch(activeGroupId);
+  const { addGoal, addOwnGoal, busy } = useLiveMatch(activeGroupId);
   const [match, setMatch] = useState<MatchData | null>(null);
   const [players, setPlayers] = useState<MatchPlayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,11 +162,6 @@ export default function MatchLive() {
     fetchData();
   };
 
-  const handleFinishMatch = async (scoreA: number, scoreB: number) => {
-    if (!match) return;
-    await saveScores(match.id, scoreA, scoreB);
-    fetchData();
-  };
 
   const handleRequestReview = () => {
     if (!match) return;
@@ -193,7 +188,6 @@ export default function MatchLive() {
         onGoalScored={handleGoalScored}
         onOwnGoal={handleOwnGoal}
         onRequestReview={handleRequestReview}
-        onSaveScores={handleFinishMatch}
         onManagePlayers={handleManagePlayers}
         isAdmin={isGroupAdmin}
         busy={busy}

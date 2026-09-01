@@ -17,7 +17,6 @@ interface LiveMatchViewProps {
   onGoalScored: (scorer: MatchPlayer, assist: MatchPlayer | null) => void;
   onOwnGoal: (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => void;
   onRequestReview: () => void;
-  onSaveScores?: (scoreA: number, scoreB: number) => void;
   onManagePlayers?: () => void;
   isAdmin?: boolean;
   busy?: boolean;
@@ -35,15 +34,13 @@ export function LiveMatchView({
   onGoalScored,
   onOwnGoal,
   onRequestReview,
-  onSaveScores,
   onManagePlayers,
   isAdmin,
   busy = false,
 }: Readonly<LiveMatchViewProps>) {
   const {
+    sheetPhase,
     selectedPlayer,
-    editScore,
-    setEditScore,
     getStats,
     assistCandidates,
     sheetOpen,
@@ -51,17 +48,12 @@ export function LiveMatchView({
     handleGoal,
     handleOwnGoal,
     handleAssistSelect,
-    handleFinishConfirm,
     closeSheet,
   } = useLiveMatchView({
-    teamAScore,
-    teamBScore,
     teamAPlayers,
     teamBPlayers,
     onGoalScored,
     onOwnGoal,
-    onRequestReview,
-    onSaveScores,
     busy,
   });
 
@@ -167,107 +159,72 @@ export function LiveMatchView({
         </div>
 
         <div className="px-5 pb-8 max-h-[70vh] overflow-y-auto">
-          {selectedPlayer && (
-            <>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
-                  <div>
-                    <p className="font-mono text-label-bold text-on-surface">{selectedPlayer.name}</p>
-                    <p className="font-mono text-label-sm" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
-                      {selectedPlayer.team === "A" ? teamAName : teamBName}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={handleGoal}
-                    className="flex flex-col items-center gap-2 py-5 bg-primary-container text-primary font-mono text-label-bold border border-primary/30 active:bg-primary/20 transition-colors"
-                  >
-                    <MaterialIcon name="sports_soccer" className="w-6 h-6" />
-                    Gol
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={handleOwnGoal}
-                    className="flex flex-col items-center gap-2 py-5 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors"
-                  >
-                    <MaterialIcon name="error" className="w-6 h-6" />
-                    Gol Contra
-                  </button>
+          {sheetPhase === "goal_type" && selectedPlayer && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
+                <div>
+                  <p className="font-mono text-label-bold text-on-surface">{selectedPlayer.name}</p>
+                  <p className="font-mono text-label-sm" style={{ color: selectedPlayer.team === "A" ? teamAColor : teamBColor }}>
+                    {selectedPlayer.team === "A" ? teamAName : teamBName}
+                  </p>
                 </div>
               </div>
-
-              <div className="space-y-4 mt-6">
-                <p className="font-mono text-label-sm text-on-surface-variant">Quem deu a assistência?</p>
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleAssistSelect(null)}
-                    className="w-full py-3 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant active:bg-surface-container-high transition-colors"
-                  >
-                    Sem assistência
-                  </button>
-                  {assistCandidates.map((p) => (
-                    <button
-                      key={p.userId}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => handleAssistSelect(p)}
-                      className="w-full flex items-center gap-3 py-3 px-4 bg-surface-variant border border-outline-variant active:bg-surface-container-high transition-colors"
-                    >
-                      <Avatar src={p.avatarUrl} alt={p.name} className="w-8 h-8 rounded-full" />
-                      <span className="font-mono text-label-sm text-on-surface">{p.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4 mt-6">
-                <p className="font-mono text-label-bold text-on-surface">Placar final</p>
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                  <div>
-                    <label htmlFor="live-score-team-a" className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamAColor }}>
-                      {teamAName}
-                    </label>
-                    <input
-                      id="live-score-team-a"
-                      type="number"
-                      min={0}
-                      value={editScore.teamA}
-                      onChange={(e) => setEditScore((prev) => ({ ...prev, teamA: Number(e.target.value) }))}
-                      className="w-full bg-surface-variant border border-outline-variant px-3 py-3 font-display text-headline-md text-on-surface text-center appearance-none"
-                    />
-                  </div>
-                  <span className="font-mono text-label-bold text-on-surface-variant pt-6">x</span>
-                  <div>
-                    <label htmlFor="live-score-team-b" className="block font-mono text-label-sm uppercase mb-2 text-center" style={{ color: teamBColor }}>
-                      {teamBName}
-                    </label>
-                    <input
-                      id="live-score-team-b"
-                      type="number"
-                      min={0}
-                      value={editScore.teamB}
-                      onChange={(e) => setEditScore((prev) => ({ ...prev, teamB: Number(e.target.value) }))}
-                      className="w-full bg-surface-variant border border-outline-variant px-3 py-3 font-display text-headline-md text-on-surface text-center appearance-none"
-                    />
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={handleFinishConfirm}
-                  className="w-full py-3 bg-success text-white font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform"
+                  onClick={handleGoal}
+                  className="flex flex-col items-center gap-2 py-5 bg-primary-container text-primary font-mono text-label-bold border border-primary/30 active:bg-primary/20 transition-colors"
                 >
-                  {busy ? "Finalizando..." : "Finalizar Partida"}
+                  <MaterialIcon name="sports_soccer" className="w-6 h-6" />
+                  Gol
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={handleOwnGoal}
+                  className="flex flex-col items-center gap-2 py-5 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors"
+                >
+                  <MaterialIcon name="error" className="w-6 h-6" />
+                  Gol Contra
                 </button>
               </div>
-            </>
+            </div>
+          )}
+
+          {sheetPhase === "assist" && selectedPlayer && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar src={selectedPlayer.avatarUrl} alt={selectedPlayer.name} className="w-12 h-12 rounded-full" />
+                <div>
+                  <p className="font-mono text-label-bold text-on-surface">Gol do {selectedPlayer.name}!</p>
+                  <p className="font-mono text-label-sm text-on-surface-variant">Quem deu a assistência?</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => handleAssistSelect(null)}
+                  className="w-full py-3 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant active:bg-surface-container-high transition-colors"
+                >
+                  Sem assistência
+                </button>
+                {assistCandidates.map((p) => (
+                  <button
+                    key={p.userId}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => handleAssistSelect(p)}
+                    className="w-full flex items-center gap-3 py-3 px-4 bg-surface-variant border border-outline-variant active:bg-surface-container-high transition-colors"
+                  >
+                    <Avatar src={p.avatarUrl} alt={p.name} className="w-8 h-8 rounded-full" />
+                    <span className="font-mono text-label-sm text-on-surface">{p.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </dialog>

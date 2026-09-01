@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { Avatar } from "../components/ui/Avatar";
@@ -375,7 +375,8 @@ export default function Matches() {
   const { activeGroupId } = useActiveGroup();
   const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } = useMatches(activeGroupId);
   const { isGroupAdmin } = useIsAdmin();
-  const { busy: liveBusy, startMatch, addGoal, addOwnGoal, saveScores } = useLiveMatch(activeGroupId);
+  const { busy: liveBusy, startMatch, addGoal, addOwnGoal } = useLiveMatch(activeGroupId);
+  const navigate = useNavigate();
   const [cancelModalMatch, setCancelModalMatch] = useState<MatchWithMeta | null>(null);
   const [startModalMatch, setStartModalMatch] = useState<MatchWithMeta | null>(null);
   const [expandedFinished, setExpandedFinished] = useState<string | null>(null);
@@ -416,11 +417,6 @@ export default function Matches() {
     refetch();
   };
 
-  const handleFinishMatch = async (scoreA: number, scoreB: number) => {
-    if (!featured) return;
-    await saveScores(featured.id, scoreA, scoreB);
-    refetch();
-  };
 
   return (
     <AppShell>
@@ -437,8 +433,7 @@ export default function Matches() {
           teamBPlayers={featured.confirmedPlayers.filter((p) => p.team === "B")}
           onGoalScored={handleGoalScored}
           onOwnGoal={handleOwnGoal}
-          onSaveScores={handleFinishMatch}
-          onRequestReview={() => {}}
+          onRequestReview={() => navigate(`/matches/${featured.id}/review`)}
           busy={liveBusy}
         />
       ) : (

@@ -1,38 +1,29 @@
 import { useState, useCallback } from "react";
 import type { MatchPlayer } from "./useMatches";
 
-type SheetPhase = "closed" | "goal_type" | "assist" | "finish";
+type SheetPhase = "closed" | "goal_type" | "assist";
 
 interface PlayerStats {
   [userId: string]: { goals: number; assists: number; ownGoals: number };
 }
 
 interface UseLiveMatchViewProps {
-  teamAScore: number;
-  teamBScore: number;
   teamAPlayers: MatchPlayer[];
   teamBPlayers: MatchPlayer[];
   onGoalScored: (scorer: MatchPlayer, assist: MatchPlayer | null) => void;
   onOwnGoal: (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => void;
-  onRequestReview: () => void;
-  onSaveScores?: (scoreA: number, scoreB: number) => void;
   busy?: boolean;
 }
 
 export function useLiveMatchView({
-  teamAScore,
-  teamBScore,
   teamAPlayers,
   teamBPlayers,
   onGoalScored,
   onOwnGoal,
-  onRequestReview,
-  onSaveScores,
   busy = false,
 }: UseLiveMatchViewProps) {
   const [sheetPhase, setSheetPhase] = useState<SheetPhase>("closed");
   const [selectedPlayer, setSelectedPlayer] = useState<MatchPlayer | null>(null);
-  const [editScore, setEditScore] = useState({ teamA: teamAScore, teamB: teamBScore });
   const [playerStats, setPlayerStats] = useState<PlayerStats>({});
 
   const getStats = useCallback((userId: string | null) => {
@@ -66,8 +57,7 @@ export function useLiveMatchView({
   const closeSheet = useCallback(() => {
     setSheetPhase("closed");
     setSelectedPlayer(null);
-    setEditScore({ teamA: teamAScore, teamB: teamBScore });
-  }, [teamAScore, teamBScore]);
+  }, []);
 
   const handlePlayerClick = useCallback((player: MatchPlayer) => {
     if (busy) return;
@@ -94,14 +84,6 @@ export function useLiveMatchView({
     closeSheet();
   }, [selectedPlayer, updateStats, onGoalScored, closeSheet]);
 
-  const handleFinishConfirm = useCallback(() => {
-    if (onSaveScores) {
-      onSaveScores(editScore.teamA, editScore.teamB);
-    }
-    closeSheet();
-    onRequestReview();
-  }, [onSaveScores, editScore, onRequestReview, closeSheet]);
-
   const sameTeamPlayers = selectedPlayer?.team === "A" ? teamAPlayers : teamBPlayers;
   const assistCandidates = sameTeamPlayers.filter((p) => p.userId && p.userId !== selectedPlayer?.userId);
   const sheetOpen = sheetPhase !== "closed";
@@ -109,8 +91,6 @@ export function useLiveMatchView({
   return {
     sheetPhase,
     selectedPlayer,
-    editScore,
-    setEditScore,
     playerStats,
     getStats,
     assistCandidates,
@@ -119,7 +99,6 @@ export function useLiveMatchView({
     handleGoal,
     handleOwnGoal,
     handleAssistSelect,
-    handleFinishConfirm,
     closeSheet,
   };
 }

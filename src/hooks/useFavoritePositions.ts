@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from './useAuth'
 
@@ -24,48 +24,69 @@ export function useFavoritePositions() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const refetchFavorites = useCallback(async () => {
+    if (!user) return
+
+    const userId = user.id
+
+    const [{ data: positionsData }, { data: favoritesData }, { data: gameTypesData }] = await Promise.all([
+      supabase.from('positions').select('id, name, code, game_type_id').order('name', { ascending: true }),
+      supabase.from('user_favorite_positions').select('position_id, is_primary').eq('user_id', userId),
+      supabase.from('game_types').select('id, name'),
+    ])
+
+    setPositions(positionsData ?? [])
+
+    const favMap = new Map<number, FavoritePosition>()
+    for (const fav of favoritesData ?? []) {
+      favMap.set(fav.position_id, { position_id: fav.position_id, is_primary: fav.is_primary })
+    }
+    setFavorites(favMap)
+
+    const futsal = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'futsal')
+    const society = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'society')
+    setGameTypeIds({ futsal: futsal?.id ?? null, society: society?.id ?? null })
+    setGameTypeNames({ futsal: futsal?.name ?? 'Futsal', society: society?.name ?? 'Society' })
+  }, [user])
+
+  const loadFavorites = useCallback(async () => {
+    if (!user) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      await refetchFavorites()
+    } finally {
+      setLoading(false)
+    }
+  }, [user, refetchFavorites])
+
+  useEffect(() => {
+    if (!user) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional state refresh on user change
+    loadFavorites()
+  }, [user, loadFavorites])
+
   useEffect(() => {
     if (!user) return
 
-    let cancelled = false
-    const userId = user.id
-
-    async function load() {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const [{ data: positionsData }, { data: favoritesData }, { data: gameTypesData }] = await Promise.all([
-          supabase.from('positions').select('id, name, code, game_type_id').order('name', { ascending: true }),
-          supabase.from('user_favorite_positions').select('position_id, is_primary').eq('user_id', userId),
-          supabase.from('game_types').select('id, name'),
-        ])
-
-        if (cancelled) return
-
-        setPositions(positionsData ?? [])
-
-        const favMap = new Map<number, FavoritePosition>()
-        for (const fav of favoritesData ?? []) {
-          favMap.set(fav.position_id, { position_id: fav.position_id, is_primary: fav.is_primary })
-        }
-        setFavorites(favMap)
-
-        const futsal = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'futsal')
-        const society = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'society')
-        setGameTypeIds({ futsal: futsal?.id ?? null, society: society?.id ?? null })
-        setGameTypeNames({ futsal: futsal?.name ?? 'Futsal', society: society?.name ?? 'Society' })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    load()
+    const channel = supabase
+      .channel(`fav-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_favorite_positions',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        refetchFavorites()
+      })
+      .subscribe()
 
     return () => {
-      cancelled = true
+      supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [user, refetchFavorites])
 
   const toggleFavorite = async (positionId: number, isPrimary: boolean) => {
     if (!user) return
