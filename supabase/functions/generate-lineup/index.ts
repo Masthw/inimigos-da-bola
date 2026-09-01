@@ -9,14 +9,18 @@ interface PlayerData {
   position: string;
   points: number;
   isGoalkeeper: boolean;
+  matchPlayerId: string;
+  guestName: string | null;
 }
 
 interface MatchPlayerRow {
-  user_id: string;
-  team: string;
+  id: string;
+  user_id: string | null;
+  team: string | null;
   goals_scored: number;
   assists: number;
   users: { name: string } | { name: string }[] | null;
+  guest_name: string | null;
 }
 
 interface FavPositionRow {
@@ -89,10 +93,9 @@ async function getValidPositionIds(adminClient: SupabaseClient, gameTypeId: numb
 async function getDraftData(adminClient: SupabaseClient, matchId: string): Promise<{ players: PlayerData[]; teamSize: number }> {
   const { data: matchPlayers, error: playersError } = await adminClient
     .from('match_players')
-    .select('user_id, team, goals_scored, assists, users(name)')
+    .select('id, user_id, team, goals_scored, assists, users(name), guest_name')
     .eq('match_id', matchId)
     .eq('status', 'confirmed')
-    .not('user_id', 'is', null)
     .overrideTypes<MatchPlayerRow[]>();
 
   if (playersError) throw playersError;
@@ -100,7 +103,7 @@ async function getDraftData(adminClient: SupabaseClient, matchId: string): Promi
     throw new FunctionError(400, 'Nenhum jogador confirmado');
   }
 
-  const userIds = matchPlayers.map((p) => p.user_id);
+  const userIds = matchPlayers.map((p) => p.user_id).filter((id): id is string => id !== null);
 
   const { data: favPositions, error: favError } = await adminClient
     .from('user_favorite_positions')
@@ -160,15 +163,16 @@ async function getDraftData(adminClient: SupabaseClient, matchId: string): Promi
       ? favPosition.code
       : 'MF';
 
-    const rawUser = Array.isArray(p.users) ? p.users[0] : p.users;
-    const points = rankMap.get(p.user_id) || 0;
+    const points = rankMap.get(p.user_id || '') || 0;
 
     return {
-      userId: p.user_id,
-      name: rawUser?.name || 'Jogador',
+      userId: p.user_id ?? '',
+      name: (Array.isArray(p.users) ? p.users[0]?.name : p.users?.name) ?? p.guest_name ?? 'Convidado',
       position: positionCode,
       points,
-      isGoalkeeper: positionCode === 'GK',
+      isGoalkeeper: false,
+      matchPlayerId: p.id,
+      guestName: p.guest_name ?? null,
     };
   });
 
@@ -245,25 +249,19 @@ async function persistDraft(adminClient: SupabaseClient, matchId: string, draft:
       adminClient
         .from('match_players')
         .update({ team: 'A' })
-        .eq('match_id', matchId)
-        .eq('user_id', p.userId)
-        .eq('status', 'confirmed'),
+        .eq('id', p.matchPlayerId),
     ),
     ...draft.teamB.map((p) =>
       adminClient
         .from('match_players')
         .update({ team: 'B' })
-        .eq('match_id', matchId)
-        .eq('user_id', p.userId)
-        .eq('status', 'confirmed'),
+        .eq('id', p.matchPlayerId),
     ),
     ...draft.subs.map((p) =>
       adminClient
         .from('match_players')
         .update({ team: null })
-        .eq('match_id', matchId)
-        .eq('user_id', p.userId)
-        .eq('status', 'confirmed'),
+        .eq('id', p.matchPlayerId),
     ),
   ];
 

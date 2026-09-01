@@ -170,35 +170,6 @@ export function useLiveMatch(groupId: string | null = null) {
     [groupId],
   );
 
-  const saveScores = useCallback(
-    async (matchId: string, teamAScore: number, teamBScore: number) => {
-      setBusy(true);
-      try {
-        const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
-        if (!valid) {
-          return { error: guardError ?? "Validação de grupo falhou" };
-        }
-
-        const { error } = await supabase
-          .from("matches")
-          .update({
-            team_a_score: teamAScore,
-            team_b_score: teamBScore,
-          })
-          .eq("id", matchId);
-
-        if (error) {
-          console.error("Erro ao salvar placar:", error);
-          return { error: "Erro ao salvar placar" };
-        }
-
-        return { error: null };
-      } finally {
-        setBusy(false);
-      }
-    },
-    [groupId],
-  );
 
   const startMatch = useCallback(async (matchId: string) => {
     setBusy(true);
@@ -206,6 +177,17 @@ export function useLiveMatch(groupId: string | null = null) {
       const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
       if (!valid) {
         return { error: guardError ?? "Validação de grupo falhou" };
+      }
+
+      try {
+        await supabase.functions.invoke("generate-lineup", {
+          body: { matchId, groupId },
+        });
+      } catch (drawErr) {
+        console.error(
+          "Aviso: sorteio de times falhou, partida inicia com times default",
+          drawErr,
+        );
       }
 
       const { error } = await supabase.from("matches").update({
@@ -225,5 +207,5 @@ export function useLiveMatch(groupId: string | null = null) {
     }
   }, [groupId]);
 
-  return { busy, addGoal, addOwnGoal, saveScores, startMatch };
+  return { busy, addGoal, addOwnGoal, startMatch };
 }
