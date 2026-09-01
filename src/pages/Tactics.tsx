@@ -798,7 +798,9 @@ export default function Tactics() {
   const isFutsal = courtType === "futsal";
   const courtImage = isFutsal ? "/courts/futsal.jpg" : "/courts/society.jpg";
   const courtName = isFutsal ? "Quadra de Futsal" : "Quadra Society";
-  const layoutPositions = (isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: p.x })) : [...activePositions]) as LayoutPosition[];
+  const layoutPositions = (isDesktop
+    ? activePositions.map((p) => ({ ...p, x: p.y, y: 100 - p.x }))
+    : [...activePositions]) as LayoutPosition[];
 
   const matchInfo = {
     opponent: nextMatch.title,
