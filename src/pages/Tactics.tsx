@@ -326,7 +326,6 @@ interface FetchedTeams {
 
 async function fetchMatchData(
   matchId: string,
-  userId: string | undefined,
   activePositions: readonly { id: string }[],
 ): Promise<FetchedTeams> {
   const playersRes = await supabase
@@ -387,8 +386,6 @@ async function fetchMatchData(
       }
     }
 
-    void userId;
-
     return {
       id: row.user_id ?? row.guest_name ?? "unknown",
       name: fullName,
@@ -430,7 +427,7 @@ function useTacticsBoard(
       return;
     }
     try {
-      const data = await fetchMatchData(nextMatch.id, currentUserId, activePositions);
+      const data = await fetchMatchData(nextMatch.id, activePositions);
       setPlayers(data.all);
       setTeamA(data.teamA);
       setTeamB(data.teamB);
@@ -440,7 +437,7 @@ function useTacticsBoard(
       setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
       setLoading(false);
     }
-  }, [nextMatch, currentUserId, activePositions, canAccess]);
+  }, [nextMatch, activePositions, canAccess]);
 
   useEffect(() => {
     let isMounted = true;
@@ -588,6 +585,185 @@ function TacticsUnconfirmed({ courtType, hasMatch }: Readonly<{ courtType: strin
 
 // COMPONENTE PRINCIPAL
 
+interface LayoutPosition {
+  id: PositionId;
+  short: string;
+  label: string;
+  x: number;
+  y: number;
+}
+
+function CourtCard({
+  title,
+  teamPlayers,
+  layoutPositions,
+  courtImage,
+  isDesktop,
+  currentUserId,
+  isGroupAdmin,
+  onSelect,
+}: Readonly<{
+  title: string | null;
+  teamPlayers: Player[];
+  layoutPositions: LayoutPosition[];
+  courtImage: string;
+  isDesktop: boolean;
+  currentUserId: string | undefined;
+  isGroupAdmin: boolean;
+  onSelect: (playerId: string, posId: PositionId | null) => void;
+}>) {
+  const hasPlayers = teamPlayers.length > 0;
+
+  return (
+    <div>
+      {title && <h3 className="font-mono text-label-bold text-on-surface uppercase tracking-wide mb-2">{title}</h3>}
+      <div
+        className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
+          isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"
+        }`}
+      >
+        <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+        <CourtMarkings horizontal={isDesktop} />
+        {layoutPositions.map((pos) => {
+          const occupant = hasPlayers ? teamPlayers.find((p) => p.position === pos.id) : undefined;
+          const occupantIsMe = hasPlayers && occupant !== undefined && occupant.userId === currentUserId;
+          const canEdit = isGroupAdmin || occupantIsMe;
+          const canSelect = hasPlayers && (!occupant || canEdit);
+          return (
+            <TacticalNode
+              key={pos.id}
+              id={pos.id}
+              short={pos.short}
+              label={pos.label}
+              x={pos.x}
+              y={pos.y}
+              occupant={occupant}
+              canSelect={canSelect}
+              onSelect={() => {
+                if (occupant) {
+                  onSelect(occupant.id, occupant.position === pos.id ? null : pos.id);
+                } else if (hasPlayers) {
+                  const meOnTeam = teamPlayers.find((p) => p.userId === currentUserId);
+                  if (meOnTeam) {
+                    onSelect(meOnTeam.id, pos.id);
+                  }
+                }
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CourtArea({
+  teamA,
+  teamB,
+  layoutPositions,
+  courtImage,
+  isDesktop,
+  currentUserId,
+  isGroupAdmin,
+  onSelect,
+}: Readonly<{
+  teamA: Player[];
+  teamB: Player[];
+  layoutPositions: LayoutPosition[];
+  courtImage: string;
+  isDesktop: boolean;
+  currentUserId: string | undefined;
+  isGroupAdmin: boolean;
+  onSelect: (playerId: string, posId: PositionId | null) => void;
+}>) {
+  const hasPlayers = teamA.length > 0 || teamB.length > 0;
+
+  return (
+    <div className="w-full lg:flex-1 flex flex-col gap-4">
+      {hasPlayers ? (
+        <>
+          {teamA.length > 0 && (
+            <CourtCard
+              title="Time A"
+              teamPlayers={teamA}
+              layoutPositions={layoutPositions}
+              courtImage={courtImage}
+              isDesktop={isDesktop}
+              currentUserId={currentUserId}
+              isGroupAdmin={isGroupAdmin}
+              onSelect={onSelect}
+            />
+          )}
+          {teamB.length > 0 && (
+            <CourtCard
+              title="Time B"
+              teamPlayers={teamB}
+              layoutPositions={layoutPositions}
+              courtImage={courtImage}
+              isDesktop={isDesktop}
+              currentUserId={currentUserId}
+              isGroupAdmin={isGroupAdmin}
+              onSelect={onSelect}
+            />
+          )}
+        </>
+      ) : (
+        <CourtCard
+          title={null}
+          teamPlayers={[]}
+          layoutPositions={layoutPositions}
+          courtImage={courtImage}
+          isDesktop={isDesktop}
+          currentUserId={currentUserId}
+          isGroupAdmin={isGroupAdmin}
+          onSelect={onSelect}
+        />
+      )}
+    </div>
+  );
+}
+
+function SidebarTeams({
+  teamA,
+  teamB,
+  matchInfo,
+  courtName,
+  currentUserId,
+}: Readonly<{
+  teamA: Player[];
+  teamB: Player[];
+  matchInfo: { opponent: string; date: string; court: string };
+  courtName: string;
+  currentUserId: string | undefined;
+}>) {
+  const teams = [
+    { label: "Time A", players: teamA },
+    { label: "Time B", players: teamB },
+  ].filter((t) => t.players.length > 0);
+
+  return (
+    <div className="flex flex-col gap-4 w-full lg:w-105 lg:shrink-0">
+      {teams.length > 0 ? (
+        teams.map((t) => (
+          <TeamList
+            key={t.label}
+            players={t.players}
+            teamLabel={t.label}
+            match={matchInfo}
+            courtLabel={courtName}
+            currentUserId={currentUserId}
+          />
+        ))
+      ) : (
+        <div className="bg-surface-container-high rounded-xl border border-outline-variant/30 p-4">
+          <p className="font-mono text-label-sm text-on-surface-variant">Nenhum jogador escalado</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Tactics() {
   const { user } = useAuth();
   const { activeGroupId } = useActiveGroup();
@@ -619,13 +795,15 @@ export default function Tactics() {
 
   if (!isOpen && !isPreparing) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
 
-  const courtImage = courtType === "futsal" ? "/courts/futsal.jpg" : "/courts/society.jpg";
-  const layoutPositions = isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: p.x })) : activePositions;
+  const isFutsal = courtType === "futsal";
+  const courtImage = isFutsal ? "/courts/futsal.jpg" : "/courts/society.jpg";
+  const courtName = isFutsal ? "Quadra de Futsal" : "Quadra Society";
+  const layoutPositions = (isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: p.x })) : [...activePositions]) as LayoutPosition[];
 
   const matchInfo = {
     opponent: nextMatch.title,
     date: `${nextMatch.date} • ${nextMatch.time}`,
-    court: courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society",
+    court: courtName,
   };
 
   const handleStartGame = async () => {
@@ -636,43 +814,11 @@ export default function Tactics() {
     }
   };
 
-  const renderPositionsForTeam = (teamPlayers: Player[]) =>
-    layoutPositions.map((pos) => {
-      const occupant = teamPlayers.find((p) => p.position === pos.id);
-      const occupantIsMe = !!occupant && occupant.userId === currentUserId;
-      const canEdit = isGroupAdmin || occupantIsMe;
-      const canSelect = !occupant || canEdit;
-      return (
-        <TacticalNode
-          key={pos.id}
-          id={pos.id}
-          short={pos.short}
-          label={pos.label}
-          x={pos.x}
-          y={pos.y}
-          occupant={occupant}
-          canSelect={canSelect}
-          onSelect={() => {
-            if (occupant) {
-              selectPosition(occupant.id, occupant.position === pos.id ? null : pos.id);
-            } else {
-              const meOnTeam = teamPlayers.find((p) => p.userId === currentUserId);
-              if (meOnTeam && (isGroupAdmin || meOnTeam.userId === currentUserId)) {
-                selectPosition(meOnTeam.id, pos.id);
-              }
-            }
-          }}
-        />
-      );
-    });
-
   return (
     <AppShell>
       <div className="min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
-          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">
-            {courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society"}
-          </h2>
+          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">{courtName}</h2>
           {isPreparing && isGroupAdmin && (
             <button
               type="button"
@@ -687,89 +833,24 @@ export default function Tactics() {
         </header>
 
         <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row items-center lg:items-start gap-6 lg:gap-8 px-4 md:px-margin-desktop py-6">
-          <div className="w-full lg:flex-1 flex flex-col gap-4">
-            {teamA.length > 0 && (
-              <div>
-                <h3 className="font-mono text-label-bold text-on-surface uppercase tracking-wide mb-2">Time A</h3>
-                <div
-                  className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
-                    isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"
-                  }`}
-                >
-                  <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-                  <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                  <CourtMarkings horizontal={isDesktop} />
-                  {renderPositionsForTeam(teamA)}
-                </div>
-              </div>
-            )}
+          <CourtArea
+            teamA={teamA}
+            teamB={teamB}
+            layoutPositions={layoutPositions}
+            courtImage={courtImage}
+            isDesktop={isDesktop}
+            currentUserId={currentUserId}
+            isGroupAdmin={isGroupAdmin}
+            onSelect={selectPosition}
+          />
 
-            {teamB.length > 0 && (
-              <div>
-                <h3 className="font-mono text-label-bold text-on-surface uppercase tracking-wide mb-2">Time B</h3>
-                <div
-                  className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
-                    isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"
-                  }`}
-                >
-                  <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-                  <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                  <CourtMarkings horizontal={isDesktop} />
-                  {renderPositionsForTeam(teamB)}
-                </div>
-              </div>
-            )}
-
-            {teamA.length === 0 && teamB.length === 0 && (
-              <div
-                className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
-                  isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"
-                }`}
-              >
-                <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                <CourtMarkings horizontal={isDesktop} />
-                {layoutPositions.map((pos) => (
-                  <TacticalNode
-                    key={pos.id}
-                    id={pos.id}
-                    short={pos.short}
-                    label={pos.label}
-                    x={pos.x}
-                    y={pos.y}
-                    canSelect={false}
-                    onSelect={() => {}}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-4 w-full lg:w-105 lg:shrink-0">
-            {teamA.length > 0 && (
-              <TeamList
-                players={teamA}
-                teamLabel="Time A"
-                match={matchInfo}
-                courtLabel={courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society"}
-                currentUserId={currentUserId}
-              />
-            )}
-            {teamB.length > 0 && (
-              <TeamList
-                players={teamB}
-                teamLabel="Time B"
-                match={matchInfo}
-                courtLabel={courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society"}
-                currentUserId={currentUserId}
-              />
-            )}
-            {teamA.length === 0 && teamB.length === 0 && (
-              <div className="bg-surface-container-high rounded-xl border border-outline-variant/30 p-4">
-                <p className="font-mono text-label-sm text-on-surface-variant">Nenhum jogador escalado</p>
-              </div>
-            )}
-          </div>
+          <SidebarTeams
+            teamA={teamA}
+            teamB={teamB}
+            matchInfo={matchInfo}
+            courtName={courtName}
+            currentUserId={currentUserId}
+          />
         </div>
       </div>
     </AppShell>

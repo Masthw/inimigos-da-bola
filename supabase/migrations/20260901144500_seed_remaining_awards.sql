@@ -6,17 +6,20 @@
 -- e os linka a todas as modalidades via award_game_types.
 
 -- 1. Inserir os awards que ainda nao existem (Craque da Partida ja existe)
+--    is_voting_based = true apenas para os eleitos por voto popular.
+--    Goleador/Garçom sao definidos pelas stats (gols/assistencias) e
+--    Inimigo da Bola e escolhido apenas por admins.
 WITH new_awards(name, description, is_voting_based) AS (
   VALUES
     ('Goleador',         'Artilheiro da partida',                 false),
     ('Garçom',           'Melhor assistente da partida',          false),
-    ('Muralha',          'Melhor defesa da partida',                false),
-    ('Motorzinho',       'Jogador mais movimentado da partida',     false),
-    ('Perninha',         'Melhor chute com a perninha',             false),
-    ('Frango',           'Menor desempenho da partida',             false),
-    ('Cansado',          'Rends menos no jogo',                     false),
-    ('Professor',        'Jogo mais inteligente da partida',        false),
-    ('Fominha',          'Mais fome de gol da partida',             false),
+    ('Muralha',          'Melhor defesa da partida',                true),
+    ('Motorzinho',       'Jogador mais movimentado da partida',     true),
+    ('Perninha',         'Melhor chute com a perninha',             true),
+    ('Frango',           'Menor desempenho da partida',             true),
+    ('Cansado',          'Rends menos no jogo',                     true),
+    ('Professor',        'Jogo mais inteligente da partida',        true),
+    ('Fominha',          'Mais fome de gol da partida',             true),
     ('Inimigo da Bola',  'Melhor marcador da partida',              false)
 )
 INSERT INTO awards (sport_id, name, description, is_voting_based)

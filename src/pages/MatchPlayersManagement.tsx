@@ -15,6 +15,16 @@ interface MatchPlayerRow {
   users: { name: string | null; avatar_url: string | null } | null;
 }
 
+function teamButtonClass(selected: string, team: string): string {
+  if (selected !== team) {
+    return "bg-surface-container text-on-surface-variant border-outline-variant";
+  }
+  if (team === "A") {
+    return "bg-error-container text-on-error-container border-error";
+  }
+  return "bg-primary-container text-on-primary-container border-primary";
+}
+
 export default function MatchPlayersManagement() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
@@ -67,7 +77,7 @@ export default function MatchPlayersManagement() {
     fetchPlayers();
   }
 
-  async function handleAddGuest(e: React.FormEvent) {
+  async function handleAddGuest(e: React.SyntheticEvent) {
     e.preventDefault();
     if (!matchId || !guestName.trim() || !activeGroupId) return;
 
@@ -210,13 +220,7 @@ export default function MatchPlayersManagement() {
                     key={team}
                     type="button"
                     onClick={() => setGuestTeam(team)}
-                    className={`flex-1 py-3 font-mono text-label-bold border transition-colors ${
-                      guestTeam === team
-                        ? team === "A"
-                          ? "bg-error-container text-on-error-container border-error"
-                          : "bg-primary-container text-on-primary-container border-primary"
-                        : "bg-surface-container text-on-surface-variant border-outline-variant"
-                    }`}
+                    className={`flex-1 py-3 font-mono text-label-bold border transition-colors ${teamButtonClass(guestTeam, team)}`}
                   >
                     Time {team}
                   </button>
