@@ -1,4 +1,4 @@
-import { corsHeaders, FunctionError, jsonResponse, requireAdmin } from '../_shared/auth.ts';
+import { authenticate, corsHeaders, FunctionError, isGlobalAdmin, isGroupAdmin, jsonResponse } from '../_shared/auth.ts';
 
 Deno.serve(async (req) => {
   const headers = corsHeaders(req);
@@ -8,12 +8,25 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { adminClient } = await requireAdmin(req);
+    const { adminClient, authenticatedClient, userId } = await authenticate(req);
 
     const { matchId, groupId } = await req.json().catch(() => ({}));
 
     if (!matchId) {
       throw new FunctionError(400, 'matchId é obrigatório');
+    }
+
+    let matchGroupId: string | null = null;
+    const { data: matchRow } = await authenticatedClient
+      .from('matches')
+      .select('group_id')
+      .eq('id', matchId)
+      .single();
+    matchGroupId = matchRow?.group_id ?? null;
+
+    const callerIsAdmin = await isGlobalAdmin(authenticatedClient, adminClient, userId);
+    if (!callerIsAdmin && (!matchGroupId || !(await isGroupAdmin(authenticatedClient, matchGroupId)))) {
+      throw new FunctionError(403, 'Apenas administradores podem executar esta acao');
     }
 
     const { data, error } = await adminClient.rpc('tally_match_votes', {

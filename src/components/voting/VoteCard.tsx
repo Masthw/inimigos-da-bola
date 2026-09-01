@@ -17,13 +17,12 @@ interface VoteCardProps {
 export const VoteCard = memo(function VoteCard({ award, players, currentUserId, votedPlayers, hasVoted, onVote, disabled }: Readonly<VoteCardProps>) {
   const [showModal, setShowModal] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const awardMeta = getAwardMeta(award.name);
   const icon = awardMeta.icon;
-  const isMvp = award.name.toLowerCase().includes("craque");
-  const eligiblePlayers = players.filter((p) => p.userId !== currentUserId);
+  const eligiblePlayers = players.filter((p) => p.userId !== "" && p.userId !== currentUserId);
 
   const allVoteCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -44,30 +43,16 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
 
   const maxVotes = Math.max(...Object.values(allVoteCounts), 1);
 
+  // O schema permite um único votado por (partida, eleitor, prêmio), então o
+  // modal é sempre seleção única.
   const togglePlayer = (playerId: string) => {
-    if (isMvp) {
-      setSelectedPlayerIds([playerId]);
-    } else {
-      setSelectedPlayerIds((prev) => (prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]));
-    }
+    setSelectedPlayerId((prev) => (prev === playerId ? null : playerId));
   };
-
-  const selectedIdsSet = useMemo(() => new Set(selectedPlayerIds), [selectedPlayerIds]);
 
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      if (isMvp) {
-        const playerId = selectedPlayerIds[0] || null;
-        await onVote(playerId);
-      } else {
-        const currentIds = new Set(votedPlayers.map((vp) => vp.userId));
-        const selectedIds = new Set(selectedPlayerIds);
-        const toAdd = selectedPlayerIds.filter((id) => !currentIds.has(id));
-        const toRemove = Array.from(currentIds).filter((id) => !selectedIds.has(id));
-
-        await Promise.all([...toAdd.map((playerId) => onVote(playerId)), ...toRemove.map((playerId) => onVote(playerId))]);
-      }
+      await onVote(selectedPlayerId);
     } finally {
       setSubmitting(false);
     }
@@ -75,7 +60,7 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
   };
 
   const openModal = () => {
-    setSelectedPlayerIds(votedPlayers.map((vp) => vp.userId));
+    setSelectedPlayerId(votedPlayers[0]?.userId ?? null);
     setIsClosing(false);
     setShowModal(true);
   };
@@ -85,7 +70,7 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
     setTimeout(() => {
       setShowModal(false);
       setIsClosing(false);
-      setSelectedPlayerIds([]);
+      setSelectedPlayerId(null);
     }, 180);
   }, []);
 
@@ -177,7 +162,7 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {eligiblePlayers.map((player) => {
-                const isSelected = selectedIdsSet.has(player.userId);
+                const isSelected = selectedPlayerId === player.userId;
                 return (
                   <button
                     key={player.userId}
@@ -214,7 +199,7 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
               </button>
               <button
                 type="button"
-                disabled={submitting || selectedPlayerIds.length === 0}
+                disabled={submitting || selectedPlayerId === null}
                 onClick={handleConfirm}
                 className="flex-1 py-3 bg-primary text-on-primary font-mono text-label-bold active:bg-primary/80 transition-colors disabled:opacity-50"
               >

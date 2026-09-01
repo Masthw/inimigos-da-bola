@@ -56,10 +56,12 @@ function getEnvOrThrow(): { supabaseUrl: string; anonKey: string; serviceRoleKey
   return { supabaseUrl, anonKey, serviceRoleKey };
 }
 
-// Valida o JWT do chamador e exige role de admin.
-export async function requireAdmin(
+// Valida o JWT do chamador e anexa o caller. Retorna o client autenticado (RLS
+// avalia como o usuário real) e o client service_role. Não aplica verificação
+// de role aqui — cada função decide a política.
+export async function authenticate(
   req: Request,
-): Promise<{ userId: string; adminClient: SupabaseClient }> {
+): Promise<{ userId: string; authenticatedClient: SupabaseClient; adminClient: SupabaseClient }> {
   const authHeader = req.headers.get('Authorization') ?? '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
 
@@ -69,7 +71,6 @@ export async function requireAdmin(
 
   const { supabaseUrl, anonKey, serviceRoleKey } = getEnvOrThrow();
 
-  // Client autenticado com o JWT do chamador (RLS avalia como o usuario real)
   const authenticatedClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
@@ -80,26 +81,29 @@ export async function requireAdmin(
   }
   const userId = userData.user.id;
 
-  const checkIsAdmin = async () => {
-    const { data: rpcResult, error: rpcError } = await authenticatedClient.rpc('is_admin');
-
-    if (!rpcError && typeof rpcResult === 'boolean') {
-      return rpcResult;
-    }
-
-    const adminProbe = createClient(supabaseUrl, serviceRoleKey);
-    const { data: profile } = await adminProbe.from('users').select('role').eq('id', userId)
-      .maybeSingle();
-
-    return profile?.role === 'admin';
-  };
-
-  const isAdmin = await checkIsAdmin();
-
-  if (!isAdmin) {
-    throw new FunctionError(403, 'Apenas administradores podem executar esta acao');
-  }
-
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
-  return { userId, adminClient };
+  return { userId, authenticatedClient, adminClient };
+}
+
+// TRUE se o usuário (userId) for admin global.
+export async function isGlobalAdmin(
+  authenticatedClient: SupabaseClient,
+  adminClient: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  const { data: rpcResult, error: rpcError } = await authenticatedClient.rpc('is_admin');
+  if (!rpcError && typeof rpcResult === 'boolean') return rpcResult;
+
+  const { data: profile } = await adminClient.from('users').select('role').eq('id', userId)
+    .maybeSingle();
+  return profile?.role === 'admin';
+}
+
+// TRUE se o usuário do JWT for admin do grupo informado.
+export async function isGroupAdmin(
+  authenticatedClient: SupabaseClient,
+  groupId: string,
+): Promise<boolean> {
+  const { data, error } = await authenticatedClient.rpc('is_group_admin', { p_group_id: groupId });
+  return !error && data === true;
 }

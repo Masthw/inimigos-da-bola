@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { corsHeaders, FunctionError, jsonResponse, requireAdmin } from '../_shared/auth.ts';
+import { authenticate, corsHeaders, FunctionError, isGlobalAdmin, isGroupAdmin, jsonResponse } from '../_shared/auth.ts';
 
 // 1. TIPAGENS
 
@@ -281,21 +281,28 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers });
 
   try {
-    const { adminClient } = await requireAdmin(req);
+    const { adminClient, authenticatedClient, userId } = await authenticate(req);
     const { matchId, groupId } = await req.json().catch(() => ({}));
 
     if (!matchId) {
       throw new FunctionError(400, 'matchId é obrigatório');
     }
 
-    const { data: matchRow, error: matchFetchError } = await adminClient
+    let matchGroupId: string | null = null;
+    const { data: matchRow, error: matchFetchError } = await authenticatedClient
       .from('matches')
       .select('group_id')
       .eq('id', matchId)
       .single();
     if (matchFetchError) throw matchFetchError;
-    if (groupId && matchRow?.group_id !== groupId) {
+    matchGroupId = matchRow?.group_id ?? null;
+    if (groupId && matchGroupId !== groupId) {
       throw new FunctionError(403, 'Partida não pertence ao grupo informado');
+    }
+
+    const callerIsAdmin = await isGlobalAdmin(authenticatedClient, adminClient, userId);
+    if (!callerIsAdmin && (!matchGroupId || !(await isGroupAdmin(authenticatedClient, matchGroupId)))) {
+      throw new FunctionError(403, 'Apenas administradores podem executar esta acao');
     }
 
     const { players, teamSize } = await getDraftData(adminClient, matchId);
