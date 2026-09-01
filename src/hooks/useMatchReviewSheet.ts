@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useMatchReview } from "../hooks/useMatchReview";
 import { useActiveGroup } from "../hooks/useActiveGroup";
-import { useIsAdmin } from "../hooks/useIsAdmin";
+import { useAuth } from "../hooks/useAuth";
 import type { MatchPlayer } from "../hooks/useMatches";
 
 type SheetPhase = "closed" | "goal_type" | "assist" | "manage";
@@ -11,7 +11,7 @@ export function useMatchReviewSheet() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { activeGroupId } = useActiveGroup();
-  const { isGroupAdmin } = useIsAdmin();
+  const { user } = useAuth();
   const matchReview = useMatchReview(matchId, activeGroupId);
 
   const [manualScore, setManualScore] = useState<{ teamA: number; teamB: number } | null>(null);
@@ -109,7 +109,7 @@ export function useMatchReviewSheet() {
 
   return {
     ...matchReview,
-    isAdmin: isGroupAdmin,
+    isAdmin: user?.id === match?.organizerId,
     manualScore,
     setManualScore,
     showConfirm,

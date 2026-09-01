@@ -5,7 +5,7 @@ import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { LiveMatchView } from "../components/match/LiveMatchView";
 import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useActiveGroup } from "../hooks/useActiveGroup";
-import { useIsAdmin } from "../hooks/useIsAdmin";
+import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabaseClient";
 import type { MatchPlayer } from "../hooks/useMatches";
 
@@ -18,13 +18,14 @@ interface MatchData {
   teamBColor: string;
   teamAScore: number | null;
   teamBScore: number | null;
+  organizerId: string;
 }
 
 export default function MatchLive() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { activeGroupId } = useActiveGroup();
-  const { isGroupAdmin } = useIsAdmin();
+  const { user } = useAuth();
   const { addGoal, addOwnGoal, busy } = useLiveMatch(activeGroupId);
   const [match, setMatch] = useState<MatchData | null>(null);
   const [players, setPlayers] = useState<MatchPlayer[]>([]);
@@ -37,12 +38,12 @@ export default function MatchLive() {
     const [matchRes, playersRes] = await Promise.all([
       supabase
         .from("matches")
-        .select("id, status, team_a_name, team_b_name, team_a_color, team_b_color, team_a_score, team_b_score")
+        .select("id, status, team_a_name, team_b_name, team_a_color, team_b_color, team_a_score, team_b_score, organizer_id")
         .eq("id", matchId)
         .single(),
       supabase
         .from("match_players")
-        .select("user_id, guest_name, team, status, users(name, avatar_url)")
+        .select("user_id, guest_name, team, status, goals_scored, assists, own_goals_scored, users(name, avatar_url)")
         .eq("match_id", matchId)
         .eq("status", "confirmed"),
     ]);
@@ -55,6 +56,11 @@ export default function MatchLive() {
 
     if (matchRes.data.status === "voting") {
       navigate(`/matches/${matchId}/vote`);
+      return;
+    }
+
+    if (matchRes.data.status === "preparing") {
+      navigate("/tactics");
       return;
     }
 
@@ -77,6 +83,7 @@ export default function MatchLive() {
       teamBColor: matchRes.data.team_b_color ?? "#3b82f6",
       teamAScore: matchRes.data.team_a_score,
       teamBScore: matchRes.data.team_b_score,
+      organizerId: matchRes.data.organizer_id,
     };
 
     const playerList: MatchPlayer[] = (playersRes.data ?? []).map((row) => ({
@@ -84,6 +91,9 @@ export default function MatchLive() {
       name: row.users?.name ?? row.guest_name ?? "Convidado",
       avatarUrl: row.users?.avatar_url ?? null,
       team: row.team,
+      goalsScored: row.goals_scored ?? 0,
+      assists: row.assists ?? 0,
+      ownGoalsScored: row.own_goals_scored ?? 0,
     }));
 
     setMatch(matchData);
@@ -149,6 +159,7 @@ export default function MatchLive() {
 
   const teamAPlayers = players.filter((p) => p.team === "A");
   const teamBPlayers = players.filter((p) => p.team === "B");
+  const isCreator = user?.id === match?.organizerId;
 
   const handleGoalScored = async (scorer: MatchPlayer, assist: MatchPlayer | null) => {
     if (!match) return;
@@ -189,7 +200,7 @@ export default function MatchLive() {
         onOwnGoal={handleOwnGoal}
         onRequestReview={handleRequestReview}
         onManagePlayers={handleManagePlayers}
-        isAdmin={isGroupAdmin}
+        isAdmin={isCreator}
         busy={busy}
       />
     </AppShell>

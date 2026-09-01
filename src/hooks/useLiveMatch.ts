@@ -191,7 +191,7 @@ export function useLiveMatch(groupId: string | null = null) {
       }
 
       const { error } = await supabase.from("matches").update({
-        status: "in_progress",
+        status: "preparing",
         team_a_score: 0,
         team_b_score: 0,
       }).eq("id", matchId);
@@ -207,5 +207,49 @@ export function useLiveMatch(groupId: string | null = null) {
     }
   }, [groupId]);
 
-  return { busy, addGoal, addOwnGoal, startMatch };
+  const startLive = useCallback(async (matchId: string) => {
+    setBusy(true);
+    try {
+      const { valid, error: guardError } = await validateMatchGroup(matchId, groupId);
+      if (!valid) {
+        return { error: guardError ?? "Validação de grupo falhou" };
+      }
+
+      const { error } = await supabase.from("matches").update({
+        status: "in_progress",
+      }).eq("id", matchId);
+
+      if (error) {
+        console.error("Erro ao iniciar jogo ao vivo:", error);
+        return { error: "Erro ao iniciar jogo ao vivo" };
+      }
+
+      return { error: null };
+    } finally {
+      setBusy(false);
+    }
+  }, [groupId]);
+
+  const setTacticalPosition = useCallback(
+    async (matchPlayerId: string, position: string | null) => {
+      setBusy(true);
+      try {
+        const { error } = await supabase
+          .from("match_players")
+          .update({ tactical_position: position })
+          .eq("id", matchPlayerId);
+
+        if (error) {
+          console.error("Erro ao salvar posição tática:", error);
+          return { error: "Erro ao salvar posição" };
+        }
+        return { error: null };
+      } finally {
+        setBusy(false);
+      }
+    },
+    [],
+  );
+
+  return { busy, addGoal, addOwnGoal, startMatch, startLive, setTacticalPosition };
 }

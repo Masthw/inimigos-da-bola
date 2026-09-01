@@ -21,6 +21,7 @@ const monthFormatter = new Intl.DateTimeFormat(PT_BR, { month: "short" });
 
 const STATUS_META: Record<MatchWithMeta["status"], { label: string; className: string }> = {
   open: { label: "AGENDADA", className: "bg-secondary-container text-on-secondary-container" },
+  preparing: { label: "PREPARANDO", className: "bg-tertiary-container text-on-tertiary" },
   in_progress: { label: "AO VIVO", className: "bg-error-container text-on-error-container" },
   voting: { label: "VOTAÇÃO ABERTA", className: "bg-primary-container text-on-primary-container" },
   finished: { label: "FINALIZADA", className: "bg-surface-variant text-on-surface-variant" },
@@ -375,7 +376,7 @@ export default function Matches() {
   const { activeGroupId } = useActiveGroup();
   const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } = useMatches(activeGroupId);
   const { isGroupAdmin } = useIsAdmin();
-  const { busy: liveBusy, startMatch, addGoal, addOwnGoal } = useLiveMatch(activeGroupId);
+  const { busy: liveBusy, startMatch, startLive, addGoal, addOwnGoal } = useLiveMatch(activeGroupId);
   const navigate = useNavigate();
   const [cancelModalMatch, setCancelModalMatch] = useState<MatchWithMeta | null>(null);
   const [startModalMatch, setStartModalMatch] = useState<MatchWithMeta | null>(null);
@@ -403,7 +404,14 @@ export default function Matches() {
     refetch();
   };
 
+  const handleStartLive = async () => {
+    if (!featured) return;
+    await startLive(featured.id);
+    refetch();
+  };
+
   const isInProgress = featured?.status === "in_progress";
+  const isPreparing = featured?.status === "preparing";
 
   const handleGoalScored = async (scorer: MatchPlayer, assist: MatchPlayer | null) => {
     if (!featured) return;
@@ -420,7 +428,42 @@ export default function Matches() {
 
   return (
     <AppShell>
-      {isInProgress && featured ? (
+      {isPreparing && featured ? (
+        <section className="min-h-[calc(100svh-4rem)] flex items-center justify-center p-4">
+          <div className="max-w-md w-full text-center space-y-6">
+            <div className="flex items-center justify-center gap-3">
+              <MaterialIcon name="shield_lock" className="w-8 h-8 text-tertiary" />
+              <h2 className="text-headline-md font-display font-black text-on-surface uppercase">Em Preparação</h2>
+            </div>
+            <p className="text-on-surface-variant font-body max-w-sm mx-auto">
+              Os times foram sorteados. Defina a escalação tática antes de iniciar o jogo ao vivo.
+            </p>
+            <div className="flex flex-col gap-3 pt-2">
+              <Link
+                to="/tactics"
+                className="w-full py-4 bg-primary text-on-primary font-mono text-label-bold transition-colors flex items-center justify-center gap-3"
+              >
+                <MaterialIcon name="sports_soccer" className="w-5 h-5" />
+                Definir Escalação
+              </Link>
+              {isGroupAdmin && (
+                <button
+                  type="button"
+                  onClick={handleStartLive}
+                  disabled={liveBusy}
+                  className="w-full py-4 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant transition-colors flex items-center justify-center gap-3"
+                >
+                  <MaterialIcon name={liveBusy ? "pending" : "play_arrow"} className="w-5 h-5" />
+                  {liveBusy ? "INICIANDO..." : "INICIAR JOGO"}
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] text-on-surface-variant font-mono">
+              {featured.confirmedPlayers.filter((p) => p.team === "A").length} x {featured.confirmedPlayers.filter((p) => p.team === "B").length}
+            </p>
+          </div>
+        </section>
+      ) : isInProgress && featured ? (
         <LiveMatchView
           matchId={featured.id}
           teamAName={featured.teamAName ?? "Time A"}
@@ -435,6 +478,7 @@ export default function Matches() {
           onOwnGoal={handleOwnGoal}
           onRequestReview={() => navigate(`/matches/${featured.id}/review`)}
           busy={liveBusy}
+          isAdmin={isGroupAdmin}
         />
       ) : (
         <>

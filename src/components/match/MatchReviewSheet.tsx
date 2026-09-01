@@ -7,6 +7,7 @@ interface MatchReviewSheetProps {
   match: MatchReviewData;
   selectedPlayer: MatchPlayer | null;
   saving: boolean;
+  isAdmin: boolean;
   sheetPhase: "closed" | "goal_type" | "assist" | "manage";
   assistCandidates: MatchPlayer[];
   onClose: () => void;
@@ -23,6 +24,7 @@ export function MatchReviewSheet({
   match,
   selectedPlayer,
   saving,
+  isAdmin,
   sheetPhase,
   assistCandidates,
   onClose,
@@ -75,7 +77,7 @@ export function MatchReviewSheet({
                     {goalCount > 0 && (
                       <button
                         type="button"
-                        disabled={saving}
+                        disabled={!isAdmin || saving}
                         onClick={onRemoveGoal}
                         className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
                       >
@@ -86,7 +88,7 @@ export function MatchReviewSheet({
                     {assistCount > 0 && (
                       <button
                         type="button"
-                        disabled={saving}
+                        disabled={!isAdmin || saving}
                         onClick={onRemoveAssist}
                         className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
                       >
@@ -97,7 +99,7 @@ export function MatchReviewSheet({
                     {ownGoalCount > 0 && (
                       <button
                         type="button"
-                        disabled={saving}
+                        disabled={!isAdmin || saving}
                         onClick={onRemoveOwnGoal}
                         className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
                       >
@@ -113,7 +115,7 @@ export function MatchReviewSheet({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    disabled={saving}
+                    disabled={!isAdmin || saving}
                     onClick={onGoal}
                     className="flex flex-col items-center gap-2 py-4 bg-primary-container text-primary font-mono text-label-bold border border-primary/30 active:bg-primary/20 transition-colors"
                   >
@@ -122,7 +124,7 @@ export function MatchReviewSheet({
                   </button>
                   <button
                     type="button"
-                    disabled={saving}
+                    disabled={!isAdmin || saving}
                     onClick={onOwnGoal}
                     className="flex flex-col items-center gap-2 py-4 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors"
                   >
@@ -132,7 +134,7 @@ export function MatchReviewSheet({
                 </div>
                 <button
                   type="button"
-                  disabled={saving}
+                  disabled={!isAdmin || saving}
                   onClick={onAddAssistOnly}
                   className="w-full flex flex-col items-center gap-2 py-4 bg-secondary-container text-secondary font-mono text-label-bold border border-secondary/30 active:bg-secondary/20 transition-colors"
                 >

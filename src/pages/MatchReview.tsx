@@ -281,6 +281,7 @@ export default function MatchReview() {
         match={match}
         selectedPlayer={selectedPlayer}
         saving={saving}
+        isAdmin={isAdmin}
         sheetPhase={sheetPhase}
         assistCandidates={assistCandidates}
         onClose={closeSheet}

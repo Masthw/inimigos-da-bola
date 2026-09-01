@@ -12,6 +12,9 @@ export interface MatchPlayer {
   name: string;
   avatarUrl: string | null;
   team: string | null;
+  goalsScored?: number;
+  assists?: number;
+  ownGoalsScored?: number;
 }
 
 export interface MatchPlayerDetail {
@@ -27,7 +30,7 @@ export interface MatchWithMeta {
   id: string;
   dateTime: string;
   location: string;
-  status: "open" | "in_progress" | "finished" | "voting" | "cancelled";
+  status: "open" | "preparing" | "in_progress" | "finished" | "voting" | "cancelled";
   maxPlayers: number;
   maxWaitlist: number;
   teamAName: string | null;
@@ -78,6 +81,9 @@ interface PlayerRow {
   user_id: string | null;
   guest_name: string | null;
   team: string | null;
+  goals_scored: number | null;
+  assists: number | null;
+  own_goals_scored: number | null;
   users: { name: string | null; avatar_url: string | null } | null;
 }
 
@@ -123,6 +129,9 @@ function processMatchPlayers(playersData: PlayerRow[], userId: string | null) {
       name,
       avatarUrl: row.users?.avatar_url ?? null,
       team: row.team,
+      goalsScored: row.goals_scored ?? 0,
+      assists: row.assists ?? 0,
+      ownGoalsScored: row.own_goals_scored ?? 0,
     };
     const entry = playersByMatch.get(row.match_id) ??
       { confirmed: [], waitlist: [] };
@@ -221,7 +230,7 @@ async function fetchMatchesData(userId: string | null, groupId: string | null) {
       supabase
         .from("match_players")
         .select(
-          "match_id, status, user_id, guest_name, team, users(name, avatar_url)",
+          "match_id, status, user_id, guest_name, team, goals_scored, assists, own_goals_scored, users(name, avatar_url)",
         )
         .in("match_id", matchIds),
       Promise.resolve(
