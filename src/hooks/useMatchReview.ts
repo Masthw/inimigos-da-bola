@@ -35,6 +35,7 @@ export interface MatchReviewData {
   teamBColor: string;
   teamAScore: number;
   teamBScore: number;
+  organizerId: string;
   goals: MatchGoal[];
   assists: MatchAssist[];
   ownGoals: OwnGoal[];
@@ -56,7 +57,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       supabase
         .from("matches")
         .select(
-          "id, team_a_name, team_b_name, team_a_color, team_b_color, team_a_score, team_b_score, status",
+          "id, team_a_name, team_b_name, team_a_color, team_b_color, team_a_score, team_b_score, status, organizer_id",
         )
         .eq("id", matchId)
         .single(),
@@ -136,6 +137,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       teamBColor: matchRes.data.team_b_color ?? "#3b82f6",
       teamAScore: matchRes.data.team_a_score ?? 0,
       teamBScore: matchRes.data.team_b_score ?? 0,
+      organizerId: matchRes.data.organizer_id,
       goals,
       assists,
       ownGoals,

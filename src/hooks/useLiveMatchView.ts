@@ -28,8 +28,14 @@ export function useLiveMatchView({
 
   const getStats = useCallback((userId: string | null) => {
     if (!userId) return { goals: 0, assists: 0, ownGoals: 0 };
-    return playerStats[userId] || { goals: 0, assists: 0, ownGoals: 0 };
-  }, [playerStats]);
+    const local = playerStats[userId];
+    const player = [...teamAPlayers, ...teamBPlayers].find((p) => p.userId === userId);
+    return {
+      goals: Math.max(local?.goals ?? 0, player?.goalsScored ?? 0),
+      assists: Math.max(local?.assists ?? 0, player?.assists ?? 0),
+      ownGoals: Math.max(local?.ownGoals ?? 0, player?.ownGoalsScored ?? 0),
+    };
+  }, [playerStats, teamAPlayers, teamBPlayers]);
 
   const updateStats = useCallback((scorerId: string | null, assistId: string | null) => {
     setPlayerStats((prev) => {

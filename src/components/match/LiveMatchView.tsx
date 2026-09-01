@@ -98,7 +98,7 @@ export function LiveMatchView({
                   player={p}
                   teamColor={teamAColor}
                   stats={getStats(p.userId)}
-                  disabled={busy}
+                  disabled={!isAdmin || busy}
                   onClick={() => handlePlayerClick(p)}
                 />
               ))}
@@ -112,7 +112,7 @@ export function LiveMatchView({
                   player={p}
                   teamColor={teamBColor}
                   stats={getStats(p.userId)}
-                  disabled={busy}
+                  disabled={!isAdmin || busy}
                   onClick={() => handlePlayerClick(p)}
                 />
               ))}
@@ -173,7 +173,7 @@ export function LiveMatchView({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={!isAdmin || busy}
                   onClick={handleGoal}
                   className="flex flex-col items-center gap-2 py-5 bg-primary-container text-primary font-mono text-label-bold border border-primary/30 active:bg-primary/20 transition-colors"
                 >
@@ -182,7 +182,7 @@ export function LiveMatchView({
                 </button>
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={!isAdmin || busy}
                   onClick={handleOwnGoal}
                   className="flex flex-col items-center gap-2 py-5 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors"
                 >

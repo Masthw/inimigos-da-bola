@@ -12,6 +12,7 @@ export interface NextMatchData {
   sportName: string | null;
   myStatus: "confirmed" | "waitlist" | "cancelled" | null;
   groupId: string | null;
+  status: "open" | "preparing" | "in_progress" | "finished" | "voting" | "cancelled";
 }
 
 const PT_BR = "pt-BR";
@@ -40,6 +41,7 @@ interface MatchRow {
   id: string;
   date_time: string;
   location: string;
+  status: string;
   team_a_name: string | null;
   team_b_name: string | null;
   group_id: string | null;
@@ -51,8 +53,8 @@ async function fetchNextMatch(userId: string | null, groupId: string | null): Pr
 
   const baseQuery = supabase
     .from("matches")
-    .select("id, date_time, location, team_a_name, team_b_name, group_id, game_types(name, sport_id, sports(name))")
-    .eq("status", "open")
+     .select("id, date_time, location, status, team_a_name, team_b_name, group_id, game_types(name, sport_id, sports(name))")
+     .in("status", ["open", "preparing"])
     .gte("date_time", now)
     .order("date_time", { ascending: true })
     .limit(1);
@@ -86,9 +88,10 @@ async function fetchNextMatch(userId: string | null, groupId: string | null): Pr
     time: formatTime(row.date_time),
     hour: new Date(row.date_time).getHours(),
     location: row.location,
-    sportName,
+     sportName,
     myStatus,
     groupId: row.group_id,
+    status: (row.status ?? "open") as NextMatchData["status"],
   };
 }
 

@@ -748,6 +748,7 @@ export type Database = {
     Enums: {
       match_status_enum:
         | "open"
+        | "preparing"
         | "in_progress"
         | "finished"
         | "cancelled"

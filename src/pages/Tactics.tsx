@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { Skeleton, SkeletonPlayerRow } from "../components/ui/Skeleton";
 import { useAuth } from "../hooks/useAuth";
 import { useNextMatch } from "../hooks/useNextMatch";
+import type { NextMatchData } from "../hooks/useNextMatch";
 import { useActiveGroup } from "../hooks/useActiveGroup";
+import { useLiveMatch } from "../hooks/useLiveMatch";
+import { useIsAdmin } from "../hooks/useIsAdmin";
 import { supabase } from "../lib/supabaseClient";
 
 const POSITIONS_FUTSAL = [
@@ -49,12 +53,25 @@ const DB_POSITION_TO_LOCAL: Record<string, PositionId> = {
   "Meia Dir.": "meia_d",
 };
 
+const LOCAL_TO_DB_POSITION: Record<PositionId, string> = {
+  pivo: "Pivô",
+  ala_e: "Ala Esquerdo",
+  ala_d: "Ala Direito",
+  fixo: "Fixo",
+  gol: "Goleiro",
+  meia_e: "Meia Esquerdo",
+  meia_d: "Meia Direito",
+};
+
 interface Player {
   id: string;
   name: string;
   initials: string;
   position: PositionId | null;
   favoritePosition: PositionId | null;
+  matchPlayerId: string;
+  userId: string | null;
+  team: string | null;
 }
 
 function nodeClasses(id: PositionId): string {
@@ -87,7 +104,7 @@ function TacticalNode({
   y,
   id,
   occupant,
-  isMe,
+  canSelect,
   onSelect,
 }: Readonly<{
   short: string;
@@ -96,11 +113,9 @@ function TacticalNode({
   y: number;
   id: PositionId;
   occupant?: Player;
-  isMe: boolean;
+  canSelect: boolean;
   onSelect: () => void;
 }>) {
-  const canSelect = !occupant || isMe;
-
   return (
     <div className="absolute" style={{ left: `${x}%`, top: `${y}%` }}>
       <div className="flex flex-col items-center -translate-x-1/2 -translate-y-1/2">
@@ -165,7 +180,7 @@ function CourtMarkings({ horizontal }: Readonly<{ horizontal: boolean }>) {
         <path d="M 7 3 A 4 4 0 0 0 3 7" />
         <path d="M 93 3 A 4 4 0 0 1 97 7" />
         <path d="M 3 163 A 4 4 0 0 0 7 167" />
-        <path d="M 97 163 A 4 4 0 0 1 93 167" />
+        <path d="M 93 163 A 4 4 0 0 1 97 167" />
       </g>
     </svg>
   );
@@ -235,12 +250,14 @@ function DesktopPlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boo
 
 function TeamList({
   players,
+  teamLabel,
   match,
   courtLabel,
   currentUserId,
   unconfirmedMessage,
 }: Readonly<{
   players: Player[];
+  teamLabel: string;
   match: { opponent: string; date: string; court: string };
   courtLabel: string;
   currentUserId: string | undefined;
@@ -253,7 +270,7 @@ function TeamList({
   return (
     <div className="w-full lg:max-w-none lg:w-105 lg:shrink-0 mt-6 lg:mt-0 self-start bg-surface-container-high rounded-xl border border-outline-variant/30 overflow-hidden">
       <div className="px-3 py-2.5 bg-surface-container-highest/50 border-b border-outline-variant/20">
-        <p className="font-mono text-label-sm text-on-surface truncate">Escalação para {match.opponent}</p>
+        <p className="font-mono text-label-sm text-on-surface truncate">{teamLabel} • {match.opponent}</p>
         <p className="font-mono text-[10px] text-on-surface-variant mt-0.5 truncate">
           {match.date} • {courtLabel}
         </p>
@@ -268,7 +285,7 @@ function TeamList({
           {starters.length === 0 ? (
             <p className="px-2 py-1.5 font-body-sm text-on-surface-variant text-xs">Ninguém escalado ainda</p>
           ) : (
-            starters.map((player) => <PlayerRow key={player.id} player={player} isMe={player.id === currentUserId} />)
+            starters.map((player) => <PlayerRow key={player.id} player={player} isMe={player.userId === currentUserId} />)
           )}
         </div>
         <div className="border-t border-outline-variant/30">
@@ -277,7 +294,7 @@ function TeamList({
           </div>
           <div className="p-2 pt-0 space-y-0.5">
             {reserves.map((player) => (
-              <PlayerRow key={player.id} player={player} isMe={player.id === currentUserId} />
+              <PlayerRow key={player.id} player={player} isMe={player.userId === currentUserId} />
             ))}
           </div>
         </div>
@@ -291,7 +308,7 @@ function TeamList({
         </div>
         <div className="p-1.5 space-y-0.5">
           {ordered.map((player) => (
-            <DesktopPlayerRow key={player.id} player={player} isMe={player.id === currentUserId} />
+            <DesktopPlayerRow key={player.id} player={player} isMe={player.userId === currentUserId} />
           ))}
         </div>
       </div>
@@ -301,105 +318,195 @@ function TeamList({
 
 // HELPERS DE BUSCA & ESTADO
 
-async function fetchMatchData(matchId: string, userId?: string, activePositions: readonly { id: string }[] = []) {
-  const [playersRes, favoriteRes] = await Promise.all([
-    supabase.from("match_players").select("user_id, guest_name, team, users(name, avatar_url)").eq("match_id", matchId).eq("status", "confirmed"),
+interface FetchedTeams {
+  teamA: Player[];
+  teamB: Player[];
+  all: Player[];
+}
 
-    userId
-      ? supabase
-          .from("user_favorite_positions")
-          .select("position_id, is_primary, positions(name)")
-          .eq("user_id", userId)
-          .order("is_primary", { ascending: false })
-      : Promise.resolve({ data: null, error: null }),
-  ]);
+async function fetchMatchData(
+  matchId: string,
+  activePositions: readonly { id: string }[],
+): Promise<FetchedTeams> {
+  const playersRes = await supabase
+    .from("match_players")
+    .select("id, user_id, guest_name, team, tactical_position, users(name)")
+    .eq("match_id", matchId)
+    .eq("status", "confirmed");
 
   if (playersRes.error) {
     throw new Error("Erro ao carregar jogadores");
   }
 
-  let favoritePosId: PositionId | null = null;
-  if (favoriteRes.data && favoriteRes.data.length > 0) {
-    const primary = favoriteRes.data.find((row) => row.is_primary) ?? favoriteRes.data[0];
-    const positionName = primary.positions?.name;
+  const rows = playersRes.data ?? [];
+  const playerUserIds = Array.from(
+    new Set(rows.map((r) => r.user_id).filter((id): id is string => !!id)),
+  );
 
-    if (positionName && DB_POSITION_TO_LOCAL[positionName]) {
-      const localId = DB_POSITION_TO_LOCAL[positionName];
-      if (activePositions.some((p) => p.id === localId)) {
-        favoritePosId = localId;
-      }
+  let favResData: { user_id: string; positions: { name: string | null } | null }[] = [];
+  if (playerUserIds.length > 0) {
+    const favRes = await supabase
+      .from("user_favorite_positions")
+      .select("user_id, position_id, is_primary, positions(name)")
+      .in("user_id", playerUserIds)
+      .order("is_primary", { ascending: false });
+    favResData = (favRes.data ?? []) as typeof favResData;
+  }
+
+  const favByPlayer = new Map<string, string>();
+  for (const row of favResData) {
+    if (!favByPlayer.has(row.user_id) && row.positions?.name) {
+      favByPlayer.set(row.user_id, row.positions.name);
     }
   }
 
-  return (playersRes.data ?? []).map((row) => {
+  const players: Player[] = rows.map((row) => {
     const fullName = row.users?.name ?? row.guest_name ?? "Convidado";
-    const parts = fullName.trim().split(" ");
+    const parts = fullName.trim().split(" ").filter(Boolean);
     const initials = parts
-      .map((n) => n[0])
+      .map((n) => n[0] ?? "")
       .join("")
       .slice(0, 2)
       .toUpperCase();
 
-    const isCurrentUser = row.user_id === userId;
+    let pos: PositionId | null = null;
+    if (row.tactical_position && DB_POSITION_TO_LOCAL[row.tactical_position]) {
+      const localId = DB_POSITION_TO_LOCAL[row.tactical_position];
+      if (activePositions.some((p) => p.id === localId)) {
+        pos = localId;
+      }
+    }
+
+    let favPos: PositionId | null = null;
+    const favName = row.user_id ? favByPlayer.get(row.user_id) : null;
+    if (favName && DB_POSITION_TO_LOCAL[favName]) {
+      const localId = DB_POSITION_TO_LOCAL[favName];
+      if (activePositions.some((p) => p.id === localId)) {
+        favPos = localId;
+      }
+    }
 
     return {
       id: row.user_id ?? row.guest_name ?? "unknown",
       name: fullName,
       initials,
-      position: isCurrentUser ? favoritePosId : null,
-      favoritePosition: isCurrentUser ? favoritePosId : null,
+      position: pos,
+      favoritePosition: favPos,
+      matchPlayerId: row.id,
+      userId: row.user_id ?? null,
+      team: row.team ?? null,
     };
   });
+
+  const teamA = players.filter((p) => p.team === "A");
+  const teamB = players.filter((p) => p.team === "B");
+  return { teamA, teamB, all: players };
 }
 
 function useTacticsBoard(
-  nextMatch: { id: string } | null | undefined,
+  nextMatch: NextMatchData | null | undefined,
   currentUserId: string | undefined,
   activePositions: readonly { id: string }[],
-  isConfirmed: boolean,
+  isGroupAdmin: boolean,
+  setTacticalPositionFn: (matchPlayerId: string, position: string | null) => Promise<{ error: string | null }>,
 ) {
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [teamA, setTeamA] = useState<Player[]>([]);
+  const [teamB, setTeamB] = useState<Player[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
+
+  const refetch = useCallback(async () => {
+    if (!nextMatch || !canAccess) {
+      setPlayers([]);
+      setTeamA([]);
+      setTeamB([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      const data = await fetchMatchData(nextMatch.id, activePositions);
+      setPlayers(data.all);
+      setTeamA(data.teamA);
+      setTeamB(data.teamB);
+      setError(null);
+      setLoading(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
+      setLoading(false);
+    }
+  }, [nextMatch, activePositions, canAccess]);
 
   useEffect(() => {
     let isMounted = true;
-
     (async () => {
-      if (!nextMatch || !isConfirmed) {
-        if (isMounted) setLoading(false);
-        return;
-      }
-
-      try {
-        const data = await fetchMatchData(nextMatch.id, currentUserId, activePositions);
-        if (isMounted) {
-          setPlayers(data);
-          setLoading(false);
-        }
-      } catch (err: unknown) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
-          setLoading(false);
-        }
-      }
+      if (!isMounted) return;
+      setLoading(true);
+      await refetch();
     })();
-
     return () => {
       isMounted = false;
     };
-  }, [nextMatch, currentUserId, activePositions, isConfirmed]);
+  }, [refetch]);
 
-  const selectPosition = (posId: PositionId) => {
-    if (!currentUserId) return;
-    setPlayers((prev) => {
-      const occupiedByOther = prev.some((p) => p.position === posId && p.id !== currentUserId);
-      if (occupiedByOther) return prev;
-      return prev.map((p) => (p.id === currentUserId ? { ...p, position: p.position === posId ? null : posId } : p));
-    });
-  };
+  useEffect(() => {
+    if (!nextMatch) return;
+    const channel = supabase
+      .channel(`tactics-${nextMatch.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "match_players",
+          filter: `match_id=eq.${nextMatch.id}`,
+        },
+        () => {
+          refetch();
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [nextMatch?.id, refetch, nextMatch]);
 
-  return { loading, players, error, selectPosition };
+  const selectPosition = useCallback(
+    async (playerId: string, posId: PositionId | null) => {
+      if (!nextMatch) return;
+      const target = players.find((p) => p.id === playerId);
+      if (!target) return;
+
+      const isOwn = target.userId === currentUserId;
+      if (!isGroupAdmin && !isOwn) return;
+
+      if (posId !== null) {
+        const occupiedByOther = players.some(
+          (p) => p.position === posId && p.id !== playerId,
+        );
+        if (occupiedByOther) return;
+      }
+
+      const dbName = posId ? LOCAL_TO_DB_POSITION[posId] : null;
+      const result = await setTacticalPositionFn(target.matchPlayerId, dbName);
+      if (result.error) return;
+
+      setPlayers((prev) =>
+        prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)),
+      );
+      setTeamA((prev) =>
+        prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)),
+      );
+      setTeamB((prev) =>
+        prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)),
+      );
+    },
+    [nextMatch, players, currentUserId, isGroupAdmin, setTacticalPositionFn],
+  );
+
+  return { loading, players, teamA, teamB, error, selectPosition, refetch };
 }
 
 // COMPONENTES DE ESTADO DA UI
@@ -478,73 +585,270 @@ function TacticsUnconfirmed({ courtType, hasMatch }: Readonly<{ courtType: strin
 
 // COMPONENTE PRINCIPAL
 
+interface LayoutPosition {
+  id: PositionId;
+  short: string;
+  label: string;
+  x: number;
+  y: number;
+}
+
+function CourtCard({
+  title,
+  teamPlayers,
+  layoutPositions,
+  courtImage,
+  isDesktop,
+  currentUserId,
+  isGroupAdmin,
+  onSelect,
+}: Readonly<{
+  title: string | null;
+  teamPlayers: Player[];
+  layoutPositions: LayoutPosition[];
+  courtImage: string;
+  isDesktop: boolean;
+  currentUserId: string | undefined;
+  isGroupAdmin: boolean;
+  onSelect: (playerId: string, posId: PositionId | null) => void;
+}>) {
+  const hasPlayers = teamPlayers.length > 0;
+
+  return (
+    <div>
+      {title && <h3 className="font-mono text-label-bold text-on-surface uppercase tracking-wide mb-2">{title}</h3>}
+      <div
+        className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
+          isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"
+        }`}
+      >
+        <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+        <CourtMarkings horizontal={isDesktop} />
+        {layoutPositions.map((pos) => {
+          const occupant = hasPlayers ? teamPlayers.find((p) => p.position === pos.id) : undefined;
+          const occupantIsMe = hasPlayers && occupant !== undefined && occupant.userId === currentUserId;
+          const canEdit = isGroupAdmin || occupantIsMe;
+          const canSelect = hasPlayers && (!occupant || canEdit);
+          return (
+            <TacticalNode
+              key={pos.id}
+              id={pos.id}
+              short={pos.short}
+              label={pos.label}
+              x={pos.x}
+              y={pos.y}
+              occupant={occupant}
+              canSelect={canSelect}
+              onSelect={() => {
+                if (occupant) {
+                  onSelect(occupant.id, occupant.position === pos.id ? null : pos.id);
+                } else if (hasPlayers) {
+                  const meOnTeam = teamPlayers.find((p) => p.userId === currentUserId);
+                  if (meOnTeam) {
+                    onSelect(meOnTeam.id, pos.id);
+                  }
+                }
+              }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CourtArea({
+  teamA,
+  teamB,
+  layoutPositions,
+  courtImage,
+  isDesktop,
+  currentUserId,
+  isGroupAdmin,
+  onSelect,
+}: Readonly<{
+  teamA: Player[];
+  teamB: Player[];
+  layoutPositions: LayoutPosition[];
+  courtImage: string;
+  isDesktop: boolean;
+  currentUserId: string | undefined;
+  isGroupAdmin: boolean;
+  onSelect: (playerId: string, posId: PositionId | null) => void;
+}>) {
+  const hasPlayers = teamA.length > 0 || teamB.length > 0;
+
+  return (
+    <div className="w-full lg:flex-1 flex flex-col gap-4">
+      {hasPlayers ? (
+        <>
+          {teamA.length > 0 && (
+            <CourtCard
+              title="Time A"
+              teamPlayers={teamA}
+              layoutPositions={layoutPositions}
+              courtImage={courtImage}
+              isDesktop={isDesktop}
+              currentUserId={currentUserId}
+              isGroupAdmin={isGroupAdmin}
+              onSelect={onSelect}
+            />
+          )}
+          {teamB.length > 0 && (
+            <CourtCard
+              title="Time B"
+              teamPlayers={teamB}
+              layoutPositions={layoutPositions}
+              courtImage={courtImage}
+              isDesktop={isDesktop}
+              currentUserId={currentUserId}
+              isGroupAdmin={isGroupAdmin}
+              onSelect={onSelect}
+            />
+          )}
+        </>
+      ) : (
+        <CourtCard
+          title={null}
+          teamPlayers={[]}
+          layoutPositions={layoutPositions}
+          courtImage={courtImage}
+          isDesktop={isDesktop}
+          currentUserId={currentUserId}
+          isGroupAdmin={isGroupAdmin}
+          onSelect={onSelect}
+        />
+      )}
+    </div>
+  );
+}
+
+function SidebarTeams({
+  teamA,
+  teamB,
+  matchInfo,
+  courtName,
+  currentUserId,
+}: Readonly<{
+  teamA: Player[];
+  teamB: Player[];
+  matchInfo: { opponent: string; date: string; court: string };
+  courtName: string;
+  currentUserId: string | undefined;
+}>) {
+  const teams = [
+    { label: "Time A", players: teamA },
+    { label: "Time B", players: teamB },
+  ].filter((t) => t.players.length > 0);
+
+  return (
+    <div className="flex flex-col gap-4 w-full lg:w-105 lg:shrink-0">
+      {teams.length > 0 ? (
+        teams.map((t) => (
+          <TeamList
+            key={t.label}
+            players={t.players}
+            teamLabel={t.label}
+            match={matchInfo}
+            courtLabel={courtName}
+            currentUserId={currentUserId}
+          />
+        ))
+      ) : (
+        <div className="bg-surface-container-high rounded-xl border border-outline-variant/30 p-4">
+          <p className="font-mono text-label-sm text-on-surface-variant">Nenhum jogador escalado</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Tactics() {
   const { user } = useAuth();
   const { activeGroupId } = useActiveGroup();
   const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId);
+  const { isGroupAdmin } = useIsAdmin();
+  const { busy, startLive, setTacticalPosition } = useLiveMatch(activeGroupId);
   const isDesktop = useIsDesktop();
+  const navigate = useNavigate();
 
   const courtType = nextMatch?.sportName?.toLowerCase().includes("society") ? "society" : "futsal";
   const activePositions = courtType === "futsal" ? POSITIONS_FUTSAL : POSITIONS_SOCIETY;
   const currentUserId = user?.id;
-  const isConfirmed = !!nextMatch && nextMatch.myStatus === "confirmed";
 
-  const { loading, players, error, selectPosition } = useTacticsBoard(nextMatch, currentUserId, activePositions, isConfirmed);
+  const { loading, teamA, teamB, error, selectPosition } = useTacticsBoard(
+    nextMatch,
+    currentUserId,
+    activePositions,
+    isGroupAdmin,
+    setTacticalPosition,
+  );
+
+  const isPreparing = nextMatch?.status === "preparing";
+  const isOpen = nextMatch?.status === "open";
+  const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
 
   if (nextMatchLoading || loading) return <TacticsLoading />;
   if (error) return <TacticsError message={error} />;
-  if (!nextMatch || !isConfirmed) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
+  if (!nextMatch || (!canAccess)) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
 
-  const courtImage = courtType === "futsal" ? "/courts/futsal.jpg" : "/courts/society.jpg";
-  const layoutPositions = isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: p.x })) : activePositions;
+  if (!isOpen && !isPreparing) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
+
+  const isFutsal = courtType === "futsal";
+  const courtImage = isFutsal ? "/courts/futsal.jpg" : "/courts/society.jpg";
+  const courtName = isFutsal ? "Quadra de Futsal" : "Quadra Society";
+  const layoutPositions = (isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: p.x })) : [...activePositions]) as LayoutPosition[];
 
   const matchInfo = {
     opponent: nextMatch.title,
     date: `${nextMatch.date} • ${nextMatch.time}`,
-    court: courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society",
+    court: courtName,
+  };
+
+  const handleStartGame = async () => {
+    if (!nextMatch) return;
+    const result = await startLive(nextMatch.id);
+    if (!result.error) {
+      navigate(`/matches/${nextMatch.id}`);
+    }
   };
 
   return (
     <AppShell>
       <div className="min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
-          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">
-            {courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society"}
-          </h2>
+          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">{courtName}</h2>
+          {isPreparing && isGroupAdmin && (
+            <button
+              type="button"
+              onClick={handleStartGame}
+              disabled={busy}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary font-mono text-label-bold border border-outline-variant active:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <MaterialIcon name="play_arrow" className="w-4 h-4" />
+              Iniciar Jogo
+            </button>
+          )}
         </header>
 
         <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row items-center lg:items-start gap-6 lg:gap-8 px-4 md:px-margin-desktop py-6">
-          <div
-            className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none lg:flex-1 bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
-              isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"
-            }`}
-          >
-            <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-            <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-            <CourtMarkings horizontal={isDesktop} />
+          <CourtArea
+            teamA={teamA}
+            teamB={teamB}
+            layoutPositions={layoutPositions}
+            courtImage={courtImage}
+            isDesktop={isDesktop}
+            currentUserId={currentUserId}
+            isGroupAdmin={isGroupAdmin}
+            onSelect={selectPosition}
+          />
 
-            {layoutPositions.map((pos) => {
-              const occupant = players.find((p) => p.position === pos.id);
-              return (
-                <TacticalNode
-                  key={pos.id}
-                  id={pos.id}
-                  short={pos.short}
-                  label={pos.label}
-                  x={pos.x}
-                  y={pos.y}
-                  occupant={occupant}
-                  isMe={!!occupant && occupant.id === currentUserId}
-                  onSelect={() => selectPosition(pos.id)}
-                />
-              );
-            })}
-          </div>
-
-          <TeamList
-            players={players}
-            match={matchInfo}
-            courtLabel={courtType === "futsal" ? "Quadra de Futsal" : "Quadra Society"}
+          <SidebarTeams
+            teamA={teamA}
+            teamB={teamB}
+            matchInfo={matchInfo}
+            courtName={courtName}
             currentUserId={currentUserId}
           />
         </div>
