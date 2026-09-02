@@ -156,6 +156,7 @@ export function useNextMatch(groupId: string | null = null) {
 
     return () => {
       cancelled = true;
+      channel.unsubscribe();
       supabase.removeChannel(channel);
     };
   }, [userId, groupId]);

@@ -396,6 +396,7 @@ export function useMatches(groupId: string | null = null) {
       .subscribe();
 
     return () => {
+      channel.unsubscribe();
       supabase.removeChannel(channel);
     };
   }, [refetch]);

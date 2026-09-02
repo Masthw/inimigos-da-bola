@@ -26,10 +26,6 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('Unhandled error:', _error, _errorInfo);
   }
 
-  handleReset = () => {
-    this.setState({ hasError: false, error: null });
-  };
-
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -44,18 +40,15 @@ export class ErrorBoundary extends Component<Props, State> {
               ALGO DEU ERRADO
             </h1>
             <p className="text-body-md text-on-surface-variant mb-6">
-              Ocorreu um erro inesperado. Tente recarregar a página.
+              Ocorreu um erro inesperado. Volte para a página inicial e tente novamente.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button variant="primary" onClick={this.handleReset} icon={<MaterialIcon name="refresh" />}>
-                TENTAR NOVAMENTE
-              </Button>
+            <div className="flex flex-col gap-3 justify-center">
               <Button
-                variant="secondary"
-                onClick={() => window.location.reload()}
-                icon={<MaterialIcon name="open_in_new" />}
+                variant="primary"
+                onClick={() => window.location.assign("/")}
+                icon={<MaterialIcon name="home" />}
               >
-                RECARREGAR PÁGINA
+                VOLTAR PARA HOME
               </Button>
             </div>
           </div>
