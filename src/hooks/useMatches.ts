@@ -315,25 +315,30 @@ export function useMatches(groupId: string | null = null) {
     ) => {
       const now = Date.now();
       const openMatches = rows.filter((match) => match.status === "open");
+      const preparingMatches = rows.filter((match) => match.status === "preparing");
       const inProgressOrVoting = rows.filter((match) =>
         match.status === "in_progress" || match.status === "voting"
       );
 
+      // Prioridade do featured: in_progress/voting > preparing > próxima aberta.
       let featured: MatchWithMeta | null = null;
       if (inProgressOrVoting.length > 0) {
         featured = inProgressOrVoting[0];
+      } else if (preparingMatches.length > 0) {
+        featured = preparingMatches[0];
       } else {
         featured = openMatches.find((match) =>
           new Date(match.dateTime).getTime() >= now
         ) ?? null;
       }
 
-      const upcoming = sortByDate(
-        openMatches.filter((match) =>
+      const upcomingSource = [
+        ...openMatches.filter((match) =>
           match.id !== featured?.id && new Date(match.dateTime).getTime() >= now
         ),
-        true,
-      );
+        ...preparingMatches.filter((match) => match.id !== featured?.id),
+      ];
+      const upcoming = sortByDate(upcomingSource, true);
 
       const finished = sortByDate(
         rows.filter((match) => match.status === "finished"),

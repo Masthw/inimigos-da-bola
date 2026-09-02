@@ -5,6 +5,7 @@ interface TeamColorPickerProps {
   selectedColor: string | null;
   onSelect: (hex: string) => void;
   excludeColor?: string | null;
+  excludeMisto?: boolean;
 }
 
 const MIXED_COLOR = "#a855f7";
@@ -25,7 +26,7 @@ function isDarkColor(hex: string): boolean {
   return luminance <= 0.2;
 }
 
-export function TeamColorPicker({ label, selectedColor, onSelect, excludeColor }: Readonly<TeamColorPickerProps>) {
+export function TeamColorPicker({ label, selectedColor, onSelect, excludeColor, excludeMisto = false }: Readonly<TeamColorPickerProps>) {
   const isMixedSelected = selectedColor === MIXED_COLOR;
 
   return (
@@ -76,9 +77,10 @@ export function TeamColorPicker({ label, selectedColor, onSelect, excludeColor }
         {/* Misto / Sem colete */}
         <button
           type="button"
+          disabled={excludeMisto}
           onClick={() => onSelect(MIXED_COLOR)}
           className={`flex flex-col items-center gap-1.5 p-1 rounded-xl transition-all ${
-            isMixedSelected ? "bg-surface-container-highest scale-105" : "active:scale-95"
+            excludeMisto ? "opacity-25 cursor-not-allowed" : isMixedSelected ? "bg-surface-container-highest scale-105" : "active:scale-95"
           }`}
         >
           <div

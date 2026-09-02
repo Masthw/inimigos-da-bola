@@ -41,6 +41,8 @@ export default function NewMatch() {
   const [teamBName, setTeamBName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ maxPlayers?: string }>({});
+  const [hints, setHints] = useState<{ maxPlayers?: string; date?: string }>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +73,30 @@ export default function NewMatch() {
     if (selected) {
       setMaxPlayers(String(selected.default_max_players));
       setMaxWaitlist(String(selected.default_max_waitlist));
+      setHints((prev) => ({
+        ...prev,
+        maxPlayers: `Limite de ${selected.default_max_players} para ${selected.name}`,
+      }));
+      setFieldErrors((prev) => ({ ...prev, maxPlayers: undefined }));
+    }
+  }
+
+  function handleMaxPlayersChange(value: string) {
+    setMaxPlayers(value);
+    setFieldErrors((prev) => ({ ...prev, maxPlayers: undefined }));
+
+    const selected = gameTypes.find((gameType) => String(gameType.id) === gameTypeId);
+    const maxLimit = selected?.default_max_players;
+    const num = Number(value) || 0;
+    if (selected && maxLimit && num > maxLimit) {
+      setHints((prev) => ({
+        ...prev,
+        maxPlayers: `Será limitado a ${maxLimit} jogadores (máx. de ${selected.name})`,
+      }));
+    } else if (selected && maxLimit) {
+      setHints((prev) => ({ ...prev, maxPlayers: `Limite de ${maxLimit} para ${selected.name}` }));
+    } else {
+      setHints((prev) => ({ ...prev, maxPlayers: undefined }));
     }
   }
 
@@ -93,7 +119,17 @@ export default function NewMatch() {
       setError("Informe o local da partida");
       return;
     }
-    const maxP = Math.max(1, Math.min(99, Number(maxPlayers) || 10));
+
+    const selectedGameType = gameTypes.find((gameType) => String(gameType.id) === gameTypeId);
+    const maxLimit = selectedGameType?.default_max_players ?? Infinity;
+
+    const rawMaxP = Number(maxPlayers) || 0;
+    if (rawMaxP < 2) {
+      setFieldErrors({ maxPlayers: "O total de jogadores deve ser no mínimo 2" });
+      setError(null);
+      return;
+    }
+    const maxP = Math.min(rawMaxP, maxLimit);
     const maxW = Math.max(0, Math.min(50, Number(maxWaitlist) || 0));
 
     setSubmitting(true);
@@ -104,6 +140,9 @@ export default function NewMatch() {
         setError("Data ou hora inválidas");
         return;
       }
+
+      const isPast = dateTimeLocal.getTime() < Date.now();
+      setHints((prev) => ({ ...prev, date: isPast ? "Data retroativa (no passado)" : undefined }));
 
       const { error: insertError } = await supabase.from("matches").insert({
         date_time: dateTimeLocal.toISOString(),
@@ -194,10 +233,19 @@ export default function NewMatch() {
                     id="date"
                     type="date"
                     value={date}
-                    onChange={(event) => setDate(event.target.value)}
+                    onChange={(event) => {
+                      setDate(event.target.value);
+                      setHints((prev) => ({ ...prev, date: undefined }));
+                    }}
                     className="flex-1 bg-transparent text-on-surface font-body focus:outline-none scheme-dark"
                   />
                 </div>
+                {hints.date && (
+                  <span className="font-mono text-[10px] text-warning flex items-center gap-1">
+                    <MaterialIcon name="schedule" className="w-3.5 h-3.5" />
+                    {hints.date}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -215,20 +263,40 @@ export default function NewMatch() {
                 <label className={labelClass} htmlFor="max-players">
                   Total de Jogadores
                 </label>
-                <div className={inputClass}>
+                <div className={`${inputClass} ${fieldErrors.maxPlayers ? "border-error" : ""}`}>
                   <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
                   <input
                     id="max-players"
                     type="number"
-                    min={1}
+                    min={2}
                     value={maxPlayers}
-                    onChange={(event) => setMaxPlayers(event.target.value)}
+                    onChange={(event) => handleMaxPlayersChange(event.target.value)}
+                    onBlur={() => {
+                      const selected = gameTypes.find((gameType) => String(gameType.id) === gameTypeId);
+                      const maxLimit = selected?.default_max_players;
+                      const num = Number(maxPlayers) || 0;
+                      if (selected && maxLimit && num > maxLimit) {
+                        setMaxPlayers(String(maxLimit));
+                        setHints((prev) => ({
+                          ...prev,
+                          maxPlayers: `Limite de ${maxLimit} para ${selected.name}`,
+                        }));
+                      }
+                    }}
                     className="flex-1 bg-transparent text-on-surface font-body focus:outline-none"
                   />
                 </div>
-                <span className="font-mono text-[10px] text-on-surface-variant">
-                  {Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : ""}
-                </span>
+                {fieldErrors.maxPlayers ? (
+                  <span className="font-mono text-[10px] text-error">{fieldErrors.maxPlayers}</span>
+                ) : hints.maxPlayers ? (
+                  <span className="font-mono text-[10px] text-on-surface-variant">
+                    {hints.maxPlayers} — {Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : ""}
+                  </span>
+                ) : (
+                  <span className="font-mono text-[10px] text-on-surface-variant">
+                    {Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : ""}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
