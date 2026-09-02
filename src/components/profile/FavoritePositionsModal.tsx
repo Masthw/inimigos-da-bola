@@ -1,11 +1,17 @@
 import { useLayoutEffect, useState, useCallback, useEffectEvent, type ReactNode } from "react";
 import { MaterialIcon } from "../../components/ui/MaterialIcon";
-import { useFavoritePositions, type Position } from "../../hooks/useFavoritePositions";
+import type { Position } from "../../hooks/useFavoritePositions";
 
 interface FavoritePositionsModalProps {
   /** Controla a visibilidade do modal (renderiza nada quando false). */
   open: boolean;
   onClose: () => void;
+  loading: boolean;
+  saving: boolean;
+  error: string | null;
+  toggleFavorite: (positionId: number, isPrimary: boolean) => Promise<void>;
+  getPositionsByGameType: (gameType: "futsal" | "society") => Position[];
+  isFavorite: (positionId: number) => boolean;
 }
 
 type Tab = "futsal" | "society";
@@ -22,11 +28,9 @@ function LoadingSkeleton() {
   );
 }
 
-export function FavoritePositionsModal({ open, onClose }: Readonly<FavoritePositionsModalProps>) {
+export function FavoritePositionsModal({ open, onClose, loading, saving, error, toggleFavorite, getPositionsByGameType, isFavorite }: Readonly<FavoritePositionsModalProps>) {
   const [activeTab, setActiveTab] = useState<Tab>("futsal");
   const [isClosing, setIsClosing] = useState(false);
-
-  const { loading, saving, error, toggleFavorite, getPositionsByGameType, isFavorite } = useFavoritePositions();
 
   const futsalPositions = getPositionsByGameType("futsal");
   const societyPositions = getPositionsByGameType("society");

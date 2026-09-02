@@ -6,7 +6,7 @@ import { LiveMatchView } from "../components/match/LiveMatchView";
 import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useAuth } from "../hooks/useAuth";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 import type { MatchPlayer } from "../hooks/useMatches";
 
 interface MatchData {
@@ -111,7 +111,7 @@ export default function MatchLive() {
     loadInitialData();
 
     const channel = supabase
-      .channel(`match-live-${matchId}`)
+      .channel(uniqueChannelTopic(`match-live-${matchId}`))
       .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `id=eq.${matchId}` }, () => {
         void fetchData();
       })

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { Skeleton, SkeletonPlayerRow } from "../components/ui/Skeleton";
@@ -9,7 +9,7 @@ import type { NextMatchData } from "../hooks/useNextMatch";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useIsAdmin } from "../hooks/useIsAdmin";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 
 const POSITIONS_FUTSAL = [
   { id: "pivo", label: "Pivô", short: "PIV", x: 50, y: 22 },
@@ -42,15 +42,29 @@ const POSITION_LABELS: Record<string, string> = Object.fromEntries([
 const DB_POSITION_TO_LOCAL: Record<string, PositionId> = {
   Pivô: "pivo",
   "Ala Esquerdo": "ala_e",
+  "Ala Esquerda": "ala_e",
   "Ala Esq.": "ala_e",
   "Ala Direito": "ala_d",
+  "Ala Direita": "ala_d",
   "Ala Dir.": "ala_d",
   Fixo: "fixo",
   Goleiro: "gol",
   "Meia Esquerdo": "meia_e",
+  "Meia Esquerda": "meia_e",
   "Meia Esq.": "meia_e",
   "Meia Direito": "meia_d",
+  "Meia Direita": "meia_d",
   "Meia Dir.": "meia_d",
+};
+
+const DB_POSITION_CODE_TO_LOCAL: Record<string, PositionId> = {
+  GO: "gol",
+  FI: "fixo",
+  AD: "ala_d",
+  AE: "ala_e",
+  MD: "meia_d",
+  ME: "meia_e",
+  PI: "pivo",
 };
 
 const LOCAL_TO_DB_POSITION: Record<PositionId, string> = {
@@ -67,6 +81,7 @@ interface Player {
   id: string;
   name: string;
   initials: string;
+  avatar: string | null;
   position: PositionId | null;
   favoritePosition: PositionId | null;
   matchPlayerId: string;
@@ -124,13 +139,17 @@ function TacticalNode({
           onClick={onSelect}
           disabled={!canSelect}
           aria-label={occupant ? `${label}: ${occupant.name}` : `${label}: disponível`}
-          className={`relative w-10 h-10 rounded-full flex items-center justify-center font-mono text-label-bold text-sm shadow-lg transition-transform active:scale-90 ${
+          className={`relative w-10 h-10 rounded-full flex items-center justify-center font-mono text-label-bold text-sm shadow-lg transition-transform active:scale-90 overflow-hidden ${
             occupant
               ? `border-2 border-white/30 ${nodeClasses(id)}`
               : "border-2 border-dashed border-white/40 bg-surface-container-highest/50 text-on-surface-variant"
           } ${canSelect ? "cursor-pointer" : "cursor-not-allowed"} ${!occupant ? "hover:border-white/80 hover:text-on-surface" : ""}`}
         >
-          {occupant ? occupant.initials : short}
+          {occupant?.avatar ? (
+            <img src={occupant.avatar} alt={occupant.name} className="w-full h-full object-cover" />
+          ) : (
+            occupant ? occupant.initials : short
+          )}
         </button>
         <span
           className={`mt-1 font-mono text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${
@@ -192,13 +211,21 @@ function PlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boolean }>
       className={`flex items-center justify-between px-2 py-2 rounded-lg transition-colors hover:bg-surface-variant/40 ${isMe ? "bg-primary-container/10" : ""}`}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-mono border border-white/20 shrink-0 ${
-            player.position ? nodeClasses(player.position) : "bg-surface-variant text-on-surface-variant"
-          }`}
-        >
-          {player.initials}
-        </div>
+        {player.avatar ? (
+          <img
+            src={player.avatar}
+            alt={player.name}
+            className="w-8 h-8 rounded-full border border-white/20 shrink-0 object-cover"
+          />
+        ) : (
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-mono border border-white/20 shrink-0 ${
+              player.position ? nodeClasses(player.position) : "bg-surface-variant text-on-surface-variant"
+            }`}
+          >
+            {player.initials}
+          </div>
+        )}
         <p className="font-body-md text-on-surface text-sm truncate">
           {player.name}
           {isMe && <span className="ml-1.5 font-mono text-[9px] text-primary uppercase shrink-0">(você)</span>}
@@ -221,13 +248,21 @@ function DesktopPlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boo
       className={`grid grid-cols-[1fr_120px_90px] items-center gap-x-3 px-3 py-2 rounded-lg transition-colors hover:bg-surface-variant/40 ${isMe ? "bg-primary-container/10" : ""}`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-mono border border-white/20 shrink-0 ${
-            player.position ? nodeClasses(player.position) : "bg-surface-variant text-on-surface-variant"
-          }`}
-        >
-          {player.initials}
-        </div>
+        {player.avatar ? (
+          <img
+            src={player.avatar}
+            alt={player.name}
+            className="w-8 h-8 rounded-full border border-white/20 shrink-0 object-cover"
+          />
+        ) : (
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-mono border border-white/20 shrink-0 ${
+              player.position ? nodeClasses(player.position) : "bg-surface-variant text-on-surface-variant"
+            }`}
+          >
+            {player.initials}
+          </div>
+        )}
         <p className="font-body-md text-on-surface text-sm truncate">
           {player.name}
           {isMe && <span className="ml-1.5 font-mono text-[9px] text-primary uppercase">(você)</span>}
@@ -330,7 +365,7 @@ async function fetchMatchData(
 ): Promise<FetchedTeams> {
   const playersRes = await supabase
     .from("match_players")
-    .select("id, user_id, guest_name, team, tactical_position, users(name)")
+    .select("id, user_id, guest_name, team, tactical_position, users(name, avatar_url)")
     .eq("match_id", matchId)
     .eq("status", "confirmed");
 
@@ -343,21 +378,23 @@ async function fetchMatchData(
     new Set(rows.map((r) => r.user_id).filter((id): id is string => !!id)),
   );
 
-  let favResData: { user_id: string; positions: { name: string | null } | null }[] = [];
+  let favResData: { user_id: string; positions: { name: string | null; code: string | null } | null }[] = [];
   if (playerUserIds.length > 0) {
     const favRes = await supabase
       .from("user_favorite_positions")
-      .select("user_id, position_id, is_primary, positions(name)")
+      .select("user_id, position_id, is_primary, positions(name, code)")
       .in("user_id", playerUserIds)
       .order("is_primary", { ascending: false });
     favResData = (favRes.data ?? []) as typeof favResData;
   }
 
-  const favByPlayer = new Map<string, string>();
+  const favByPlayer = new Map<string, { name: string | null; code: string | null }>();
   for (const row of favResData) {
-    if (!favByPlayer.has(row.user_id) && row.positions?.name) {
-      favByPlayer.set(row.user_id, row.positions.name);
-    }
+    if (favByPlayer.has(row.user_id)) continue;
+    favByPlayer.set(row.user_id, {
+      name: row.positions?.name ?? null,
+      code: row.positions?.code ?? null,
+    });
   }
 
   const players: Player[] = rows.map((row) => {
@@ -378,10 +415,12 @@ async function fetchMatchData(
     }
 
     let favPos: PositionId | null = null;
-    const favName = row.user_id ? favByPlayer.get(row.user_id) : null;
-    if (favName && DB_POSITION_TO_LOCAL[favName]) {
-      const localId = DB_POSITION_TO_LOCAL[favName];
-      if (activePositions.some((p) => p.id === localId)) {
+    const fav = row.user_id ? favByPlayer.get(row.user_id) : null;
+    if (fav) {
+      const localByName = fav.name ? DB_POSITION_TO_LOCAL[fav.name] : undefined;
+      const localByCode = fav.code ? DB_POSITION_CODE_TO_LOCAL[fav.code.toUpperCase()] : undefined;
+      const localId = localByName ?? localByCode ?? null;
+      if (localId && activePositions.some((p) => p.id === localId)) {
         favPos = localId;
       }
     }
@@ -390,6 +429,7 @@ async function fetchMatchData(
       id: row.user_id ?? row.guest_name ?? "unknown",
       name: fullName,
       initials,
+      avatar: row.users?.avatar_url ?? null,
       position: pos,
       favoritePosition: favPos,
       matchPlayerId: row.id,
@@ -454,7 +494,7 @@ function useTacticsBoard(
   useEffect(() => {
     if (!nextMatch) return;
     const channel = supabase
-      .channel(`tactics-${nextMatch.id}`)
+      .channel(uniqueChannelTopic(`tactics-${nextMatch.id}`))
       .on(
         "postgres_changes",
         {
@@ -765,11 +805,12 @@ function SidebarTeams({
 }
 
 export default function Tactics() {
+  const { matchId } = useParams<{ matchId: string }>();
   const { user } = useAuth();
   const { activeGroupId } = useActiveGroup();
-  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId);
+  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId, matchId ?? null);
   const { isGroupAdmin } = useIsAdmin();
-  const { busy, startLive, setTacticalPosition } = useLiveMatch(activeGroupId);
+  const { busy, setTacticalPosition } = useLiveMatch(activeGroupId);
   const isDesktop = useIsDesktop();
   const navigate = useNavigate();
 
@@ -810,17 +851,26 @@ export default function Tactics() {
 
   const handleStartGame = async () => {
     if (!nextMatch) return;
-    const result = await startLive(nextMatch.id);
-    if (!result.error) {
-      navigate(`/matches/${nextMatch.id}`);
-    }
+    navigate(`/matches/${nextMatch.id}/colors`);
   };
 
   return (
     <AppShell>
       <div className="min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
-          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">{courtName}</h2>
+          <div className="flex items-center gap-3 min-w-0">
+            {matchId && (
+              <button
+                type="button"
+                onClick={() => navigate(`/matches/${matchId}/prepare`)}
+                className="p-2 hover:bg-surface-variant rounded-lg transition-colors shrink-0"
+                aria-label="Voltar"
+              >
+                <MaterialIcon name="arrow_back" className="w-5 h-5 text-on-surface-variant" />
+              </button>
+            )}
+            <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">{courtName}</h2>
+          </div>
           {isPreparing && isGroupAdmin && (
             <button
               type="button"

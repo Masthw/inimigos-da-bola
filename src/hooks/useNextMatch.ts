@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 import { useAuth } from "./useAuth";
 
 export interface NextMatchData {
@@ -48,20 +48,25 @@ interface MatchRow {
   game_types: { name: string | null; sport_id: number | null; sports: { name: string | null } | null } | null;
 }
 
-async function fetchNextMatch(userId: string | null, groupId: string | null): Promise<NextMatchData | null> {
+async function fetchNextMatch(userId: string | null, groupId: string | null, matchId?: string | null): Promise<NextMatchData | null> {
   const now = new Date().toISOString();
 
-  const baseQuery = supabase
+  let query = supabase
     .from("matches")
-     .select("id, date_time, location, status, team_a_name, team_b_name, group_id, game_types(name, sport_id, sports(name))")
-     .in("status", ["open", "preparing"])
-    .gte("date_time", now)
-    .order("date_time", { ascending: true })
-    .limit(1);
+    .select("id, date_time, location, status, team_a_name, team_b_name, group_id, game_types(name, sport_id, sports(name))")
+    .in("status", ["open", "preparing"]);
 
-  const { data, error } = await (groupId
-    ? baseQuery.eq("group_id", groupId).maybeSingle()
-    : baseQuery.maybeSingle());
+  if (matchId) {
+    query = query.eq("id", matchId);
+  } else {
+    query = query.gte("date_time", now).order("date_time", { ascending: true }).limit(1);
+  }
+
+  const { data, error } = await (matchId
+    ? query.maybeSingle()
+    : groupId
+      ? query.eq("group_id", groupId).maybeSingle()
+      : query.maybeSingle());
 
   if (error) throw error;
   if (!data) return null;
@@ -95,7 +100,7 @@ async function fetchNextMatch(userId: string | null, groupId: string | null): Pr
   };
 }
 
-export function useNextMatch(groupId: string | null = null) {
+export function useNextMatch(groupId: string | null = null, matchId?: string | null) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -113,7 +118,7 @@ export function useNextMatch(groupId: string | null = null) {
       setError(null);
     });
 
-    fetchNextMatch(userId, groupId)
+    fetchNextMatch(userId, groupId, matchId)
       .then((data) => {
         if (cancelled) return;
         setMatch(data);
@@ -131,14 +136,14 @@ export function useNextMatch(groupId: string | null = null) {
     return () => {
       cancelled = true;
     };
-  }, [userId, groupId]);
+  }, [userId, groupId, matchId]);
 
   useEffect(() => {
     let cancelled = false;
 
     const refetch = async () => {
       try {
-        const data = await fetchNextMatch(userId, groupId);
+        const data = await fetchNextMatch(userId, groupId, matchId);
         if (cancelled) return;
         setMatch(data);
         setLoading(false);
@@ -149,16 +154,17 @@ export function useNextMatch(groupId: string | null = null) {
     };
 
     const channel = supabase
-      .channel("next-match-realtime")
+      .channel(uniqueChannelTopic("next-match-realtime"))
       .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, refetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "match_players" }, refetch)
       .subscribe();
 
     return () => {
       cancelled = true;
+      channel.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [userId, groupId]);
+  }, [userId, groupId, matchId]);
 
   return { match, loading, error };
 }

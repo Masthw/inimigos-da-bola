@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 import { useAuth } from "../hooks/useAuth";
 import { GroupContext, type GroupInfo } from "./GroupContext";
 
@@ -85,7 +85,7 @@ export function GroupContextProvider() {
     if (!user) return;
 
     const channel = supabase
-      .channel(`user-role-${user.id}`)
+      .channel(uniqueChannelTopic(`user-role-${user.id}`))
       .on("postgres_changes", {
         event: "UPDATE",
         schema: "public",
