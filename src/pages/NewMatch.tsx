@@ -23,6 +23,16 @@ const inputClass =
 
 const labelClass = "label-bold text-on-surface-variant uppercase tracking-wider";
 
+function todayString(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+const TODAY = todayString();
+
 export default function NewMatch() {
   const { user } = useAuth();
   const { isGroupAdmin, loading: adminLoading } = useIsAdmin();
@@ -142,7 +152,12 @@ export default function NewMatch() {
       }
 
       const isPast = dateTimeLocal.getTime() < Date.now();
-      setHints((prev) => ({ ...prev, date: isPast ? "Data retroativa (no passado)" : undefined }));
+      if (isPast) {
+        setHints((prev) => ({ ...prev, date: "A data e o horário devem ser no futuro" }));
+        setError("Não é possível criar uma partida em data ou horário no passado");
+        return;
+      }
+      setHints((prev) => ({ ...prev, date: undefined }));
 
       const { error: insertError } = await supabase.from("matches").insert({
         date_time: dateTimeLocal.toISOString(),
@@ -232,6 +247,7 @@ export default function NewMatch() {
                   <input
                     id="date"
                     type="date"
+                    min={TODAY}
                     value={date}
                     onChange={(event) => {
                       setDate(event.target.value);

@@ -273,6 +273,16 @@ function FeaturedCard({
             </Link>
           )}
 
+          {match.status === "preparing" && (
+            <Link
+              to={`/matches/${match.id}/prepare`}
+              className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+            >
+              <MaterialIcon name="settings" className="w-5 h-5" />
+              CONFIGURAR PREPARAÇÃO
+            </Link>
+          )}
+
           {isPlayableStatus && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
         </div>
       </div>
@@ -284,49 +294,6 @@ function FeaturedCard({
         </div>
       )}
     </div>
-  );
-}
-
-function PreparingMatchView({
-  featured,
-  isGroupAdmin,
-}: Readonly<{
-  featured: MatchWithMeta;
-  isGroupAdmin: boolean;
-}>) {
-  return (
-    <section className="min-h-[calc(100svh-4rem)] flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center space-y-6">
-        <div className="flex items-center justify-center gap-3">
-          <MaterialIcon name="shield_lock" className="w-8 h-8 text-tertiary" />
-          <h2 className="text-headline-md font-display font-black text-on-surface uppercase">Em Preparação</h2>
-        </div>
-        <p className="text-on-surface-variant font-body max-w-sm mx-auto">
-          Os times foram sorteados. Defina a escalação tática e escolha as cores antes de iniciar o jogo ao vivo.
-        </p>
-        <div className="flex flex-col gap-3 pt-2">
-          <Link
-            to="/tactics"
-            className="w-full py-4 bg-primary text-on-primary font-mono text-label-bold transition-colors flex items-center justify-center gap-3"
-          >
-            <MaterialIcon name="sports_soccer" className="w-5 h-5" />
-            Definir Escalação
-          </Link>
-          {isGroupAdmin && (
-            <Link
-              to={`/matches/${featured.id}/colors`}
-              className="w-full py-4 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant transition-colors flex items-center justify-center gap-3"
-            >
-              <MaterialIcon name="play_arrow" className="w-5 h-5" />
-              INICIAR JOGO
-            </Link>
-          )}
-        </div>
-        <p className="text-[10px] text-on-surface-variant font-mono">
-          {featured.confirmedPlayers.filter((p) => p.team === "A").length} x {featured.confirmedPlayers.filter((p) => p.team === "B").length}
-        </p>
-      </div>
-    </section>
   );
 }
 
@@ -610,7 +577,6 @@ export default function Matches() {
   };
 
   const isInProgress = featured?.status === "in_progress";
-  const isPreparing = featured?.status === "preparing";
 
   const handleGoalScored = async (scorer: MatchPlayer, assist: MatchPlayer | null) => {
     if (!featured) return;
@@ -624,12 +590,9 @@ export default function Matches() {
     refetch();
   };
 
-
   let content: React.ReactNode;
 
-  if (isPreparing && featured) {
-    content = <PreparingMatchView featured={featured} isGroupAdmin={isGroupAdmin} />;
-  } else if (isInProgress && featured) {
+  if (isInProgress && featured) {
     content = (
       <LiveMatchView
         matchId={featured.id}

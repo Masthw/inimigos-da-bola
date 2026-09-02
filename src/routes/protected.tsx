@@ -16,6 +16,7 @@ import GroupOnboarding from "../pages/GroupOnboarding";
 import GroupManagement from "../pages/GroupManagement";
 import MatchPlayersManagement from "../pages/MatchPlayersManagement";
 import MatchColors from "../pages/MatchColors";
+import MatchPreparation from "../pages/MatchPreparation";
 
 export const protectedRoutes = (
   <Route element={<ProtectedRoute />}>
@@ -31,6 +32,8 @@ export const protectedRoutes = (
         <Route path="/matches/:matchId/results" element={<MatchResults />} />
         <Route path="/matches/:matchId/players" element={<MatchPlayersManagement />} />
         <Route path="/matches/:matchId/colors" element={<MatchColors />} />
+        <Route path="/matches/:matchId/tactics" element={<Tactics />} />
+        <Route path="/matches/:matchId/prepare" element={<MatchPreparation />} />
         <Route path="/matches/:matchId" element={<MatchLive />} />
         <Route path="/matches" element={<Matches />} />
         <Route path="/tactics" element={<Tactics />} />

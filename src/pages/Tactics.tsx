@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { Skeleton, SkeletonPlayerRow } from "../components/ui/Skeleton";
@@ -805,9 +805,10 @@ function SidebarTeams({
 }
 
 export default function Tactics() {
+  const { matchId } = useParams<{ matchId: string }>();
   const { user } = useAuth();
   const { activeGroupId } = useActiveGroup();
-  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId);
+  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId, matchId ?? null);
   const { isGroupAdmin } = useIsAdmin();
   const { busy, setTacticalPosition } = useLiveMatch(activeGroupId);
   const isDesktop = useIsDesktop();
@@ -857,7 +858,19 @@ export default function Tactics() {
     <AppShell>
       <div className="min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
-          <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">{courtName}</h2>
+          <div className="flex items-center gap-3 min-w-0">
+            {matchId && (
+              <button
+                type="button"
+                onClick={() => navigate(`/matches/${matchId}/prepare`)}
+                className="p-2 hover:bg-surface-variant rounded-lg transition-colors shrink-0"
+                aria-label="Voltar"
+              >
+                <MaterialIcon name="arrow_back" className="w-5 h-5 text-on-surface-variant" />
+              </button>
+            )}
+            <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">{courtName}</h2>
+          </div>
           {isPreparing && isGroupAdmin && (
             <button
               type="button"
