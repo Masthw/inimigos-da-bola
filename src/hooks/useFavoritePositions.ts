@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import { supabase, uniqueChannelTopic } from '../lib/supabaseClient'
 import { useAuth } from './useAuth'
 
 export interface Position {
@@ -72,7 +72,7 @@ export function useFavoritePositions() {
     if (!user) return
 
     const channel = supabase
-      .channel(`fav-${user.id}`)
+      .channel(uniqueChannelTopic(`fav-${user.id}`))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

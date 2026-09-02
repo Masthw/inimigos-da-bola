@@ -9,7 +9,7 @@ import type { NextMatchData } from "../hooks/useNextMatch";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useIsAdmin } from "../hooks/useIsAdmin";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 
 const POSITIONS_FUTSAL = [
   { id: "pivo", label: "Pivô", short: "PIV", x: 50, y: 22 },
@@ -494,7 +494,7 @@ function useTacticsBoard(
   useEffect(() => {
     if (!nextMatch) return;
     const channel = supabase
-      .channel(`tactics-${nextMatch.id}`)
+      .channel(uniqueChannelTopic(`tactics-${nextMatch.id}`))
       .on(
         "postgres_changes",
         {

@@ -9,3 +9,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+
+let channelSequence = 0;
+
+/**
+
+ * Returns a unique realtime channel topic per call so `supabase.channel()`
+ * never reuses an already-subscribed channel (which would throw "cannot add
+ * `postgres_changes` callbacks ... after `subscribe()`" under React StrictMode,
+ * where effects mount/unmount/mount without awaiting removeChannel).
+ */
+export function uniqueChannelTopic(base: string): string {
+  channelSequence += 1;
+  return `${base}-${Date.now()}-${channelSequence}`;
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 import { useAuth } from "./useAuth";
 import type { Database } from "../lib/database.types";
 type MatchPlayerInsert =
@@ -370,7 +370,7 @@ export function useMatches(groupId: string | null = null) {
 
   useEffect(() => {
     const channel = supabase
-      .channel("matches-realtime")
+      .channel(uniqueChannelTopic("matches-realtime"))
       .on(
         "postgres_changes",
         {

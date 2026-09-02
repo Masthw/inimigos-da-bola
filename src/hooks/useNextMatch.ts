@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 import { useAuth } from "./useAuth";
 
 export interface NextMatchData {
@@ -149,7 +149,7 @@ export function useNextMatch(groupId: string | null = null) {
     };
 
     const channel = supabase
-      .channel("next-match-realtime")
+      .channel(uniqueChannelTopic("next-match-realtime"))
       .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, refetch)
       .on("postgres_changes", { event: "*", schema: "public", table: "match_players" }, refetch)
       .subscribe();
