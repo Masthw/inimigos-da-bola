@@ -172,7 +172,7 @@ export default function Profile() {
   const { activeGroupId } = useActiveGroup();
   const { rank } = useUserRank(userId, activeGroupId);
   const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId, activeGroupId);
-  const { loading: favPositionsLoading, getFavoritesByGameType } = useFavoritePositions();
+  const { loading: favPositionsLoading, saving: favPositionsSaving, error: favPositionsError, getFavoritesByGameType, toggleFavorite, getPositionsByGameType, isFavorite } = useFavoritePositions();
 
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [showPositionsModal, setShowPositionsModal] = useState(false);
@@ -381,7 +381,16 @@ export default function Profile() {
           </div>
         </section>
       </div>
-      <FavoritePositionsModal open={showPositionsModal} onClose={() => setShowPositionsModal(false)} />
+      <FavoritePositionsModal
+        open={showPositionsModal}
+        onClose={() => setShowPositionsModal(false)}
+        loading={favPositionsLoading}
+        saving={favPositionsSaving}
+        error={favPositionsError}
+        toggleFavorite={toggleFavorite}
+        getPositionsByGameType={getPositionsByGameType}
+        isFavorite={isFavorite}
+      />
     </AppShell>
   );
 }
