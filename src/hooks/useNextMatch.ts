@@ -13,6 +13,8 @@ export interface NextMatchData {
   myStatus: "confirmed" | "waitlist" | "cancelled" | null;
   groupId: string | null;
   status: "open" | "preparing" | "in_progress" | "finished" | "voting" | "cancelled";
+  teamAName: string | null;
+  teamBName: string | null;
 }
 
 const PT_BR = "pt-BR";
@@ -49,7 +51,6 @@ interface MatchRow {
 }
 
 async function fetchNextMatch(userId: string | null, groupId: string | null, matchId?: string | null): Promise<NextMatchData | null> {
-  const now = new Date().toISOString();
 
   let query = supabase
     .from("matches")
@@ -59,7 +60,7 @@ async function fetchNextMatch(userId: string | null, groupId: string | null, mat
   if (matchId) {
     query = query.eq("id", matchId);
   } else {
-    query = query.gte("date_time", now).order("date_time", { ascending: true }).limit(1);
+    query = query.order("date_time", { ascending: true }).limit(1);
   }
 
   const { data, error } = await (matchId
@@ -97,6 +98,8 @@ async function fetchNextMatch(userId: string | null, groupId: string | null, mat
     myStatus,
     groupId: row.group_id,
     status: (row.status ?? "open") as NextMatchData["status"],
+    teamAName: row.team_a_name,
+    teamBName: row.team_b_name,
   };
 }
 
