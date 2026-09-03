@@ -450,11 +450,10 @@ export function useMatches(groupId: string | null = null) {
 
       setBusyMatchId(matchId);
 
+      const cancelPayload = { status: "cancelled" as const };
       const { error } = await supabase
         .from("matches")
-        .update({
-          status: "cancelled",
-        })
+        .update(cancelPayload)
         .eq("id", matchId);
 
       setBusyMatchId(null);

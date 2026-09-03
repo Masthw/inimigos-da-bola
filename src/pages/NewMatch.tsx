@@ -33,6 +33,157 @@ function todayString(): string {
 
 const TODAY = todayString();
 
+function NewMatchAccessRestricted() {
+  return (
+    <AppShell>
+      <div className="max-w-2xl mx-auto px-margin-mobile md:px-margin-desktop pt-16 text-center">
+        <MaterialIcon name="lock" className="w-10 h-10 text-on-surface-variant mx-auto mb-4" />
+        <h2 className="text-headline-md font-display uppercase text-on-surface mb-2">Acesso Restrito</h2>
+        <p className="font-mono text-label-sm text-on-surface-variant">Apenas administradores podem criar partidas.</p>
+      </div>
+    </AppShell>
+  );
+}
+
+function NewMatchScheduleSection({
+  date,
+  dateHint,
+  timeHour,
+  timeMinute,
+  onDateChange,
+  onHourChange,
+  onMinuteChange,
+}: Readonly<{
+  date: string;
+  dateHint?: string;
+  timeHour: string;
+  timeMinute: string;
+  onDateChange: (val: string) => void;
+  onHourChange: (val: string) => void;
+  onMinuteChange: (val: string) => void;
+}>) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <label className={labelClass} htmlFor="date">
+          Data
+        </label>
+        <div className={inputClass}>
+          <MaterialIcon name="calendar_today" className="w-5 h-5 text-on-surface-variant" />
+          <input
+            id="date"
+            type="date"
+            min={TODAY}
+            value={date}
+            onChange={(event) => onDateChange(event.target.value)}
+            className="flex-1 bg-transparent text-on-surface font-body focus:outline-none scheme-dark"
+          />
+        </div>
+        {dateHint && (
+          <span className="font-mono text-[10px] text-warning flex items-center gap-1">
+            <MaterialIcon name="schedule" className="w-3.5 h-3.5" />
+            {dateHint}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className={labelClass} htmlFor="time">
+          Hora
+        </label>
+        <TimePicker hour={timeHour} minute={timeMinute} onHourChange={onHourChange} onMinuteChange={onMinuteChange} />
+      </div>
+    </div>
+  );
+}
+
+function NewMatchPlayersConfig({
+  maxPlayers,
+  maxWaitlist,
+  fieldError,
+  hint,
+  onMaxPlayersChange,
+  onMaxPlayersBlur,
+  onMaxWaitlistChange,
+}: Readonly<{
+  maxPlayers: string;
+  maxWaitlist: string;
+  fieldError?: string;
+  hint?: string;
+  onMaxPlayersChange: (val: string) => void;
+  onMaxPlayersBlur: () => void;
+  onMaxWaitlistChange: (val: string) => void;
+}>) {
+  const perTeamLabel = Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : "";
+  const infoLabel = hint ? `${hint} — ${perTeamLabel}` : perTeamLabel;
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
+      <div className="flex flex-col gap-2">
+        <label className={labelClass} htmlFor="max-players">
+          Total de Jogadores
+        </label>
+        <div className={`${inputClass} ${fieldError ? "border-error" : ""}`}>
+          <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
+          <input
+            id="max-players"
+            type="number"
+            min={2}
+            value={maxPlayers}
+            onChange={(event) => onMaxPlayersChange(event.target.value)}
+            onBlur={onMaxPlayersBlur}
+            className="flex-1 bg-transparent text-on-surface font-body focus:outline-none"
+          />
+        </div>
+        {fieldError ? (
+          <span className="font-mono text-[10px] text-error">{fieldError}</span>
+        ) : (
+          <span className="font-mono text-[10px] text-on-surface-variant">{infoLabel}</span>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className={labelClass} htmlFor="max-waitlist">
+          Lista de Espera
+        </label>
+        <div className={inputClass}>
+          <MaterialIcon name="pending" className="w-5 h-5 text-on-surface-variant" />
+          <input
+            id="max-waitlist"
+            type="number"
+            min={0}
+            value={maxWaitlist}
+            onChange={(event) => onMaxWaitlistChange(event.target.value)}
+            className="flex-1 bg-transparent text-on-surface font-body focus:outline-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewMatchTeamNamesSection({
+  teamAName,
+  teamBName,
+  onTeamAChange,
+  onTeamBChange,
+}: Readonly<{
+  teamAName: string;
+  teamBName: string;
+  onTeamAChange: (val: string) => void;
+  onTeamBChange: (val: string) => void;
+}>) {
+  return (
+    <div className="border-t border-outline-variant/20 pt-6">
+      <p className="font-mono text-label-sm uppercase text-on-surface-variant tracking-widest mb-4">Nomes dos Times (opcional)</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
+        <InputField label="Time A" icon="sports_soccer" placeholder="Ex.: Inimigos da Bola" value={teamAName} onChange={onTeamAChange} />
+        <InputField label="Time B" icon="sports_soccer" placeholder="Ex.: Grêmio" value={teamBName} onChange={onTeamBChange} />
+      </div>
+    </div>
+  );
+}
+
 export default function NewMatch() {
   const { user } = useAuth();
   const { isGroupAdmin, loading: adminLoading } = useIsAdmin();
@@ -110,6 +261,19 @@ export default function NewMatch() {
     }
   }
 
+  function handleMaxPlayersBlur() {
+    const selected = gameTypes.find((gameType) => String(gameType.id) === gameTypeId);
+    const maxLimit = selected?.default_max_players;
+    const num = Number(maxPlayers) || 0;
+    if (selected && maxLimit && num > maxLimit) {
+      setMaxPlayers(String(maxLimit));
+      setHints((prev) => ({
+        ...prev,
+        maxPlayers: `Limite de ${maxLimit} para ${selected.name}`,
+      }));
+    }
+  }
+
   async function handleSubmit() {
     setError(null);
 
@@ -159,18 +323,20 @@ export default function NewMatch() {
       }
       setHints((prev) => ({ ...prev, date: undefined }));
 
-      const { error: insertError } = await supabase.from("matches").insert({
+      const matchPayload = {
         date_time: dateTimeLocal.toISOString(),
         location: location.trim(),
         game_type_id: Number(gameTypeId),
         max_players: maxP,
         max_waitlist: maxW,
         organizer_id: user?.id ?? "",
-        status: "open",
+        status: "open" as const,
         team_a_name: teamAName.trim() || null,
         team_b_name: teamBName.trim() || null,
         group_id: activeGroupId,
-      });
+      };
+
+      const { error: insertError } = await supabase.from("matches").insert(matchPayload);
 
       if (insertError) {
         console.error("Erro ao criar partida:", insertError);
@@ -196,15 +362,7 @@ export default function NewMatch() {
   }
 
   if (!isGroupAdmin) {
-    return (
-      <AppShell>
-        <div className="max-w-2xl mx-auto px-margin-mobile md:px-margin-desktop pt-16 text-center">
-          <MaterialIcon name="lock" className="w-10 h-10 text-on-surface-variant mx-auto mb-4" />
-          <h2 className="text-headline-md font-display uppercase text-on-surface mb-2">Acesso Restrito</h2>
-          <p className="font-mono text-label-sm text-on-surface-variant">Apenas administradores podem criar partidas.</p>
-        </div>
-      </AppShell>
-    );
+    return <NewMatchAccessRestricted />;
   }
 
   return (
@@ -237,109 +395,32 @@ export default function NewMatch() {
               />
             </div>
 
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <label className={labelClass} htmlFor="date">
-                  Data
-                </label>
-                <div className={inputClass}>
-                  <MaterialIcon name="calendar_today" className="w-5 h-5 text-on-surface-variant" />
-                  <input
-                    id="date"
-                    type="date"
-                    min={TODAY}
-                    value={date}
-                    onChange={(event) => {
-                      setDate(event.target.value);
-                      setHints((prev) => ({ ...prev, date: undefined }));
-                    }}
-                    className="flex-1 bg-transparent text-on-surface font-body focus:outline-none scheme-dark"
-                  />
-                </div>
-                {hints.date && (
-                  <span className="font-mono text-[10px] text-warning flex items-center gap-1">
-                    <MaterialIcon name="schedule" className="w-3.5 h-3.5" />
-                    {hints.date}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className={labelClass} htmlFor="time">
-                  Hora
-                </label>
-                <TimePicker hour={timeHour} minute={timeMinute} onHourChange={setTimeHour} onMinuteChange={setTimeMinute} />
-              </div>
-            </div>
+            <NewMatchScheduleSection
+              date={date}
+              dateHint={hints.date}
+              timeHour={timeHour}
+              timeMinute={timeMinute}
+              onDateChange={(val) => {
+                setDate(val);
+                setHints((prev) => ({ ...prev, date: undefined }));
+              }}
+              onHourChange={setTimeHour}
+              onMinuteChange={setTimeMinute}
+            />
 
             <InputField label="Local" icon="location_on" placeholder="Ex.: Arena Futsal Centro" value={location} onChange={setLocation} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
-              <div className="flex flex-col gap-2">
-                <label className={labelClass} htmlFor="max-players">
-                  Total de Jogadores
-                </label>
-                <div className={`${inputClass} ${fieldErrors.maxPlayers ? "border-error" : ""}`}>
-                  <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
-                  <input
-                    id="max-players"
-                    type="number"
-                    min={2}
-                    value={maxPlayers}
-                    onChange={(event) => handleMaxPlayersChange(event.target.value)}
-                    onBlur={() => {
-                      const selected = gameTypes.find((gameType) => String(gameType.id) === gameTypeId);
-                      const maxLimit = selected?.default_max_players;
-                      const num = Number(maxPlayers) || 0;
-                      if (selected && maxLimit && num > maxLimit) {
-                        setMaxPlayers(String(maxLimit));
-                        setHints((prev) => ({
-                          ...prev,
-                          maxPlayers: `Limite de ${maxLimit} para ${selected.name}`,
-                        }));
-                      }
-                    }}
-                    className="flex-1 bg-transparent text-on-surface font-body focus:outline-none"
-                  />
-                </div>
-                {fieldErrors.maxPlayers ? (
-                  <span className="font-mono text-[10px] text-error">{fieldErrors.maxPlayers}</span>
-                ) : hints.maxPlayers ? (
-                  <span className="font-mono text-[10px] text-on-surface-variant">
-                    {hints.maxPlayers} — {Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : ""}
-                  </span>
-                ) : (
-                  <span className="font-mono text-[10px] text-on-surface-variant">
-                    {Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : ""}
-                  </span>
-                )}
-              </div>
+            <NewMatchPlayersConfig
+              maxPlayers={maxPlayers}
+              maxWaitlist={maxWaitlist}
+              fieldError={fieldErrors.maxPlayers}
+              hint={hints.maxPlayers}
+              onMaxPlayersChange={handleMaxPlayersChange}
+              onMaxPlayersBlur={handleMaxPlayersBlur}
+              onMaxWaitlistChange={setMaxWaitlist}
+            />
 
-              <div className="flex flex-col gap-2">
-                <label className={labelClass} htmlFor="max-waitlist">
-                  Lista de Espera
-                </label>
-                <div className={inputClass}>
-                  <MaterialIcon name="pending" className="w-5 h-5 text-on-surface-variant" />
-                  <input
-                    id="max-waitlist"
-                    type="number"
-                    min={0}
-                    value={maxWaitlist}
-                    onChange={(event) => setMaxWaitlist(event.target.value)}
-                    className="flex-1 bg-transparent text-on-surface font-body focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-outline-variant/20 pt-6">
-              <p className="font-mono text-label-sm uppercase text-on-surface-variant tracking-widest mb-4">Nomes dos Times (opcional)</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
-                <InputField label="Time A" icon="sports_soccer" placeholder="Ex.: Inimigos da Bola" value={teamAName} onChange={setTeamAName} />
-                <InputField label="Time B" icon="sports_soccer" placeholder="Ex.: Grêmio" value={teamBName} onChange={setTeamBName} />
-              </div>
-            </div>
+            <NewMatchTeamNamesSection teamAName={teamAName} teamBName={teamBName} onTeamAChange={setTeamAName} onTeamBChange={setTeamBName} />
 
             {error && (
               <div className="flex items-start gap-3 p-4 bg-error-container/20 border border-error/40 rounded-lg">

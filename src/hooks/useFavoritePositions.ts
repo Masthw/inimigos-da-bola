@@ -109,11 +109,12 @@ export function useFavoritePositions() {
           .eq('position_id', positionId)
         dbError = error
       } else {
-        const { error } = await supabase.from('user_favorite_positions').insert({
+        const payload = {
           user_id: userId,
           position_id: positionId,
           is_primary: isPrimary,
-        })
+        }
+        const { error } = await supabase.from('user_favorite_positions').insert(payload)
         dbError = error
       }
 
