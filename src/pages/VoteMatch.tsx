@@ -5,6 +5,7 @@ import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { Avatar } from "../components/ui/Avatar";
 import { VoteCard } from "../components/voting/VoteCard";
 import { VoteCountdown } from "../components/voting/VoteCountdown";
+import { MatchErrorState } from "../components/match/MatchErrorState";
 import { useVoting } from "../hooks/useVoting";
 import { useAuth } from "../hooks/useAuth";
 import { useIsAdmin } from "../hooks/useIsAdmin";
@@ -104,23 +105,7 @@ export default function VoteMatch() {
   }
 
   if (error || !votingData || !user) {
-    return (
-      <AppShell>
-        <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
-          <div className="text-center">
-            <MaterialIcon name="error" className="w-10 h-10 text-error mx-auto mb-4" />
-            <p className="font-mono text-label-bold text-on-surface">{error || "Erro ao carregar votação"}</p>
-            <button
-              type="button"
-              onClick={() => navigate("/matches")}
-              className="mt-4 px-4 py-2 font-mono text-label-sm text-primary hover:bg-surface-variant transition-colors"
-            >
-              Voltar para partidas
-            </button>
-          </div>
-        </div>
-      </AppShell>
-    );
+    return <MatchErrorState message={error || "Erro ao carregar votação"} />;
   }
 
   return (

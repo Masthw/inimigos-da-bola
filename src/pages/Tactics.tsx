@@ -129,7 +129,7 @@ const TacticalNode = memo(function TacticalNode({
   id: PositionId;
   occupant?: Player;
   canSelect: boolean;
-  onSelect: () => void;
+  onSelect: (posId: PositionId | null) => void;
 }>) {
   const isFavorite = !!occupant?.favoritePosition && occupant.position === occupant.favoritePosition;
   let initial: string | null;
@@ -146,7 +146,7 @@ const TacticalNode = memo(function TacticalNode({
         <div className="relative">
           <button
             type="button"
-            onClick={onSelect}
+            onClick={() => onSelect(id)}
             disabled={!canSelect}
             aria-label={occupant ? `${label}: ${occupant.name}` : `${label}: disponível`}
             className={`relative w-10 h-10 rounded-full flex items-center justify-center font-mono text-label-bold text-sm shadow-lg transition-transform active:scale-90 overflow-hidden ${
@@ -180,6 +180,8 @@ const TacticalNode = memo(function TacticalNode({
     </div>
   );
 });
+
+const NO_PLAYERS: Player[] = [];
 
 function CourtMarkings({ horizontal }: Readonly<{ horizontal: boolean }>) {
   if (horizontal) {
@@ -679,6 +681,22 @@ const CourtCard = memo(function CourtCard({
   teamBName: string;
 }>) {
   const hasPlayers = teamPlayers.length > 0;
+  const nodeOnSelect = useCallback(
+    (posId: PositionId | null) => {
+      const occupant = hasPlayers ? teamPlayers.find((p) => p.position === posId) : undefined;
+      if (occupant) {
+        onSelect(occupant.id, occupant.position === posId ? null : posId);
+        return;
+      }
+      if (hasPlayers) {
+        const meOnTeam = teamPlayers.find((p) => p.userId === currentUserId);
+        if (meOnTeam) {
+          onSelect(meOnTeam.id, posId);
+        }
+      }
+    },
+    [hasPlayers, teamPlayers, currentUserId, onSelect],
+  );
 
   return (
     <div className="w-full flex flex-col">
@@ -705,16 +723,7 @@ const CourtCard = memo(function CourtCard({
               y={pos.y}
               occupant={occupant}
               canSelect={canSelect}
-              onSelect={() => {
-                if (occupant) {
-                  onSelect(occupant.id, occupant.position === pos.id ? null : pos.id);
-                } else if (hasPlayers) {
-                  const meOnTeam = teamPlayers.find((p) => p.userId === currentUserId);
-                  if (meOnTeam) {
-                    onSelect(meOnTeam.id, pos.id);
-                  }
-                }
-              }}
+              onSelect={nodeOnSelect}
             />
           );
         })}
@@ -781,7 +790,7 @@ const CourtArea = memo(function CourtArea({
         </>
       ) : (
         <CourtCard
-          teamPlayers={[]}
+          teamPlayers={NO_PLAYERS}
           layoutPositions={layoutPositions}
           courtImage={courtImage}
           isDesktop={isDesktop}
@@ -880,12 +889,11 @@ export default function Tactics() {
 
   if (nextMatchLoading || loading) return <TacticsLoading />;
   if (error) return <TacticsError message={error} />;
-  if (!nextMatch || !canAccess) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
 
-  if (!isOpen && !isPreparing) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
+  const canShowBoard = !!nextMatch && (isOpen || isPreparing);
+  if (!canAccess || !canShowBoard) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
 
   const handleStartGame = async () => {
-    if (!nextMatch) return;
     navigate(`/matches/${nextMatch.id}/colors`);
   };
 
