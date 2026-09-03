@@ -187,8 +187,7 @@ function FeaturedCard({
 
   return (
     <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-primary/30 flex flex-col md:flex-row transition-colors hover:border-primary/50">
-      <div className="absolute left-0 top-0 w-1 h-full bg-primary" />
-
+      <div className="absolute left-0 top-0 w-1 h-full" />
       <div className="flex-1 p-6 md:p-8 flex flex-col justify-between gap-6">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -412,9 +411,7 @@ function MatchListContent({
               </section>
             )}
 
-            {!featured && upcoming.length === 0 && (
-              <EmptyState isGroupAdmin={isGroupAdmin} />
-            )}
+            {!featured && upcoming.length === 0 && <EmptyState isGroupAdmin={isGroupAdmin} />}
           </>
         )}
       </div>

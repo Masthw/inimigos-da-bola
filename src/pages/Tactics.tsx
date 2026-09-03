@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
@@ -112,7 +112,7 @@ function useIsDesktop() {
   return isDesktop;
 }
 
-function TacticalNode({
+const TacticalNode = memo(function TacticalNode({
   short,
   label,
   x,
@@ -132,6 +132,14 @@ function TacticalNode({
   onSelect: () => void;
 }>) {
   const isFavorite = !!occupant?.favoritePosition && occupant.position === occupant.favoritePosition;
+  let initial: string | null;
+  if (occupant?.avatar) {
+    initial = null;
+  } else if (occupant) {
+    initial = occupant.initials;
+  } else {
+    initial = short;
+  }
   return (
     <div className="absolute" style={{ left: `${x}%`, top: `${y}%` }}>
       <div className="flex flex-col items-center -translate-x-1/2 -translate-y-1/2">
@@ -149,10 +157,8 @@ function TacticalNode({
           >
             {occupant?.avatar ? (
               <img src={occupant.avatar} alt={occupant.name} className="w-full h-full object-cover" />
-            ) : occupant ? (
-              occupant.initials
             ) : (
-              short
+              initial
             )}
           </button>
 
@@ -173,7 +179,7 @@ function TacticalNode({
       </div>
     </div>
   );
-}
+});
 
 function CourtMarkings({ horizontal }: Readonly<{ horizontal: boolean }>) {
   if (horizontal) {
@@ -279,7 +285,7 @@ function DesktopPlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boo
   );
 }
 
-function TeamList({
+const TeamList = memo(function TeamList({
   players,
   teamLabel,
   match,
@@ -345,7 +351,7 @@ function TeamList({
       </div>
     </div>
   );
-}
+});
 
 // HELPERS DE BUSCA & ESTADO
 
@@ -446,11 +452,13 @@ function useTacticsBoard(
   const [teamA, setTeamA] = useState<Player[]>([]);
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const isFirstLoad = useRef(true);
 
+  const matchId = nextMatch?.id;
   const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
 
   const refetch = useCallback(async () => {
-    if (!nextMatch || !canAccess) {
+    if (!matchId || !canAccess) {
       setPlayers([]);
       setTeamA([]);
       setTeamB([]);
@@ -458,7 +466,7 @@ function useTacticsBoard(
       return;
     }
     try {
-      const data = await fetchMatchData(nextMatch.id, activePositions);
+      const data = await fetchMatchData(matchId, activePositions);
       setPlayers(data.all);
       setTeamA(data.teamA);
       setTeamB(data.teamB);
@@ -468,18 +476,17 @@ function useTacticsBoard(
       setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nextMatch?.id, activePositions, canAccess]);
+  }, [matchId, activePositions, canAccess]);
 
   const refetchSilent = useCallback(async () => {
-    if (!nextMatch || !canAccess) {
+    if (!matchId || !canAccess) {
       setPlayers([]);
       setTeamA([]);
       setTeamB([]);
       return;
     }
     try {
-      const data = await fetchMatchData(nextMatch.id, activePositions);
+      const data = await fetchMatchData(matchId, activePositions);
       setPlayers(data.all);
       setTeamA(data.teamA);
       setTeamB(data.teamB);
@@ -487,37 +494,50 @@ function useTacticsBoard(
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nextMatch?.id, activePositions, canAccess]);
+  }, [matchId, activePositions, canAccess]);
 
   useEffect(() => {
     let isMounted = true;
     (async () => {
       if (!isMounted) return;
-      setLoading(true);
+      if (isFirstLoad.current) {
+        setLoading(true);
+        isFirstLoad.current = false;
+      }
       await refetch();
     })();
     return () => {
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nextMatch?.id, activePositions]);
+  }, [matchId, activePositions]);
 
   useEffect(() => {
-    if (!nextMatch) return;
+    if (!matchId) return;
     const channel = supabase
-      .channel(uniqueChannelTopic(`tactics-${nextMatch.id}`))
+      .channel(uniqueChannelTopic(`tactics-${matchId}`))
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "match_players",
-          filter: `match_id=eq.${nextMatch.id}`,
+          filter: `match_id=eq.${matchId}`,
         },
         (payload) => {
           if (payload.eventType === "INSERT" || payload.eventType === "DELETE") {
             refetchSilent();
+            return;
+          }
+          if (payload.eventType === "UPDATE") {
+            const newRow = (payload as { new?: unknown }).new as
+              | { id: string; tactical_position: string | null }
+              | undefined;
+            if (!newRow) return;
+            const localPos = newRow.tactical_position ? DB_POSITION_TO_LOCAL[newRow.tactical_position] : null;
+            setPlayers((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
+            setTeamA((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
+            setTeamB((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
           }
         },
       )
@@ -525,12 +545,11 @@ function useTacticsBoard(
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nextMatch?.id, refetchSilent]);
+  }, [matchId, refetchSilent]);
 
   const selectPosition = useCallback(
     async (playerId: string, posId: PositionId | null) => {
-      if (!nextMatch) return;
+      if (!matchId) return;
       const target = players.find((p) => p.id === playerId);
       if (!target) return;
 
@@ -550,7 +569,7 @@ function useTacticsBoard(
       setTeamA((prev) => prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)));
       setTeamB((prev) => prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)));
     },
-    [nextMatch, players, currentUserId, isGroupAdmin, setTacticalPositionFn],
+    [matchId, players, currentUserId, isGroupAdmin, setTacticalPositionFn],
   );
 
   return { loading, players, teamA, teamB, error, selectPosition, refetch };
@@ -640,7 +659,7 @@ interface LayoutPosition {
   y: number;
 }
 
-function CourtCard({
+const CourtCard = memo(function CourtCard({
   teamPlayers,
   layoutPositions,
   courtImage,
@@ -702,9 +721,9 @@ function CourtCard({
       </div>
     </div>
   );
-}
+});
 
-function CourtArea({
+const CourtArea = memo(function CourtArea({
   teamA,
   teamB,
   layoutPositions,
@@ -775,9 +794,9 @@ function CourtArea({
       )}
     </div>
   );
-}
+});
 
-function SidebarTeams({
+const SidebarTeams = memo(function SidebarTeams({
   teamA,
   teamB,
   matchInfo,
@@ -812,7 +831,7 @@ function SidebarTeams({
       )}
     </div>
   );
-}
+});
 
 export default function Tactics() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -840,24 +859,30 @@ export default function Tactics() {
   const isOpen = nextMatch?.status === "open";
   const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
 
+  const isFutsal = courtType === "futsal";
+  const courtImage = isFutsal ? "/courts/futsal.jpg" : "/courts/society.jpg";
+  const courtName = isFutsal ? "Quadra de Futsal" : "Quadra Society";
+  const layoutPositions = useMemo(
+    () => (isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: 100 - p.x })) : [...activePositions]) as LayoutPosition[],
+    [isDesktop, activePositions],
+  );
+
+  const matchInfo = useMemo(
+    () => ({
+      opponent: nextMatch?.title ?? "",
+      date: nextMatch ? `${nextMatch.date} • ${nextMatch.time}` : "",
+      court: courtName,
+    }),
+    [nextMatch, courtName],
+  );
+  const teamAName = nextMatch?.teamAName ?? "Time A";
+  const teamBName = nextMatch?.teamBName ?? "Time B";
+
   if (nextMatchLoading || loading) return <TacticsLoading />;
   if (error) return <TacticsError message={error} />;
   if (!nextMatch || !canAccess) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
 
   if (!isOpen && !isPreparing) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
-
-  const isFutsal = courtType === "futsal";
-  const courtImage = isFutsal ? "/courts/futsal.jpg" : "/courts/society.jpg";
-  const courtName = isFutsal ? "Quadra de Futsal" : "Quadra Society";
-  const layoutPositions = (isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: 100 - p.x })) : [...activePositions]) as LayoutPosition[];
-
-  const matchInfo = {
-    opponent: nextMatch.title,
-    date: `${nextMatch.date} • ${nextMatch.time}`,
-    court: courtName,
-  };
-  const teamAName = nextMatch.teamAName ?? "Time A";
-  const teamBName = nextMatch.teamBName ?? "Time B";
 
   const handleStartGame = async () => {
     if (!nextMatch) return;
