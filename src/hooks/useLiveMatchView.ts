@@ -4,14 +4,14 @@ import type { MatchPlayer } from "./useMatches";
 type SheetPhase = "closed" | "goal_type" | "assist";
 
 interface PlayerStats {
-  [userId: string]: { goals: number; assists: number; ownGoals: number };
+  [playerId: string]: { goals: number; assists: number; ownGoals: number };
 }
 
 interface UseLiveMatchViewProps {
   teamAPlayers: MatchPlayer[];
   teamBPlayers: MatchPlayer[];
   onGoalScored: (scorer: MatchPlayer, assist: MatchPlayer | null) => void;
-  onOwnGoal: (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => void;
+  onOwnGoal: (teamBenefited: string, scorerId: string | null, scorerTeam: string | null) => void;
   busy?: boolean;
 }
 
@@ -26,16 +26,18 @@ export function useLiveMatchView({
   const [selectedPlayer, setSelectedPlayer] = useState<MatchPlayer | null>(null);
   const [playerStats, setPlayerStats] = useState<PlayerStats>({});
 
-  const getStats = useCallback((userId: string | null) => {
-    if (!userId) return { goals: 0, assists: 0, ownGoals: 0 };
-    const local = playerStats[userId];
-    const player = [...teamAPlayers, ...teamBPlayers].find((p) => p.userId === userId);
+  const keyOf = useCallback((p: MatchPlayer): string => p.id ?? p.userId ?? p.name ?? "", []);
+
+  const getStats = useCallback((playerKey: string) => {
+    if (!playerKey) return { goals: 0, assists: 0, ownGoals: 0 };
+    const local = playerStats[playerKey];
+    const player = [...teamAPlayers, ...teamBPlayers].find((p) => keyOf(p) === playerKey);
     return {
       goals: Math.max(local?.goals ?? 0, player?.goalsScored ?? 0),
       assists: Math.max(local?.assists ?? 0, player?.assists ?? 0),
       ownGoals: Math.max(local?.ownGoals ?? 0, player?.ownGoalsScored ?? 0),
     };
-  }, [playerStats, teamAPlayers, teamBPlayers]);
+  }, [playerStats, teamAPlayers, teamBPlayers, keyOf]);
 
   const updateStats = useCallback((scorerId: string | null, assistId: string | null) => {
     setPlayerStats((prev) => {
@@ -78,20 +80,22 @@ export function useLiveMatchView({
   const handleOwnGoal = useCallback(() => {
     if (!selectedPlayer) return;
     const teamBenefited = selectedPlayer.team === "A" ? "B" : "A";
-    updateOwnGoalStats(selectedPlayer.userId);
-    onOwnGoal(teamBenefited, selectedPlayer.userId, selectedPlayer.team);
+    updateOwnGoalStats(keyOf(selectedPlayer));
+    onOwnGoal(teamBenefited, selectedPlayer.id ?? null, selectedPlayer.team);
     closeSheet();
-  }, [selectedPlayer, updateOwnGoalStats, onOwnGoal, closeSheet]);
+  }, [selectedPlayer, updateOwnGoalStats, onOwnGoal, closeSheet, keyOf]);
 
   const handleAssistSelect = useCallback((assist: MatchPlayer | null) => {
     if (!selectedPlayer) return;
-    updateStats(selectedPlayer.userId, assist?.userId || null);
+    updateStats(keyOf(selectedPlayer), assist ? keyOf(assist) : null);
     onGoalScored(selectedPlayer, assist);
     closeSheet();
-  }, [selectedPlayer, updateStats, onGoalScored, closeSheet]);
+  }, [selectedPlayer, updateStats, onGoalScored, closeSheet, keyOf]);
 
   const sameTeamPlayers = selectedPlayer?.team === "A" ? teamAPlayers : teamBPlayers;
-  const assistCandidates = sameTeamPlayers.filter((p) => p.userId && p.userId !== selectedPlayer?.userId);
+  const assistCandidates = selectedPlayer
+    ? sameTeamPlayers.filter((p) => keyOf(p) !== keyOf(selectedPlayer))
+    : [];
   const sheetOpen = sheetPhase !== "closed";
 
   return {

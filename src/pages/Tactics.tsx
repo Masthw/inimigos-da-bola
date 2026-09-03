@@ -13,10 +13,10 @@ import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 
 const POSITIONS_FUTSAL = [
   { id: "pivo", label: "Pivô", short: "PIV", x: 50, y: 22 },
-  { id: "ala_e", label: "Ala Esquerdo", short: "ALA", x: 20, y: 45 },
-  { id: "ala_d", label: "Ala Direito", short: "ALA", x: 80, y: 45 },
+  { id: "ala_e", label: "Ala Esquerdo", short: "AE", x: 20, y: 45 },
+  { id: "ala_d", label: "Ala Direito", short: "AD", x: 80, y: 45 },
   { id: "fixo", label: "Fixo", short: "FIX", x: 50, y: 70 },
-  { id: "gol", label: "Goleiro", short: "GK", x: 50, y: 90 },
+  { id: "gol", label: "Goleiro", short: "GO", x: 50, y: 90 },
 ] as const;
 
 const POSITIONS_SOCIETY = [
@@ -155,11 +155,7 @@ const TacticalNode = memo(function TacticalNode({
                 : "border-2 border-dashed border-white/40 bg-surface-container-highest/50 text-on-surface-variant"
             } ${canSelect ? "cursor-pointer" : "cursor-not-allowed"} ${!occupant ? "hover:border-white/80 hover:text-on-surface" : ""}`}
           >
-            {occupant?.avatar ? (
-              <img src={occupant.avatar} alt={occupant.name} className="w-full h-full object-cover" />
-            ) : (
-              initial
-            )}
+            {occupant?.avatar ? <img src={occupant.avatar} alt={occupant.name} className="w-full h-full object-cover" /> : initial}
           </button>
 
           {isFavorite && (
@@ -532,9 +528,7 @@ function useTacticsBoard(
             return;
           }
           if (payload.eventType === "UPDATE") {
-            const newRow = (payload as { new?: unknown }).new as
-              | { id: string; tactical_position: string | null }
-              | undefined;
+            const newRow = (payload as { new?: unknown }).new as { id: string; tactical_position: string | null } | undefined;
             if (!newRow) return;
             const localPos = newRow.tactical_position ? DB_POSITION_TO_LOCAL[newRow.tactical_position] : null;
             setPlayers((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
@@ -757,37 +751,34 @@ const CourtArea = memo(function CourtArea({
 }>) {
   const hasPlayers = teamA.length > 0 || teamB.length > 0;
 
+  const myTeam = currentUserId
+    ? teamA.some((p) => p.userId === currentUserId)
+      ? "A"
+      : teamB.some((p) => p.userId === currentUserId)
+        ? "B"
+        : null
+    : null;
+
+  const teamsToRender =
+    myTeam === "A" ? ([teamA] as const) : myTeam === "B" ? ([teamB] as const) : ([teamA, teamB].filter((t) => t.length > 0) as [Player[], Player[]]);
+
   return (
     <div className="w-full lg:flex-1 flex flex-col gap-4">
       {hasPlayers ? (
-        <>
-          {teamA.length > 0 && (
-            <CourtCard
-              teamPlayers={teamA}
-              layoutPositions={layoutPositions}
-              courtImage={courtImage}
-              isDesktop={isDesktop}
-              currentUserId={currentUserId}
-              isGroupAdmin={isGroupAdmin}
-              onSelect={onSelect}
-              teamAName={teamAName}
-              teamBName={teamBName}
-            />
-          )}
-          {teamB.length > 0 && (
-            <CourtCard
-              teamPlayers={teamB}
-              layoutPositions={layoutPositions}
-              courtImage={courtImage}
-              isDesktop={isDesktop}
-              currentUserId={currentUserId}
-              isGroupAdmin={isGroupAdmin}
-              onSelect={onSelect}
-              teamAName={teamAName}
-              teamBName={teamBName}
-            />
-          )}
-        </>
+        teamsToRender.map((teamPlayers) => (
+          <CourtCard
+            key={teamPlayers === teamA ? "A" : "B"}
+            teamPlayers={teamPlayers}
+            layoutPositions={layoutPositions}
+            courtImage={courtImage}
+            isDesktop={isDesktop}
+            currentUserId={currentUserId}
+            isGroupAdmin={isGroupAdmin}
+            onSelect={onSelect}
+            teamAName={teamAName}
+            teamBName={teamBName}
+          />
+        ))
       ) : (
         <CourtCard
           teamPlayers={NO_PLAYERS}

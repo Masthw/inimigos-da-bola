@@ -244,23 +244,37 @@ function distributeTeams(players: PlayerData[], teamSize: number): DraftResult {
 // 5. PERSISTÊNCIA
 
 async function persistDraft(adminClient: SupabaseClient, matchId: string, draft: DraftResult): Promise<void> {
+  // Substitutes must still belong to a team (the DB enforces team IN ('A','B')),
+  // so we assign each sub to the team with fewer players and flag is_sub.
+  let teamACount = draft.teamA.length;
+  let teamBCount = draft.teamB.length;
+
+  const subTeamFor = (): string => {
+    if (teamACount <= teamBCount) {
+      teamACount += 1;
+      return 'A';
+    }
+    teamBCount += 1;
+    return 'B';
+  };
+
   const updates = [
     ...draft.teamA.map((p) =>
       adminClient
         .from('match_players')
-        .update({ team: 'A' })
+        .update({ team: 'A', is_sub: false })
         .eq('id', p.matchPlayerId),
     ),
     ...draft.teamB.map((p) =>
       adminClient
         .from('match_players')
-        .update({ team: 'B' })
+        .update({ team: 'B', is_sub: false })
         .eq('id', p.matchPlayerId),
     ),
     ...draft.subs.map((p) =>
       adminClient
         .from('match_players')
-        .update({ team: null })
+        .update({ team: subTeamFor(), is_sub: true })
         .eq('id', p.matchPlayerId),
     ),
   ];

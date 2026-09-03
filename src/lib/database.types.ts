@@ -330,6 +330,7 @@ export type Database = {
           goals_scored: number | null
           guest_name: string | null
           id: string
+          is_sub: boolean
           match_id: string
           own_goals_scored: number | null
           status: Database["public"]["Enums"]["player_status_enum"]
@@ -342,6 +343,7 @@ export type Database = {
           goals_scored?: number | null
           guest_name?: string | null
           id?: string
+          is_sub?: boolean
           match_id: string
           own_goals_scored?: number | null
           status?: Database["public"]["Enums"]["player_status_enum"]
@@ -354,6 +356,7 @@ export type Database = {
           goals_scored?: number | null
           guest_name?: string | null
           id?: string
+          is_sub?: boolean
           match_id?: string
           own_goals_scored?: number | null
           status?: Database["public"]["Enums"]["player_status_enum"]

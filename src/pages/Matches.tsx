@@ -577,13 +577,13 @@ export default function Matches() {
 
   const handleGoalScored = async (scorer: MatchPlayer, assist: MatchPlayer | null) => {
     if (!featured) return;
-    await addGoal(featured.id, scorer.userId ?? "", scorer.team ?? "A", assist?.userId || null);
+    await addGoal(featured.id, scorer.id ?? "", scorer.team ?? "A", assist?.id || null);
     refetch();
   };
 
-  const handleOwnGoal = async (teamBenefited: string, scorerUserId: string | null) => {
+  const handleOwnGoal = async (teamBenefited: string, scorerId: string | null) => {
     if (!featured) return;
-    await addOwnGoal(featured.id, teamBenefited, scorerUserId);
+    await addOwnGoal(featured.id, teamBenefited, scorerId ?? null);
     refetch();
   };
 
