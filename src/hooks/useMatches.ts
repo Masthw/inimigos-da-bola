@@ -389,8 +389,19 @@ export function useMatches(groupId: string | null = null) {
           schema: "public",
           table: "match_players",
         },
-        () => {
-          refetch();
+        (payload) => {
+          const eventType = payload.eventType;
+          if (eventType === "INSERT" || eventType === "DELETE") {
+            refetch();
+            return;
+          }
+          if (eventType === "UPDATE") {
+            const oldRow = (payload as { old?: Record<string, unknown> }).old;
+            const newRow = (payload as { new?: Record<string, unknown> }).new;
+            if (oldRow?.status !== newRow?.status) {
+              refetch();
+            }
+          }
         },
       )
       .subscribe();

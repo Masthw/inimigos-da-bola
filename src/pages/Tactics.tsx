@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
@@ -112,7 +112,7 @@ function useIsDesktop() {
   return isDesktop;
 }
 
-function TacticalNode({
+const TacticalNode = memo(function TacticalNode({
   short,
   label,
   x,
@@ -129,28 +129,46 @@ function TacticalNode({
   id: PositionId;
   occupant?: Player;
   canSelect: boolean;
-  onSelect: () => void;
+  onSelect: (posId: PositionId | null) => void;
 }>) {
+  const isFavorite = !!occupant?.favoritePosition && occupant.position === occupant.favoritePosition;
+  let initial: string | null;
+  if (occupant?.avatar) {
+    initial = null;
+  } else if (occupant) {
+    initial = occupant.initials;
+  } else {
+    initial = short;
+  }
   return (
     <div className="absolute" style={{ left: `${x}%`, top: `${y}%` }}>
       <div className="flex flex-col items-center -translate-x-1/2 -translate-y-1/2">
-        <button
-          type="button"
-          onClick={onSelect}
-          disabled={!canSelect}
-          aria-label={occupant ? `${label}: ${occupant.name}` : `${label}: disponível`}
-          className={`relative w-10 h-10 rounded-full flex items-center justify-center font-mono text-label-bold text-sm shadow-lg transition-transform active:scale-90 overflow-hidden ${
-            occupant
-              ? `border-2 border-white/30 ${nodeClasses(id)}`
-              : "border-2 border-dashed border-white/40 bg-surface-container-highest/50 text-on-surface-variant"
-          } ${canSelect ? "cursor-pointer" : "cursor-not-allowed"} ${!occupant ? "hover:border-white/80 hover:text-on-surface" : ""}`}
-        >
-          {occupant?.avatar ? (
-            <img src={occupant.avatar} alt={occupant.name} className="w-full h-full object-cover" />
-          ) : (
-            occupant ? occupant.initials : short
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => onSelect(id)}
+            disabled={!canSelect}
+            aria-label={occupant ? `${label}: ${occupant.name}` : `${label}: disponível`}
+            className={`relative w-10 h-10 rounded-full flex items-center justify-center font-mono text-label-bold text-sm shadow-lg transition-transform active:scale-90 overflow-hidden ${
+              occupant
+                ? `border-2 border-white/30 ${nodeClasses(id)}`
+                : "border-2 border-dashed border-white/40 bg-surface-container-highest/50 text-on-surface-variant"
+            } ${canSelect ? "cursor-pointer" : "cursor-not-allowed"} ${!occupant ? "hover:border-white/80 hover:text-on-surface" : ""}`}
+          >
+            {occupant?.avatar ? (
+              <img src={occupant.avatar} alt={occupant.name} className="w-full h-full object-cover" />
+            ) : (
+              initial
+            )}
+          </button>
+
+          {isFavorite && (
+            <span className="absolute -top-1 -right-1 z-10 text-tertiary rounded-full p-0.5 shadow-md">
+              <MaterialIcon name="star" className="w-3.5 h-3.5 fill-current" />
+            </span>
           )}
-        </button>
+        </div>
+
         <span
           className={`mt-1 font-mono text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${
             occupant ? "text-on-surface bg-surface-container/70" : "text-on-surface-variant/70 bg-surface-container/40"
@@ -161,7 +179,9 @@ function TacticalNode({
       </div>
     </div>
   );
-}
+});
+
+const NO_PLAYERS: Player[] = [];
 
 function CourtMarkings({ horizontal }: Readonly<{ horizontal: boolean }>) {
   if (horizontal) {
@@ -176,10 +196,6 @@ function CourtMarkings({ horizontal }: Readonly<{ horizontal: boolean }>) {
           <rect x="3" y="38" width="10" height="24" />
           <rect x="141" y="28" width="26" height="44" />
           <rect x="157" y="38" width="10" height="24" />
-          <path d="M 7 3 A 4 4 0 0 0 3 7" />
-          <path d="M 163 3 A 4 4 0 0 1 167 7" />
-          <path d="M 7 97 A 4 4 0 0 1 3 93" />
-          <path d="M 163 97 A 4 4 0 0 0 167 93" />
         </g>
       </svg>
     );
@@ -196,10 +212,6 @@ function CourtMarkings({ horizontal }: Readonly<{ horizontal: boolean }>) {
         <rect x="38" y="3" width="24" height="10" />
         <rect x="28" y="141" width="44" height="26" />
         <rect x="38" y="157" width="24" height="10" />
-        <path d="M 7 3 A 4 4 0 0 0 3 7" />
-        <path d="M 93 3 A 4 4 0 0 1 97 7" />
-        <path d="M 3 163 A 4 4 0 0 0 7 167" />
-        <path d="M 93 163 A 4 4 0 0 1 97 167" />
       </g>
     </svg>
   );
@@ -212,11 +224,7 @@ function PlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boolean }>
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {player.avatar ? (
-          <img
-            src={player.avatar}
-            alt={player.name}
-            className="w-8 h-8 rounded-full border border-white/20 shrink-0 object-cover"
-          />
+          <img src={player.avatar} alt={player.name} className="w-8 h-8 rounded-full border border-white/20 shrink-0 object-cover" />
         ) : (
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-mono border border-white/20 shrink-0 ${
@@ -249,11 +257,7 @@ function DesktopPlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boo
     >
       <div className="flex items-center gap-3 min-w-0">
         {player.avatar ? (
-          <img
-            src={player.avatar}
-            alt={player.name}
-            className="w-8 h-8 rounded-full border border-white/20 shrink-0 object-cover"
-          />
+          <img src={player.avatar} alt={player.name} className="w-8 h-8 rounded-full border border-white/20 shrink-0 object-cover" />
         ) : (
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-mono border border-white/20 shrink-0 ${
@@ -283,7 +287,7 @@ function DesktopPlayerRow({ player, isMe }: Readonly<{ player: Player; isMe: boo
   );
 }
 
-function TeamList({
+const TeamList = memo(function TeamList({
   players,
   teamLabel,
   match,
@@ -305,7 +309,7 @@ function TeamList({
   return (
     <div className="w-full lg:max-w-none lg:w-105 lg:shrink-0 mt-6 lg:mt-0 self-start bg-surface-container-high rounded-xl border border-outline-variant/30 overflow-hidden">
       <div className="px-3 py-2.5 bg-surface-container-highest/50 border-b border-outline-variant/20">
-        <p className="font-mono text-label-sm text-on-surface truncate">{teamLabel} • {match.opponent}</p>
+        <p className="font-mono text-label-sm text-on-surface truncate">{teamLabel}</p>
         <p className="font-mono text-[10px] text-on-surface-variant mt-0.5 truncate">
           {match.date} • {courtLabel}
         </p>
@@ -349,7 +353,7 @@ function TeamList({
       </div>
     </div>
   );
-}
+});
 
 // HELPERS DE BUSCA & ESTADO
 
@@ -359,10 +363,7 @@ interface FetchedTeams {
   all: Player[];
 }
 
-async function fetchMatchData(
-  matchId: string,
-  activePositions: readonly { id: string }[],
-): Promise<FetchedTeams> {
+async function fetchMatchData(matchId: string, activePositions: readonly { id: string }[]): Promise<FetchedTeams> {
   const playersRes = await supabase
     .from("match_players")
     .select("id, user_id, guest_name, team, tactical_position, users(name, avatar_url)")
@@ -374,9 +375,7 @@ async function fetchMatchData(
   }
 
   const rows = playersRes.data ?? [];
-  const playerUserIds = Array.from(
-    new Set(rows.map((r) => r.user_id).filter((id): id is string => !!id)),
-  );
+  const playerUserIds = Array.from(new Set(rows.map((r) => r.user_id).filter((id): id is string => !!id)));
 
   let favResData: { user_id: string; positions: { name: string | null; code: string | null } | null }[] = [];
   if (playerUserIds.length > 0) {
@@ -455,11 +454,13 @@ function useTacticsBoard(
   const [teamA, setTeamA] = useState<Player[]>([]);
   const [teamB, setTeamB] = useState<Player[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const isFirstLoad = useRef(true);
 
+  const matchId = nextMatch?.id;
   const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
 
   const refetch = useCallback(async () => {
-    if (!nextMatch || !canAccess) {
+    if (!matchId || !canAccess) {
       setPlayers([]);
       setTeamA([]);
       setTeamB([]);
@@ -467,7 +468,7 @@ function useTacticsBoard(
       return;
     }
     try {
-      const data = await fetchMatchData(nextMatch.id, activePositions);
+      const data = await fetchMatchData(matchId, activePositions);
       setPlayers(data.all);
       setTeamA(data.teamA);
       setTeamB(data.teamB);
@@ -477,45 +478,80 @@ function useTacticsBoard(
       setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
       setLoading(false);
     }
-  }, [nextMatch, activePositions, canAccess]);
+  }, [matchId, activePositions, canAccess]);
+
+  const refetchSilent = useCallback(async () => {
+    if (!matchId || !canAccess) {
+      setPlayers([]);
+      setTeamA([]);
+      setTeamB([]);
+      return;
+    }
+    try {
+      const data = await fetchMatchData(matchId, activePositions);
+      setPlayers(data.all);
+      setTeamA(data.teamA);
+      setTeamB(data.teamB);
+      setError(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
+    }
+  }, [matchId, activePositions, canAccess]);
 
   useEffect(() => {
     let isMounted = true;
     (async () => {
       if (!isMounted) return;
-      setLoading(true);
+      if (isFirstLoad.current) {
+        setLoading(true);
+        isFirstLoad.current = false;
+      }
       await refetch();
     })();
     return () => {
       isMounted = false;
     };
-  }, [refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, activePositions]);
 
   useEffect(() => {
-    if (!nextMatch) return;
+    if (!matchId) return;
     const channel = supabase
-      .channel(uniqueChannelTopic(`tactics-${nextMatch.id}`))
+      .channel(uniqueChannelTopic(`tactics-${matchId}`))
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "match_players",
-          filter: `match_id=eq.${nextMatch.id}`,
+          filter: `match_id=eq.${matchId}`,
         },
-        () => {
-          refetch();
+        (payload) => {
+          if (payload.eventType === "INSERT" || payload.eventType === "DELETE") {
+            refetchSilent();
+            return;
+          }
+          if (payload.eventType === "UPDATE") {
+            const newRow = (payload as { new?: unknown }).new as
+              | { id: string; tactical_position: string | null }
+              | undefined;
+            if (!newRow) return;
+            const localPos = newRow.tactical_position ? DB_POSITION_TO_LOCAL[newRow.tactical_position] : null;
+            setPlayers((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
+            setTeamA((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
+            setTeamB((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
+          }
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [nextMatch?.id, refetch, nextMatch]);
+  }, [matchId, refetchSilent]);
 
   const selectPosition = useCallback(
     async (playerId: string, posId: PositionId | null) => {
-      if (!nextMatch) return;
+      if (!matchId) return;
       const target = players.find((p) => p.id === playerId);
       if (!target) return;
 
@@ -523,9 +559,7 @@ function useTacticsBoard(
       if (!isGroupAdmin && !isOwn) return;
 
       if (posId !== null) {
-        const occupiedByOther = players.some(
-          (p) => p.position === posId && p.id !== playerId,
-        );
+        const occupiedByOther = players.some((p) => p.position === posId && p.id !== playerId);
         if (occupiedByOther) return;
       }
 
@@ -533,17 +567,11 @@ function useTacticsBoard(
       const result = await setTacticalPositionFn(target.matchPlayerId, dbName);
       if (result.error) return;
 
-      setPlayers((prev) =>
-        prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)),
-      );
-      setTeamA((prev) =>
-        prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)),
-      );
-      setTeamB((prev) =>
-        prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)),
-      );
+      setPlayers((prev) => prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)));
+      setTeamA((prev) => prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)));
+      setTeamB((prev) => prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)));
     },
-    [nextMatch, players, currentUserId, isGroupAdmin, setTacticalPositionFn],
+    [matchId, players, currentUserId, isGroupAdmin, setTacticalPositionFn],
   );
 
   return { loading, players, teamA, teamB, error, selectPosition, refetch };
@@ -633,8 +661,7 @@ interface LayoutPosition {
   y: number;
 }
 
-function CourtCard({
-  title,
+const CourtCard = memo(function CourtCard({
   teamPlayers,
   layoutPositions,
   courtImage,
@@ -643,7 +670,6 @@ function CourtCard({
   isGroupAdmin,
   onSelect,
 }: Readonly<{
-  title: string | null;
   teamPlayers: Player[];
   layoutPositions: LayoutPosition[];
   courtImage: string;
@@ -651,14 +677,31 @@ function CourtCard({
   currentUserId: string | undefined;
   isGroupAdmin: boolean;
   onSelect: (playerId: string, posId: PositionId | null) => void;
+  teamAName: string;
+  teamBName: string;
 }>) {
   const hasPlayers = teamPlayers.length > 0;
+  const nodeOnSelect = useCallback(
+    (posId: PositionId | null) => {
+      const occupant = hasPlayers ? teamPlayers.find((p) => p.position === posId) : undefined;
+      if (occupant) {
+        onSelect(occupant.id, occupant.position === posId ? null : posId);
+        return;
+      }
+      if (hasPlayers) {
+        const meOnTeam = teamPlayers.find((p) => p.userId === currentUserId);
+        if (meOnTeam) {
+          onSelect(meOnTeam.id, posId);
+        }
+      }
+    },
+    [hasPlayers, teamPlayers, currentUserId, onSelect],
+  );
 
   return (
-    <div>
-      {title && <h3 className="font-mono text-label-bold text-on-surface uppercase tracking-wide mb-2">{title}</h3>}
+    <div className="w-full flex flex-col">
       <div
-        className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
+        className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none mx-auto lg:mx-0 bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 border-surface-container-highest overflow-hidden shadow-2xl ${
           isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"
         }`}
       >
@@ -680,25 +723,16 @@ function CourtCard({
               y={pos.y}
               occupant={occupant}
               canSelect={canSelect}
-              onSelect={() => {
-                if (occupant) {
-                  onSelect(occupant.id, occupant.position === pos.id ? null : pos.id);
-                } else if (hasPlayers) {
-                  const meOnTeam = teamPlayers.find((p) => p.userId === currentUserId);
-                  if (meOnTeam) {
-                    onSelect(meOnTeam.id, pos.id);
-                  }
-                }
-              }}
+              onSelect={nodeOnSelect}
             />
           );
         })}
       </div>
     </div>
   );
-}
+});
 
-function CourtArea({
+const CourtArea = memo(function CourtArea({
   teamA,
   teamB,
   layoutPositions,
@@ -707,6 +741,8 @@ function CourtArea({
   currentUserId,
   isGroupAdmin,
   onSelect,
+  teamAName,
+  teamBName,
 }: Readonly<{
   teamA: Player[];
   teamB: Player[];
@@ -716,6 +752,8 @@ function CourtArea({
   currentUserId: string | undefined;
   isGroupAdmin: boolean;
   onSelect: (playerId: string, posId: PositionId | null) => void;
+  teamAName: string;
+  teamBName: string;
 }>) {
   const hasPlayers = teamA.length > 0 || teamB.length > 0;
 
@@ -725,7 +763,6 @@ function CourtArea({
         <>
           {teamA.length > 0 && (
             <CourtCard
-              title="Time A"
               teamPlayers={teamA}
               layoutPositions={layoutPositions}
               courtImage={courtImage}
@@ -733,11 +770,12 @@ function CourtArea({
               currentUserId={currentUserId}
               isGroupAdmin={isGroupAdmin}
               onSelect={onSelect}
+              teamAName={teamAName}
+              teamBName={teamBName}
             />
           )}
           {teamB.length > 0 && (
             <CourtCard
-              title="Time B"
               teamPlayers={teamB}
               layoutPositions={layoutPositions}
               courtImage={courtImage}
@@ -745,55 +783,55 @@ function CourtArea({
               currentUserId={currentUserId}
               isGroupAdmin={isGroupAdmin}
               onSelect={onSelect}
+              teamAName={teamAName}
+              teamBName={teamBName}
             />
           )}
         </>
       ) : (
         <CourtCard
-          title={null}
-          teamPlayers={[]}
+          teamPlayers={NO_PLAYERS}
           layoutPositions={layoutPositions}
           courtImage={courtImage}
           isDesktop={isDesktop}
           currentUserId={currentUserId}
           isGroupAdmin={isGroupAdmin}
           onSelect={onSelect}
+          teamAName={teamAName}
+          teamBName={teamBName}
         />
       )}
     </div>
   );
-}
+});
 
-function SidebarTeams({
+const SidebarTeams = memo(function SidebarTeams({
   teamA,
   teamB,
   matchInfo,
   courtName,
   currentUserId,
+  teamAName,
+  teamBName,
 }: Readonly<{
   teamA: Player[];
   teamB: Player[];
   matchInfo: { opponent: string; date: string; court: string };
   courtName: string;
   currentUserId: string | undefined;
+  teamAName: string;
+  teamBName: string;
 }>) {
   const teams = [
-    { label: "Time A", players: teamA },
-    { label: "Time B", players: teamB },
+    { label: teamAName, players: teamA },
+    { label: teamBName, players: teamB },
   ].filter((t) => t.players.length > 0);
 
   return (
     <div className="flex flex-col gap-4 w-full lg:w-105 lg:shrink-0">
       {teams.length > 0 ? (
         teams.map((t) => (
-          <TeamList
-            key={t.label}
-            players={t.players}
-            teamLabel={t.label}
-            match={matchInfo}
-            courtLabel={courtName}
-            currentUserId={currentUserId}
-          />
+          <TeamList key={t.label} players={t.players} teamLabel={t.label} match={matchInfo} courtLabel={courtName} currentUserId={currentUserId} />
         ))
       ) : (
         <div className="bg-surface-container-high rounded-xl border border-outline-variant/30 p-4">
@@ -802,7 +840,7 @@ function SidebarTeams({
       )}
     </div>
   );
-}
+});
 
 export default function Tactics() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -830,27 +868,32 @@ export default function Tactics() {
   const isOpen = nextMatch?.status === "open";
   const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
 
-  if (nextMatchLoading || loading) return <TacticsLoading />;
-  if (error) return <TacticsError message={error} />;
-  if (!nextMatch || (!canAccess)) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
-
-  if (!isOpen && !isPreparing) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
-
   const isFutsal = courtType === "futsal";
   const courtImage = isFutsal ? "/courts/futsal.jpg" : "/courts/society.jpg";
   const courtName = isFutsal ? "Quadra de Futsal" : "Quadra Society";
-  const layoutPositions = (isDesktop
-    ? activePositions.map((p) => ({ ...p, x: p.y, y: 100 - p.x }))
-    : [...activePositions]) as LayoutPosition[];
+  const layoutPositions = useMemo(
+    () => (isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: 100 - p.x })) : [...activePositions]) as LayoutPosition[],
+    [isDesktop, activePositions],
+  );
 
-  const matchInfo = {
-    opponent: nextMatch.title,
-    date: `${nextMatch.date} • ${nextMatch.time}`,
-    court: courtName,
-  };
+  const matchInfo = useMemo(
+    () => ({
+      opponent: nextMatch?.title ?? "",
+      date: nextMatch ? `${nextMatch.date} • ${nextMatch.time}` : "",
+      court: courtName,
+    }),
+    [nextMatch, courtName],
+  );
+  const teamAName = nextMatch?.teamAName ?? "Time A";
+  const teamBName = nextMatch?.teamBName ?? "Time B";
+
+  if (nextMatchLoading || loading) return <TacticsLoading />;
+  if (error) return <TacticsError message={error} />;
+
+  const canShowBoard = !!nextMatch && (isOpen || isPreparing);
+  if (!canAccess || !canShowBoard) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
 
   const handleStartGame = async () => {
-    if (!nextMatch) return;
     navigate(`/matches/${nextMatch.id}/colors`);
   };
 
@@ -894,6 +937,8 @@ export default function Tactics() {
             currentUserId={currentUserId}
             isGroupAdmin={isGroupAdmin}
             onSelect={selectPosition}
+            teamAName={teamAName}
+            teamBName={teamBName}
           />
 
           <SidebarTeams
@@ -902,6 +947,8 @@ export default function Tactics() {
             matchInfo={matchInfo}
             courtName={courtName}
             currentUserId={currentUserId}
+            teamAName={teamAName}
+            teamBName={teamBName}
           />
         </div>
       </div>
