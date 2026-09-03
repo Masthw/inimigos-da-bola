@@ -114,12 +114,63 @@ export default function MatchLive() {
 
     const channel = supabase
       .channel(uniqueChannelTopic(`match-live-${matchId}`))
-      .on("postgres_changes", { event: "*", schema: "public", table: "matches", filter: `id=eq.${matchId}` }, () => {
-        void fetchData();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "match_players", filter: `match_id=eq.${matchId}` }, () => {
-        void fetchData();
-      })
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${matchId}` },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          setMatch((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              teamAScore: (row.team_a_score as number) ?? prev.teamAScore,
+              teamBScore: (row.team_b_score as number) ?? prev.teamBScore,
+            };
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "match_players", filter: `match_id=eq.${matchId}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const row = payload.new as Record<string, unknown>;
+            const player: MatchPlayer = {
+              id: row.id as string,
+              userId: row.user_id as string | null,
+              name: (row.guest_name as string) ?? "Convidado",
+              avatarUrl: null,
+              team: row.team as string,
+              goalsScored: (row.goals_scored as number) ?? 0,
+              assists: (row.assists as number) ?? 0,
+              ownGoalsScored: (row.own_goals_scored as number) ?? 0,
+            };
+            setPlayers((prev) => [...prev, player]);
+            return;
+          }
+          if (payload.eventType === "DELETE") {
+            const oldRow = payload.old as Record<string, unknown>;
+            setPlayers((prev) => prev.filter((p) => p.id !== oldRow.id));
+            return;
+          }
+          if (payload.eventType === "UPDATE") {
+            const row = payload.new as Record<string, unknown>;
+            setPlayers((prev) =>
+              prev.map((p) =>
+                p.id === row.id
+                  ? {
+                      ...p,
+                      goalsScored: (row.goals_scored as number) ?? p.goalsScored,
+                      assists: (row.assists as number) ?? p.assists,
+                      ownGoalsScored: (row.own_goals_scored as number) ?? p.ownGoalsScored,
+                      team: (row.team as string) ?? p.team,
+                    }
+                  : p,
+              ),
+            );
+          }
+        },
+      )
       .subscribe();
 
     return () => {
@@ -186,7 +237,7 @@ export default function MatchLive() {
         onOwnGoal={handleOwnGoal}
         onRequestReview={handleRequestReview}
         onManagePlayers={handleManagePlayers}
-        isAdmin={isCreator}
+        isCreator={isCreator}
         busy={busy}
       />
     </AppShell>

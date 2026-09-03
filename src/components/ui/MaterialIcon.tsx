@@ -54,6 +54,7 @@ import {
   Crown,
   Users,
   type LucideIcon,
+  Palette,
 } from "lucide-react";
 
 const iconRegistry: Record<string, LucideIcon> = {
@@ -111,6 +112,7 @@ const iconRegistry: Record<string, LucideIcon> = {
   "circle-star": CircleStar,
   crown: Crown,
   group: Users,
+  palette: Palette,
 };
 
 interface MaterialIconProps {

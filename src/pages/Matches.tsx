@@ -10,6 +10,7 @@ import { useMatches, type MatchWithMeta, type MatchPlayer, type PlayerStatus } f
 import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useIsAdmin } from "../hooks/useIsAdmin";
 import { useActiveGroup } from "../hooks/useActiveGroup";
+import { useAuth } from "../hooks/useAuth";
 import { getCourtPhotos } from "../lib/courts";
 
 const PT_BR = "pt-BR";
@@ -546,6 +547,7 @@ export default function Matches() {
   const { featured, upcoming, finished, loading, busyMatchId, myStatus, setAttendance, cancelMatch, refetch } = useMatches(activeGroupId);
   const { isGroupAdmin } = useIsAdmin();
   const { busy: liveBusy, startMatch, addGoal, addOwnGoal } = useLiveMatch(activeGroupId);
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [cancelModalMatch, setCancelModalMatch] = useState<MatchWithMeta | null>(null);
   const [startModalMatch, setStartModalMatch] = useState<MatchWithMeta | null>(null);
@@ -605,7 +607,7 @@ export default function Matches() {
         onOwnGoal={handleOwnGoal}
         onRequestReview={() => navigate(`/matches/${featured.id}/review`)}
         busy={liveBusy}
-        isAdmin={isGroupAdmin}
+        isCreator={user?.id === featured.organizerId}
       />
     );
   } else {
