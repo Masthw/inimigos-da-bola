@@ -12,17 +12,141 @@ import { useIsAdmin } from "../hooks/useIsAdmin";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { supabase } from "../lib/supabaseClient";
 
-export default function VoteMatch() {
-  const { matchId } = useParams<{ matchId: string }>();
+function VoteMatchLoading() {
+  return (
+    <AppShell>
+      <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
+        <div className="text-center">
+          <MaterialIcon name="pending" className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+          <p className="font-mono text-label-sm text-on-surface-variant">Carregando votação...</p>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+function VotingHeaderScore({
+  votingData,
+  goalScorer,
+  assistKing,
+}: Readonly<{
+  votingData: NonNullable<ReturnType<typeof useVoting>["votingData"]>;
+  goalScorer: { name: string; goalsScored: number } | null;
+  assistKing: { name: string; assists: number } | null;
+}>) {
+  return (
+    <div className="px-4 py-3 bg-surface-container-high border-b border-outline-variant">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-3">
+        <div className="text-center">
+          <p className="font-mono text-label-sm uppercase truncate" style={{ color: votingData.teamAColor }}>
+            {votingData.teamAName}
+          </p>
+          <p className="display-lg font-display font-bold leading-none" style={{ color: votingData.teamAColor }}>
+            {votingData.teamAScore}
+          </p>
+        </div>
+        <span className="text-headline-md font-mono text-on-surface-variant">x</span>
+        <div className="text-center">
+          <p className="font-mono text-label-sm uppercase truncate" style={{ color: votingData.teamBColor }}>
+            {votingData.teamBName}
+          </p>
+          <p className="display-lg font-display font-bold leading-none" style={{ color: votingData.teamBColor }}>
+            {votingData.teamBScore}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {goalScorer && (
+          <div className="flex items-center gap-2 p-2 bg-primary-container/30 rounded-lg">
+            <MaterialIcon name="sports_soccer" className="w-4 h-4 text-primary" />
+            <Avatar src={null} alt={goalScorer.name} className="w-5 h-5 rounded-full" />
+            <span className="font-mono text-[10px] text-on-surface truncate">{goalScorer.name}</span>
+            <span className="font-mono text-[9px] text-on-surface-variant ml-auto">{goalScorer.goalsScored}G</span>
+          </div>
+        )}
+        {assistKing && (
+          <div className="flex items-center gap-2 p-2 bg-secondary-container/30 rounded-lg">
+            <MaterialIcon name="send" className="w-4 h-4 text-secondary" />
+            <Avatar src={null} alt={assistKing.name} className="w-5 h-5 rounded-full" />
+            <span className="font-mono text-[10px] text-on-surface truncate">{assistKing.name}</span>
+            <span className="font-mono text-[9px] text-on-surface-variant ml-auto">{assistKing.assists}A</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ExitConfirmModal({ allVoted, onStay, onExit }: Readonly<{ allVoted: boolean; onStay: () => void; onExit: () => void }>) {
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-surface-container-high rounded-2xl p-6 max-w-sm w-full border border-outline-variant">
+        <MaterialIcon name="logout" className="w-10 h-10 text-warning mx-auto mb-4" />
+        <h3 className="text-headline-sm font-display text-on-surface text-center mb-2">Sair da Votação?</h3>
+        <p className="font-mono text-label-sm text-on-surface-variant text-center mb-6">
+          {allVoted
+            ? "Seus votos já foram registrados. Tem certeza que deseja sair?"
+            : "Você ainda não votou em todas as categorias. Seus votos registrados serão mantidos, mas você não poderá voltar."}
+        </p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onStay}
+            className="flex-1 py-3 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant active:bg-surface-container-high transition-colors"
+          >
+            Ficar
+          </button>
+          <button
+            type="button"
+            onClick={onExit}
+            className="flex-1 py-3 bg-primary text-on-primary font-mono text-label-bold active:bg-primary/80 transition-colors"
+          >
+            Ver Resultados
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EndingOverlays({ ending, endingError, onClearError }: Readonly<{ ending: boolean; endingError: string | null; onClearError: () => void }>) {
+  if (endingError) {
+    return (
+      <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div className="bg-surface-container-high rounded-2xl p-6 max-w-sm w-full border border-outline-variant">
+          <MaterialIcon name="error" className="w-10 h-10 text-error mx-auto mb-4" />
+          <p className="font-mono text-label-bold text-on-surface text-center">{endingError}</p>
+          <button
+            type="button"
+            onClick={onClearError}
+            className="mt-4 w-full py-3 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (ending) {
+    return (
+      <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+        <div className="text-center">
+          <MaterialIcon name="pending" className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
+          <p className="font-mono text-label-bold text-on-surface">Encerrando votação...</p>
+          <p className="font-mono text-[10px] text-on-surface-variant mt-1">Processando resultados</p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function useVoteMatchStatus(matchId: string | undefined) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { isGroupAdmin } = useIsAdmin();
-  const { activeGroupId } = useActiveGroup();
   const [statusCheck, setStatusCheck] = useState<"checking" | "voting" | "ended">(matchId == null ? "ended" : "checking");
-  const { votingData, loading, saving, error, submitVote, hasVoted, getVotedPlayers } = useVoting(matchId, activeGroupId);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [ending, setEnding] = useState(false);
-  const [endingError, setEndingError] = useState<string | null>(null);
 
   useEffect(() => {
     const id = matchId ?? "";
@@ -31,11 +155,7 @@ export default function VoteMatch() {
     let cancelled = false;
 
     async function checkStatus() {
-      const { data } = await supabase
-        .from("matches")
-        .select("status")
-        .eq("id", id)
-        .single();
+      const { data } = await supabase.from("matches").select("status").eq("id", id).single();
 
       if (cancelled) return;
 
@@ -58,6 +178,21 @@ export default function VoteMatch() {
       navigate(`/matches/${matchId}/results`);
     }
   }, [statusCheck, matchId, navigate]);
+
+  return statusCheck;
+}
+
+export default function VoteMatch() {
+  const { matchId } = useParams<{ matchId: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isGroupAdmin } = useIsAdmin();
+  const { activeGroupId } = useActiveGroup();
+  const statusCheck = useVoteMatchStatus(matchId);
+  const { votingData, loading, saving, error, submitVote, hasVoted, getVotedPlayers } = useVoting(matchId, activeGroupId);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [endingError, setEndingError] = useState<string | null>(null);
 
   const craqueAward = votingData?.awards.find((a) => a.name.toLowerCase().includes("craque"));
   const votingAwards = votingData?.awards.filter((a) => !a.isAutomatic) ?? [];
@@ -98,16 +233,7 @@ export default function VoteMatch() {
   }, [votingData]);
 
   if (statusCheck === "checking" || loading) {
-    return (
-      <AppShell>
-        <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
-          <div className="text-center">
-            <MaterialIcon name="pending" className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-            <p className="font-mono text-label-sm text-on-surface-variant">Carregando votação...</p>
-          </div>
-        </div>
-      </AppShell>
-    );
+    return <VoteMatchLoading />;
   }
 
   if (error || !votingData || !user) {
@@ -125,46 +251,7 @@ export default function VoteMatch() {
           <VoteCountdown endsAt={votingData.votingEndsAt} isAdmin={isGroupAdmin} onEndVoting={handleEndVoting} />
         </header>
 
-        <div className="px-4 py-3 bg-surface-container-high border-b border-outline-variant">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-3">
-            <div className="text-center">
-              <p className="font-mono text-label-sm uppercase truncate" style={{ color: votingData.teamAColor }}>
-                {votingData.teamAName}
-              </p>
-              <p className="display-lg font-display font-bold leading-none" style={{ color: votingData.teamAColor }}>
-                {votingData.teamAScore}
-              </p>
-            </div>
-            <span className="text-headline-md font-mono text-on-surface-variant">x</span>
-            <div className="text-center">
-              <p className="font-mono text-label-sm uppercase truncate" style={{ color: votingData.teamBColor }}>
-                {votingData.teamBName}
-              </p>
-              <p className="display-lg font-display font-bold leading-none" style={{ color: votingData.teamBColor }}>
-                {votingData.teamBScore}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {goalScorer && (
-              <div className="flex items-center gap-2 p-2 bg-primary-container/30 rounded-lg">
-                <MaterialIcon name="sports_soccer" className="w-4 h-4 text-primary" />
-                <Avatar src={null} alt={goalScorer.name} className="w-5 h-5 rounded-full" />
-                <span className="font-mono text-[10px] text-on-surface truncate">{goalScorer.name}</span>
-                <span className="font-mono text-[9px] text-on-surface-variant ml-auto">{goalScorer.goalsScored}G</span>
-              </div>
-            )}
-            {assistKing && (
-              <div className="flex items-center gap-2 p-2 bg-secondary-container/30 rounded-lg">
-                <MaterialIcon name="send" className="w-4 h-4 text-secondary" />
-                <Avatar src={null} alt={assistKing.name} className="w-5 h-5 rounded-full" />
-                <span className="font-mono text-[10px] text-on-surface truncate">{assistKing.name}</span>
-                <span className="font-mono text-[9px] text-on-surface-variant ml-auto">{assistKing.assists}A</span>
-              </div>
-            )}
-          </div>
-        </div>
+        <VotingHeaderScore votingData={votingData} goalScorer={goalScorer} assistKing={assistKing} />
 
         <div className="flex-1 overflow-y-auto p-4 max-w-5xl mx-auto w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {votingAwards.map((award) => (
@@ -194,60 +281,10 @@ export default function VoteMatch() {
         )}
 
         {showExitConfirm && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-surface-container-high rounded-2xl p-6 max-w-sm w-full border border-outline-variant">
-              <MaterialIcon name="logout" className="w-10 h-10 text-warning mx-auto mb-4" />
-              <h3 className="text-headline-sm font-display text-on-surface text-center mb-2">Sair da Votação?</h3>
-              <p className="font-mono text-label-sm text-on-surface-variant text-center mb-6">
-                {allVoted
-                  ? "Seus votos já foram registrados. Tem certeza que deseja sair?"
-                  : "Você ainda não votou em todas as categorias. Seus votos registrados serão mantidos, mas você não poderá voltar."}
-              </p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowExitConfirm(false)}
-                  className="flex-1 py-3 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant active:bg-surface-container-high transition-colors"
-                >
-                  Ficar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/matches/${matchId}/results`)}
-                  className="flex-1 py-3 bg-primary text-on-primary font-mono text-label-bold active:bg-primary/80 transition-colors"
-                >
-                  Ver Resultados
-                </button>
-              </div>
-            </div>
-          </div>
+          <ExitConfirmModal allVoted={allVoted} onStay={() => setShowExitConfirm(false)} onExit={() => navigate(`/matches/${matchId}/results`)} />
         )}
 
-        {endingError && (
-          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-            <div className="bg-surface-container-high rounded-2xl p-6 max-w-sm w-full border border-outline-variant">
-              <MaterialIcon name="error" className="w-10 h-10 text-error mx-auto mb-4" />
-              <p className="font-mono text-label-bold text-on-surface text-center">{endingError}</p>
-              <button
-                type="button"
-                onClick={() => setEndingError(null)}
-                className="mt-4 w-full py-3 bg-surface-variant text-on-surface font-mono text-label-bold border border-outline-variant"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        )}
-
-        {ending && (
-          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-            <div className="text-center">
-              <MaterialIcon name="pending" className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
-              <p className="font-mono text-label-bold text-on-surface">Encerrando votação...</p>
-              <p className="font-mono text-[10px] text-on-surface-variant mt-1">Processando resultados</p>
-            </div>
-          </div>
-        )}
+        <EndingOverlays ending={ending} endingError={endingError} onClearError={() => setEndingError(null)} />
       </div>
     </AppShell>
   );

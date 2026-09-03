@@ -170,9 +170,10 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         return false;
       }
 
+      const scorePayload = { team_a_score: teamA, team_b_score: teamB };
       const { error } = await supabase
         .from("matches")
-        .update({ team_a_score: teamA, team_b_score: teamB })
+        .update(scorePayload)
         .eq("id", matchId);
       if (error) {
         setError("Erro ao atualizar placar");
@@ -199,12 +200,13 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
 
       const votingEndsAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
         .toISOString();
+      const votingPayload = {
+        status: "voting" as const,
+        voting_ends_at: votingEndsAt,
+      };
       const { error } = await supabase
         .from("matches")
-        .update({
-          status: "voting",
-          voting_ends_at: votingEndsAt,
-        })
+        .update(votingPayload)
         .eq("id", matchId);
       if (error) {
         setError("Erro ao iniciar votação");
@@ -262,10 +264,11 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
           ? { team_a_score: currentTeamScore + 1 }
           : { team_b_score: currentTeamScore + 1 };
 
+        const scorerPayload = { goals_scored: currentGoals + 1 };
         const updates: SupabaseUpdatePromise[] = [
           supabase
             .from("match_players")
-            .update({ goals_scored: currentGoals + 1 })
+            .update(scorerPayload)
             .eq("id", scorerRes.data.id),
           supabase
             .from("matches")
@@ -283,10 +286,11 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
 
           if (assistRes.data) {
             const currentAssists = assistRes.data.assists ?? 0;
+            const assistPayload = { assists: currentAssists + 1 };
             updates.push(
               supabase
                 .from("match_players")
-                .update({ assists: currentAssists + 1 })
+                .update(assistPayload)
                 .eq("id", assistRes.data.id),
             );
           }
@@ -357,10 +361,11 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
 
         if (scorerRes?.data) {
           const currentOwnGoals = scorerRes.data.own_goals_scored ?? 0;
+          const ownGoalPayload = { own_goals_scored: currentOwnGoals + 1 };
           updates.push(
             supabase
               .from("match_players")
-              .update({ own_goals_scored: currentOwnGoals + 1 })
+              .update(ownGoalPayload)
               .eq("id", scorerRes.data.id),
           );
         }
@@ -408,14 +413,15 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
 
       const team = playerRes.data.team as "A" | "B";
 
+      const goalDecPayload = {
+        goals_scored: (playerRes.data.goals_scored ?? 1) - 1,
+      };
       const [matchRes] = await Promise.all([
         supabase.from("matches").select("team_a_score, team_b_score").eq(
           "id",
           matchId,
         ).single(),
-        supabase.from("match_players").update({
-          goals_scored: (playerRes.data.goals_scored ?? 1) - 1,
-        }).eq("id", playerRes.data.id),
+        supabase.from("match_players").update(goalDecPayload).eq("id", playerRes.data.id),
       ]);
 
       if (matchRes.data) {
@@ -460,9 +466,10 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         return false;
       }
 
-      await supabase.from("match_players").update({
+      const assistDecPayload = {
         assists: (playerRes.data.assists ?? 1) - 1,
-      }).eq("id", playerRes.data.id);
+      };
+      await supabase.from("match_players").update(assistDecPayload).eq("id", playerRes.data.id);
       await fetchReviewData();
       return true;
     } finally {
@@ -497,14 +504,15 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       const team = playerRes.data.team as "A" | "B";
       const teamBenefited = team === "A" ? "B" : "A";
 
+      const ownGoalDecPayload = {
+        own_goals_scored: (playerRes.data.own_goals_scored ?? 1) - 1,
+      };
       const [matchRes] = await Promise.all([
         supabase.from("matches").select("team_a_score, team_b_score").eq(
           "id",
           matchId,
         ).single(),
-        supabase.from("match_players").update({
-          own_goals_scored: (playerRes.data.own_goals_scored ?? 1) - 1,
-        }).eq("id", playerRes.data.id),
+        supabase.from("match_players").update(ownGoalDecPayload).eq("id", playerRes.data.id),
       ]);
 
       if (matchRes.data) {
@@ -547,9 +555,10 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         return false;
       }
 
-      await supabase.from("match_players").update({
+      const addAssistPayload = {
         assists: (playerRes.data.assists ?? 0) + 1,
-      }).eq("id", playerRes.data.id);
+      };
+      await supabase.from("match_players").update(addAssistPayload).eq("id", playerRes.data.id);
       await fetchReviewData();
       return true;
     } finally {

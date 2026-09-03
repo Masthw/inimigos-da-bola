@@ -75,7 +75,8 @@ export default function GroupManagement() {
     if (!activeGroupId) return;
     setBusyUserId(userId);
     try {
-      await supabase.from("group_members").update({ status: "approved" }).eq("group_id", activeGroupId).eq("user_id", userId);
+      const payload = { status: "approved" };
+      await supabase.from("group_members").update(payload).eq("group_id", activeGroupId).eq("user_id", userId);
       await fetchData();
       refreshGroup();
     } finally {
@@ -99,7 +100,8 @@ export default function GroupManagement() {
     if (!activeGroupId) return;
     setBusyUserId(userId);
     try {
-      await supabase.from("group_members").update({ role }).eq("group_id", activeGroupId).eq("user_id", userId);
+      const payload = { role };
+      await supabase.from("group_members").update(payload).eq("group_id", activeGroupId).eq("user_id", userId);
       await fetchData();
       refreshGroup();
     } finally {

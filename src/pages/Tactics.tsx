@@ -553,9 +553,7 @@ function useTacticsBoard(
       if (!isGroupAdmin && !isOwn) return;
 
       if (posId !== null) {
-        const occupiedByOther = players.some(
-          (p) => p.position === posId && p.id !== playerId && p.team === target.team,
-        );
+        const occupiedByOther = players.some((p) => p.position === posId && p.id !== playerId && p.team === target.team);
         if (occupiedByOther) return;
       }
 
@@ -824,34 +822,16 @@ const SidebarTeams = memo(function SidebarTeams({
   );
 });
 
-export default function Tactics() {
-  const { matchId } = useParams<{ matchId: string }>();
-  const { user } = useAuth();
-  const { activeGroupId } = useActiveGroup();
-  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId, matchId ?? null);
-  const { isGroupAdmin } = useIsAdmin();
-  const { busy, setTacticalPosition } = useLiveMatch(activeGroupId);
-  const isDesktop = useIsDesktop();
-  const navigate = useNavigate();
-
+function useTacticsConfig(nextMatch: NextMatchData | null, isDesktop: boolean, isGroupAdmin: boolean) {
   const courtType = nextMatch?.sportName?.toLowerCase().includes("society") ? "society" : "futsal";
   const activePositions = courtType === "futsal" ? POSITIONS_FUTSAL : POSITIONS_SOCIETY;
-  const currentUserId = user?.id;
-
-  const { loading, teamA, teamB, error, selectPosition } = useTacticsBoard(
-    nextMatch,
-    currentUserId,
-    activePositions,
-    isGroupAdmin,
-    setTacticalPosition,
-  );
-
-  const isPreparing = nextMatch?.status === "preparing";
-  const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
-
   const isFutsal = courtType === "futsal";
   const courtImage = isFutsal ? "/courts/futsal.jpg" : "/courts/society.jpg";
   const courtName = isFutsal ? "Quadra de Futsal" : "Quadra Society";
+  const isPreparing = nextMatch?.status === "preparing";
+  const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
+  const canShowBoard = !!nextMatch && isPreparing;
+
   const layoutPositions = useMemo(
     () => (isDesktop ? activePositions.map((p) => ({ ...p, x: p.y, y: 100 - p.x })) : [...activePositions]) as LayoutPosition[],
     [isDesktop, activePositions],
@@ -865,71 +845,129 @@ export default function Tactics() {
     }),
     [nextMatch, courtName],
   );
+
   const teamAName = nextMatch?.teamAName ?? "Time A";
   const teamBName = nextMatch?.teamBName ?? "Time B";
 
+  return {
+    courtType,
+    activePositions,
+    courtImage,
+    courtName,
+    isPreparing,
+    canAccess,
+    canShowBoard,
+    layoutPositions,
+    matchInfo,
+    teamAName,
+    teamBName,
+  };
+}
+
+function TacticsHeader({
+  courtName,
+  matchId,
+  isPreparing,
+  isGroupAdmin,
+  busy,
+  onBack,
+  onStartGame,
+}: Readonly<{
+  courtName: string;
+  matchId?: string;
+  isPreparing: boolean;
+  isGroupAdmin: boolean;
+  busy: boolean;
+  onBack: () => void;
+  onStartGame: () => void;
+}>) {
+  return (
+    <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
+      <div className="flex items-center gap-3 min-w-0">
+        {matchId && (
+          <button type="button" onClick={onBack} className="p-2 hover:bg-surface-variant rounded-lg transition-colors shrink-0" aria-label="Voltar">
+            <MaterialIcon name="arrow_back" className="w-5 h-5 text-on-surface-variant" />
+          </button>
+        )}
+        <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">{courtName}</h2>
+      </div>
+      {isPreparing && isGroupAdmin && (
+        <button
+          type="button"
+          onClick={onStartGame}
+          disabled={busy}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary font-mono text-label-bold border border-outline-variant active:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <MaterialIcon name="play_arrow" className="w-4 h-4" />
+          Iniciar Jogo
+        </button>
+      )}
+    </header>
+  );
+}
+
+export default function Tactics() {
+  const { matchId } = useParams<{ matchId: string }>();
+  const { user } = useAuth();
+  const { activeGroupId } = useActiveGroup();
+  const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId, matchId ?? null);
+  const { isGroupAdmin } = useIsAdmin();
+  const { busy, setTacticalPosition } = useLiveMatch(activeGroupId);
+  const isDesktop = useIsDesktop();
+  const navigate = useNavigate();
+
+  const config = useTacticsConfig(nextMatch, isDesktop, isGroupAdmin);
+  const currentUserId = user?.id;
+
+  const { loading, teamA, teamB, error, selectPosition } = useTacticsBoard(
+    nextMatch,
+    currentUserId,
+    config.activePositions,
+    isGroupAdmin,
+    setTacticalPosition,
+  );
+
   if (nextMatchLoading || loading) return <TacticsLoading />;
   if (error) return <TacticsError message={error} />;
-
-  const canShowBoard = !!nextMatch && isPreparing;
-  if (!canAccess || !canShowBoard) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
-
-  const handleStartGame = async () => {
-    navigate(`/matches/${nextMatch.id}/colors`);
-  };
+  if (!config.canAccess || !config.canShowBoard) {
+    return <TacticsUnconfirmed courtType={config.courtType} hasMatch={!!nextMatch} />;
+  }
 
   return (
     <AppShell>
       <div className="min-h-screen flex flex-col">
-        <header className="flex items-center justify-between px-4 md:px-margin-desktop w-full h-16 shrink-0 border-b border-outline-variant gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            {matchId && (
-              <button
-                type="button"
-                onClick={() => navigate(`/matches/${matchId}/prepare`)}
-                className="p-2 hover:bg-surface-variant rounded-lg transition-colors shrink-0"
-                aria-label="Voltar"
-              >
-                <MaterialIcon name="arrow_back" className="w-5 h-5 text-on-surface-variant" />
-              </button>
-            )}
-            <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase truncate">{courtName}</h2>
-          </div>
-          {isPreparing && isGroupAdmin && (
-            <button
-              type="button"
-              onClick={handleStartGame}
-              disabled={busy}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary font-mono text-label-bold border border-outline-variant active:bg-primary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <MaterialIcon name="play_arrow" className="w-4 h-4" />
-              Iniciar Jogo
-            </button>
-          )}
-        </header>
+        <TacticsHeader
+          courtName={config.courtName}
+          matchId={matchId}
+          isPreparing={config.isPreparing}
+          isGroupAdmin={isGroupAdmin}
+          busy={busy}
+          onBack={() => navigate(`/matches/${matchId}/prepare`)}
+          onStartGame={() => navigate(`/matches/${nextMatch?.id}/colors`)}
+        />
 
         <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row items-center lg:items-start gap-6 lg:gap-8 px-4 md:px-margin-desktop py-6">
           <CourtArea
             teamA={teamA}
             teamB={teamB}
-            layoutPositions={layoutPositions}
-            courtImage={courtImage}
+            layoutPositions={config.layoutPositions}
+            courtImage={config.courtImage}
             isDesktop={isDesktop}
             currentUserId={currentUserId}
             isGroupAdmin={isGroupAdmin}
             onSelect={selectPosition}
-            teamAName={teamAName}
-            teamBName={teamBName}
+            teamAName={config.teamAName}
+            teamBName={config.teamBName}
           />
 
           <SidebarTeams
             teamA={teamA}
             teamB={teamB}
-            matchInfo={matchInfo}
-            courtName={courtName}
+            matchInfo={config.matchInfo}
+            courtName={config.courtName}
             currentUserId={currentUserId}
-            teamAName={teamAName}
-            teamBName={teamBName}
+            teamAName={config.teamAName}
+            teamBName={config.teamBName}
           />
         </div>
       </div>
