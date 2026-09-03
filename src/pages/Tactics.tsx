@@ -553,7 +553,9 @@ function useTacticsBoard(
       if (!isGroupAdmin && !isOwn) return;
 
       if (posId !== null) {
-        const occupiedByOther = players.some((p) => p.position === posId && p.id !== playerId);
+        const occupiedByOther = players.some(
+          (p) => p.position === posId && p.id !== playerId && p.team === target.team,
+        );
         if (occupiedByOther) return;
       }
 
@@ -749,25 +751,14 @@ const CourtArea = memo(function CourtArea({
   teamAName: string;
   teamBName: string;
 }>) {
-  const hasPlayers = teamA.length > 0 || teamB.length > 0;
-
-  const myTeam = currentUserId
-    ? teamA.some((p) => p.userId === currentUserId)
-      ? "A"
-      : teamB.some((p) => p.userId === currentUserId)
-        ? "B"
-        : null
-    : null;
-
-  const teamsToRender =
-    myTeam === "A" ? ([teamA] as const) : myTeam === "B" ? ([teamB] as const) : ([teamA, teamB].filter((t) => t.length > 0) as [Player[], Player[]]);
+  const teamsToRender = [teamA, teamB].filter((t) => t.length > 0) as Player[][];
 
   return (
     <div className="w-full lg:flex-1 flex flex-col gap-4">
-      {hasPlayers ? (
-        teamsToRender.map((teamPlayers) => (
+      {teamsToRender.length > 0 ? (
+        teamsToRender.map((teamPlayers, idx) => (
           <CourtCard
-            key={teamPlayers === teamA ? "A" : "B"}
+            key={idx === 0 ? "A" : "B"}
             teamPlayers={teamPlayers}
             layoutPositions={layoutPositions}
             courtImage={courtImage}
@@ -856,7 +847,6 @@ export default function Tactics() {
   );
 
   const isPreparing = nextMatch?.status === "preparing";
-  const isOpen = nextMatch?.status === "open";
   const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
 
   const isFutsal = courtType === "futsal";
@@ -881,7 +871,7 @@ export default function Tactics() {
   if (nextMatchLoading || loading) return <TacticsLoading />;
   if (error) return <TacticsError message={error} />;
 
-  const canShowBoard = !!nextMatch && (isOpen || isPreparing);
+  const canShowBoard = !!nextMatch && isPreparing;
   if (!canAccess || !canShowBoard) return <TacticsUnconfirmed courtType={courtType} hasMatch={!!nextMatch} />;
 
   const handleStartGame = async () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 import { useAuth } from "./useAuth";
 import { validateMatchGroup } from "../lib/groupGuard";
 
@@ -169,6 +169,23 @@ export function useVoting(matchId: string | undefined, groupId: string | null = 
       active = false;
     };
   }, [fetchVotingData]);
+
+  useEffect(() => {
+    if (!matchId) return;
+    const channel = supabase
+      .channel(uniqueChannelTopic(`voting-${matchId}`))
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "match_votes", filter: `match_id=eq.${matchId}` },
+        () => {
+          void fetchVotingData();
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [matchId, fetchVotingData]);
 
   const submitVote = useCallback(
     async (awardId: number, votedUserId: string | null) => {

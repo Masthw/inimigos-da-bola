@@ -18,7 +18,7 @@ interface LiveMatchViewProps {
   onOwnGoal: (teamBenefited: string, scorerId: string | null, scorerTeam: string | null) => void;
   onRequestReview: () => void;
   onManagePlayers?: () => void;
-  isAdmin?: boolean;
+  isCreator?: boolean;
   busy?: boolean;
 }
 
@@ -35,7 +35,7 @@ export function LiveMatchView({
   onOwnGoal,
   onRequestReview,
   onManagePlayers,
-  isAdmin,
+  isCreator,
   busy = false,
 }: Readonly<LiveMatchViewProps>) {
   const {
@@ -65,6 +65,12 @@ export function LiveMatchView({
           <span className="font-mono text-label-bold uppercase tracking-widest text-error">Ao Vivo</span>
         </div>
       </div>
+
+      {!isCreator && (
+        <div className="px-4 py-2 bg-secondary-container/30 border-b border-secondary/20 shrink-0">
+          <p className="font-mono text-[10px] text-secondary text-center uppercase tracking-widest">Somente o criador registra eventos</p>
+        </div>
+      )}
 
       <div className="px-4 py-5 bg-surface-container-high border-b border-outline-variant shrink-0">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 max-w-lg mx-auto">
@@ -98,7 +104,7 @@ export function LiveMatchView({
                   player={p}
                   teamColor={teamAColor}
                   stats={getStats(p.id ?? p.userId ?? "")}
-                  disabled={!isAdmin || busy}
+                  disabled={!isCreator || busy}
                   onClick={() => handlePlayerClick(p)}
                 />
               ))}
@@ -112,7 +118,7 @@ export function LiveMatchView({
                   player={p}
                   teamColor={teamBColor}
                   stats={getStats(p.id ?? p.userId ?? "")}
-                  disabled={!isAdmin || busy}
+                  disabled={!isCreator || busy}
                   onClick={() => handlePlayerClick(p)}
                 />
               ))}
@@ -121,7 +127,7 @@ export function LiveMatchView({
         </div>
       </div>
 
-      {isAdmin && (
+      {isCreator && (
         <div className="fixed bottom-0 left-0 right-0 z-30 px-4 py-3 border-t border-outline-variant bg-surface-container flex gap-3">
           {onManagePlayers && (
             <button
@@ -175,7 +181,7 @@ export function LiveMatchView({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  disabled={!isAdmin || busy}
+                  disabled={!isCreator || busy}
                   onClick={handleGoal}
                   className="flex flex-col items-center gap-2 py-5 bg-primary-container text-primary font-mono text-label-bold border border-primary/30 active:bg-primary/20 transition-colors"
                 >
@@ -184,7 +190,7 @@ export function LiveMatchView({
                 </button>
                 <button
                   type="button"
-                  disabled={!isAdmin || busy}
+                  disabled={!isCreator || busy}
                   onClick={handleOwnGoal}
                   className="flex flex-col items-center gap-2 py-5 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors"
                 >

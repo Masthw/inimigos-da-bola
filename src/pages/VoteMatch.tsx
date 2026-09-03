@@ -71,10 +71,16 @@ export default function VoteMatch() {
       const { error: fnError } = await supabase.functions.invoke("tally-match-votes", {
         body: { matchId, groupId: activeGroupId },
       });
-      if (fnError) throw fnError;
+      if (fnError) {
+        const msg = fnError.message ?? (fnError.context as { error?: string } | undefined)?.error ?? "Erro ao encerrar votação.";
+        setEndingError(msg);
+        setEnding(false);
+        return;
+      }
       navigate(`/matches/${matchId}/results`);
-    } catch {
-      setEndingError("Erro ao encerrar votação. Tente novamente.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao encerrar votação.";
+      setEndingError(msg);
       setEnding(false);
     }
   }, [activeGroupId, matchId, navigate]);
