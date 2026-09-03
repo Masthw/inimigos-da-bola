@@ -468,7 +468,8 @@ function useTacticsBoard(
       setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
       setLoading(false);
     }
-  }, [nextMatch, activePositions, canAccess]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextMatch?.id, activePositions, canAccess]);
 
   const refetchSilent = useCallback(async () => {
     if (!nextMatch || !canAccess) {
@@ -486,7 +487,8 @@ function useTacticsBoard(
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
     }
-  }, [nextMatch, activePositions, canAccess]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextMatch?.id, activePositions, canAccess]);
 
   useEffect(() => {
     let isMounted = true;
@@ -498,7 +500,8 @@ function useTacticsBoard(
     return () => {
       isMounted = false;
     };
-  }, [refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextMatch?.id, activePositions]);
 
   useEffect(() => {
     if (!nextMatch) return;
@@ -522,7 +525,8 @@ function useTacticsBoard(
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [nextMatch?.id, refetchSilent, nextMatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextMatch?.id, refetchSilent]);
 
   const selectPosition = useCallback(
     async (playerId: string, posId: PositionId | null) => {

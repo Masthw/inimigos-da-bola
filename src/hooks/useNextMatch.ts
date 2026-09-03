@@ -159,7 +159,24 @@ export function useNextMatch(groupId: string | null = null, matchId?: string | n
     const channel = supabase
       .channel(uniqueChannelTopic("next-match-realtime"))
       .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, refetch)
-      .on("postgres_changes", { event: "*", schema: "public", table: "match_players" }, refetch)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "match_players" },
+        (payload) => {
+          const eventType = payload.eventType;
+          if (eventType === "INSERT" || eventType === "DELETE") {
+            refetch();
+            return;
+          }
+          if (eventType === "UPDATE") {
+            const oldRow = (payload as { old?: Record<string, unknown> }).old;
+            const newRow = (payload as { new?: Record<string, unknown> }).new;
+            if (oldRow?.status !== newRow?.status) {
+              refetch();
+            }
+          }
+        },
+      )
       .subscribe();
 
     return () => {
