@@ -44,7 +44,7 @@ export default function MatchLive() {
         .single(),
       supabase
         .from("match_players")
-        .select("user_id, guest_name, team, status, goals_scored, assists, own_goals_scored, users(name, avatar_url)")
+        .select("id, user_id, guest_name, team, status, goals_scored, assists, own_goals_scored, users(name, avatar_url)")
         .eq("match_id", matchId)
         .eq("status", "confirmed"),
     ]);
@@ -88,6 +88,7 @@ export default function MatchLive() {
     };
 
     const playerList: MatchPlayer[] = (playersRes.data ?? []).map((row) => ({
+      id: row.id,
       userId: row.user_id,
       name: row.users?.name ?? row.guest_name ?? "Convidado",
       avatarUrl: row.users?.avatar_url ?? null,
@@ -148,13 +149,13 @@ export default function MatchLive() {
 
   const handleGoalScored = async (scorer: MatchPlayer, assist: MatchPlayer | null) => {
     if (!match) return;
-    await addGoal(match.id, scorer.userId ?? "", scorer.team ?? "A", assist?.userId || null);
+    await addGoal(match.id, scorer.id ?? "", scorer.team ?? "A", assist?.id || null);
     fetchData();
   };
 
-  const handleOwnGoal = async (teamBenefited: string, scorerUserId: string | null) => {
+  const handleOwnGoal = async (teamBenefited: string, scorerId: string | null) => {
     if (!match) return;
-    await addOwnGoal(match.id, teamBenefited, scorerUserId);
+    await addOwnGoal(match.id, teamBenefited, scorerId ?? null);
     fetchData();
   };
 

@@ -19,9 +19,9 @@ export function useLiveMatch(groupId: string | null = null) {
   const addGoal = useCallback(
     async (
       matchId: string,
-      scorerUserId: string,
+      scorerId: string,
       team: string,
-      assistUserId?: string | null,
+      assistId?: string | null,
     ) => {
       setBusy(true);
       try {
@@ -34,7 +34,7 @@ export function useLiveMatch(groupId: string | null = null) {
           supabase.from("match_players").select("id, goals_scored").eq(
             "match_id",
             matchId,
-          ).eq("user_id", scorerUserId).maybeSingle(),
+          ).eq("id", scorerId).maybeSingle(),
           supabase.from("matches").select("team_a_score, team_b_score").eq(
             "id",
             matchId,
@@ -67,10 +67,10 @@ export function useLiveMatch(groupId: string | null = null) {
 
         const updates: SupabaseUpdatePromise[] = [updateScorer, updateScore];
 
-        if (assistUserId) {
+        if (assistId) {
           const assistRes = await supabase.from("match_players").select(
             "id, assists",
-          ).eq("match_id", matchId).eq("user_id", assistUserId).maybeSingle();
+          ).eq("match_id", matchId).eq("id", assistId).maybeSingle();
 
           if (assistRes.data) {
             const currentAssists = assistRes.data.assists ?? 0;
@@ -105,7 +105,7 @@ export function useLiveMatch(groupId: string | null = null) {
     async (
       matchId: string,
       teamBenefited: string,
-      scorerUserId: string | null,
+      scorerId: string | null,
     ) => {
       setBusy(true);
       try {
@@ -119,11 +119,11 @@ export function useLiveMatch(groupId: string | null = null) {
             "id",
             matchId,
           ).single(),
-          scorerUserId
+          scorerId
             ? supabase.from("match_players").select("id, own_goals_scored").eq(
               "match_id",
               matchId,
-            ).eq("user_id", scorerUserId).maybeSingle()
+            ).eq("id", scorerId).maybeSingle()
             : null,
         ]);
 

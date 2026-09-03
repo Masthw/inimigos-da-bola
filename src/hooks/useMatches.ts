@@ -8,6 +8,7 @@ type MatchPlayerInsert =
 export type PlayerStatus = "confirmed" | "waitlist" | "cancelled";
 
 export interface MatchPlayer {
+  id?: string;
   userId: string | null;
   name: string;
   avatarUrl: string | null;
@@ -76,6 +77,7 @@ interface MatchRow {
 }
 
 interface PlayerRow {
+  id: string;
   match_id: string;
   status: PlayerStatus;
   user_id: string | null;
@@ -125,6 +127,7 @@ function processMatchPlayers(playersData: PlayerRow[], userId: string | null) {
 
     const name = row.users?.name ?? row.guest_name ?? "Convidado";
     const player: MatchPlayer = {
+      id: row.id,
       userId: row.user_id,
       name,
       avatarUrl: row.users?.avatar_url ?? null,
@@ -230,7 +233,7 @@ async function fetchMatchesData(userId: string | null, groupId: string | null) {
       supabase
         .from("match_players")
         .select(
-          "match_id, status, user_id, guest_name, team, goals_scored, assists, own_goals_scored, users(name, avatar_url)",
+          "id, match_id, status, user_id, guest_name, team, goals_scored, assists, own_goals_scored, users(name, avatar_url)",
         )
         .in("match_id", matchIds),
       Promise.resolve(

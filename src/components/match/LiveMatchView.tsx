@@ -15,7 +15,7 @@ interface LiveMatchViewProps {
   teamAPlayers: MatchPlayer[];
   teamBPlayers: MatchPlayer[];
   onGoalScored: (scorer: MatchPlayer, assist: MatchPlayer | null) => void;
-  onOwnGoal: (teamBenefited: string, scorerUserId: string | null, scorerTeam: string | null) => void;
+  onOwnGoal: (teamBenefited: string, scorerId: string | null, scorerTeam: string | null) => void;
   onRequestReview: () => void;
   onManagePlayers?: () => void;
   isAdmin?: boolean;
@@ -94,10 +94,10 @@ export function LiveMatchView({
             <div className="space-y-2">
               {teamAPlayers.map((p) => (
                 <PlayerCard
-                  key={p.userId ?? p.name}
+                  key={p.id ?? p.userId ?? p.name}
                   player={p}
                   teamColor={teamAColor}
-                  stats={getStats(p.userId)}
+                  stats={getStats(p.id ?? p.userId ?? "")}
                   disabled={!isAdmin || busy}
                   onClick={() => handlePlayerClick(p)}
                 />
@@ -108,10 +108,10 @@ export function LiveMatchView({
             <div className="space-y-2">
               {teamBPlayers.map((p) => (
                 <PlayerCard
-                  key={p.userId ?? p.name}
+                  key={p.id ?? p.userId ?? p.name}
                   player={p}
                   teamColor={teamBColor}
-                  stats={getStats(p.userId)}
+                  stats={getStats(p.id ?? p.userId ?? "")}
                   disabled={!isAdmin || busy}
                   onClick={() => handlePlayerClick(p)}
                 />
@@ -121,27 +121,29 @@ export function LiveMatchView({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 px-4 py-3 border-t border-outline-variant bg-surface-container flex gap-3">
-        {isAdmin && onManagePlayers && (
+      {isAdmin && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 px-4 py-3 border-t border-outline-variant bg-surface-container flex gap-3">
+          {onManagePlayers && (
+            <button
+              type="button"
+              onClick={onManagePlayers}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary-container text-on-secondary-container font-mono text-label-bold border border-outline-variant active:bg-surface-variant transition-colors"
+            >
+              <MaterialIcon name="group" className="w-4 h-4" />
+              Jogadores
+            </button>
+          )}
           <button
             type="button"
-            onClick={onManagePlayers}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary-container text-on-secondary-container font-mono text-label-bold border border-outline-variant active:bg-surface-variant transition-colors"
+            disabled={busy}
+            onClick={onRequestReview}
+            className={`${onManagePlayers ? "flex-1" : "w-full"} flex items-center justify-center gap-2 py-3 bg-success/15 text-success font-mono text-label-bold border border-success/30 active:bg-success/25 transition-colors`}
           >
-            <MaterialIcon name="group" className="w-4 h-4" />
-            Jogadores
+            <MaterialIcon name="flag" className="w-4 h-4" />
+            Finalizar
           </button>
-        )}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onRequestReview}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-success/15 text-success font-mono text-label-bold border border-success/30 active:bg-success/25 transition-colors"
-        >
-          <MaterialIcon name="flag" className="w-4 h-4" />
-          Finalizar
-        </button>
-      </div>
+        </div>
+      )}
 
       {sheetOpen && (
         <button type="button" aria-label="Fechar painel" onClick={closeSheet} className="fixed inset-0 bg-black/50 z-40 cursor-default" />
@@ -213,7 +215,7 @@ export function LiveMatchView({
                 </button>
                 {assistCandidates.map((p) => (
                   <button
-                    key={p.userId}
+                    key={p.id ?? p.userId ?? p.name}
                     type="button"
                     disabled={busy}
                     onClick={() => handleAssistSelect(p)}
