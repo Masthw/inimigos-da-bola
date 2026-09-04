@@ -113,6 +113,37 @@ function useIsDesktop() {
   return isDesktop;
 }
 
+function getTacticalNodeAriaLabel(label: string, occupant?: Player, isOpponentView?: boolean): string {
+  if (occupant) {
+    const suffix = isOpponentView ? " (Adversário)" : "";
+    return `${label}: ${occupant.name}${suffix}`;
+  }
+  const state = isOpponentView ? "Disponível (Adversário)" : "disponível";
+  return `${label}: ${state}`;
+}
+
+function getTacticalNodeBorder(occupant?: Player, isOpponentView?: boolean, id?: PositionId): string {
+  if (occupant) {
+    const borderStyle = isOpponentView ? "border-outline-variant/60 opacity-90" : "border-white/30";
+    return `border-2 ${borderStyle} ${id ? nodeClasses(id) : ""}`;
+  }
+  if (isOpponentView) {
+    return "border-2 border-dashed border-outline-variant/40 bg-surface-container/30 text-on-surface-variant/40";
+  }
+  return "border-2 border-dashed border-white/40 bg-surface-container-highest/50 text-on-surface-variant";
+}
+
+function getTacticalNodeInitial(occupant?: Player, short?: string): string | null {
+  if (occupant?.avatar) return null;
+  if (occupant) return occupant.initials;
+  return short ?? "";
+}
+
+function getTacticalNodeLabelClass(occupant?: Player): string {
+  if (occupant) return "text-on-surface bg-surface-container/70";
+  return "text-on-surface-variant/70 bg-surface-container/40";
+}
+
 const TacticalNode = memo(function TacticalNode({
   short,
   label,
@@ -134,15 +165,12 @@ const TacticalNode = memo(function TacticalNode({
   isOpponentView?: boolean;
   onSelect: (posId: PositionId | null) => void;
 }>) {
-  const isFavorite = !!occupant?.favoritePosition && occupant.position === occupant.favoritePosition;
-  let initial: string | null;
-  if (occupant?.avatar) {
-    initial = null;
-  } else if (occupant) {
-    initial = occupant.initials;
-  } else {
-    initial = short;
-  }
+  const isFavorite = Boolean(occupant?.favoritePosition && occupant.position === occupant.favoritePosition);
+  const initial = getTacticalNodeInitial(occupant, short);
+  const ariaLabel = getTacticalNodeAriaLabel(label, occupant, isOpponentView);
+  const borderClasses = getTacticalNodeBorder(occupant, isOpponentView, id);
+  const labelClass = getTacticalNodeLabelClass(occupant);
+
   return (
     <div className="tactical-node absolute" style={{ left: `${x}%`, top: `${y}%` }}>
       <div className="flex flex-col items-center -translate-x-1/2 -translate-y-1/2">
@@ -151,20 +179,10 @@ const TacticalNode = memo(function TacticalNode({
             type="button"
             onClick={() => onSelect(id)}
             disabled={!canSelect}
-            aria-label={
-              occupant
-                ? `${label}: ${occupant.name}${isOpponentView ? " (Adversário)" : ""}`
-                : `${label}: ${isOpponentView ? "Disponível (Adversário)" : "disponível"}`
-            }
+            aria-label={ariaLabel}
             className={`relative w-10 h-10 rounded-full flex items-center justify-center font-mono text-label-bold text-sm shadow-lg transition-transform ${
               canSelect ? "active:scale-90 cursor-pointer" : "cursor-default"
-            } overflow-hidden ${
-              occupant
-                ? `border-2 ${isOpponentView ? "border-outline-variant/60 opacity-90" : "border-white/30"} ${nodeClasses(id)}`
-                : isOpponentView
-                  ? "border-2 border-dashed border-outline-variant/40 bg-surface-container/30 text-on-surface-variant/40"
-                  : "border-2 border-dashed border-white/40 bg-surface-container-highest/50 text-on-surface-variant"
-            } ${canSelect && !occupant ? "hover:border-white/80 hover:text-on-surface" : ""}`}
+            } overflow-hidden ${borderClasses} ${canSelect && !occupant ? "hover:border-white/80 hover:text-on-surface" : ""}`}
           >
             {occupant?.avatar ? <img src={occupant.avatar} alt={occupant.name} className="w-full h-full object-cover" /> : initial}
           </button>
@@ -176,11 +194,7 @@ const TacticalNode = memo(function TacticalNode({
           )}
         </div>
 
-        <span
-          className={`mt-1 font-mono text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${
-            occupant ? "text-on-surface bg-surface-container/70" : "text-on-surface-variant/70 bg-surface-container/40"
-          }`}
-        >
+        <span className={`mt-1 font-mono text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${labelClass}`}>
           {occupant ? occupant.name : label}
         </span>
       </div>
@@ -368,6 +382,67 @@ interface FetchedTeams {
   all: Player[];
 }
 
+async function fetchFavoritePositionsMap(
+  playerUserIds: string[],
+): Promise<Map<string, { name: string | null; code: string | null }>> {
+  const favByPlayer = new Map<string, { name: string | null; code: string | null }>();
+  if (playerUserIds.length === 0) return favByPlayer;
+
+  const favRes = await supabase
+    .from("user_favorite_positions")
+    .select("user_id, position_id, is_primary, positions(name, code)")
+    .in("user_id", playerUserIds)
+    .order("is_primary", { ascending: false });
+
+  const favRows = (favRes.data ?? []) as {
+    user_id: string;
+    positions: { name: string | null; code: string | null } | null;
+  }[];
+
+  for (const row of favRows) {
+    if (!favByPlayer.has(row.user_id)) {
+      favByPlayer.set(row.user_id, {
+        name: row.positions?.name ?? null,
+        code: row.positions?.code ?? null,
+      });
+    }
+  }
+
+  return favByPlayer;
+}
+
+function resolveLocalPosition(
+  dbPosition: string | null,
+  activePositions: readonly { id: string }[],
+): PositionId | null {
+  if (!dbPosition || !DB_POSITION_TO_LOCAL[dbPosition]) return null;
+  const localId = DB_POSITION_TO_LOCAL[dbPosition];
+  return activePositions.some((p) => p.id === localId) ? localId : null;
+}
+
+function resolveFavoritePosition(
+  fav: { name: string | null; code: string | null } | undefined,
+  activePositions: readonly { id: string }[],
+): PositionId | null {
+  if (!fav) return null;
+  const localByName = fav.name ? DB_POSITION_TO_LOCAL[fav.name] : undefined;
+  const localByCode = fav.code ? DB_POSITION_CODE_TO_LOCAL[fav.code.toUpperCase()] : undefined;
+  const localId = localByName ?? localByCode ?? null;
+  if (localId && activePositions.some((p) => p.id === localId)) {
+    return localId;
+  }
+  return null;
+}
+
+function getPlayerInitials(name: string): string {
+  const parts = name.trim().split(" ").filter(Boolean);
+  return parts
+    .map((n) => n[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 async function fetchMatchData(matchId: string, activePositions: readonly { id: string }[]): Promise<FetchedTeams> {
   const playersRes = await supabase
     .from("match_players")
@@ -380,71 +455,67 @@ async function fetchMatchData(matchId: string, activePositions: readonly { id: s
   }
 
   const rows = playersRes.data ?? [];
-  const playerUserIds = Array.from(new Set(rows.map((r) => r.user_id).filter((id): id is string => !!id)));
-
-  let favResData: { user_id: string; positions: { name: string | null; code: string | null } | null }[] = [];
-  if (playerUserIds.length > 0) {
-    const favRes = await supabase
-      .from("user_favorite_positions")
-      .select("user_id, position_id, is_primary, positions(name, code)")
-      .in("user_id", playerUserIds)
-      .order("is_primary", { ascending: false });
-    favResData = (favRes.data ?? []) as typeof favResData;
-  }
-
-  const favByPlayer = new Map<string, { name: string | null; code: string | null }>();
-  for (const row of favResData) {
-    if (favByPlayer.has(row.user_id)) continue;
-    favByPlayer.set(row.user_id, {
-      name: row.positions?.name ?? null,
-      code: row.positions?.code ?? null,
-    });
-  }
+  const playerUserIds = Array.from(new Set(rows.map((r) => r.user_id).filter((id): id is string => Boolean(id))));
+  const favByPlayer = await fetchFavoritePositionsMap(playerUserIds);
 
   const players: Player[] = rows.map((row) => {
     const fullName = row.users?.name ?? row.guest_name ?? "Convidado";
-    const parts = fullName.trim().split(" ").filter(Boolean);
-    const initials = parts
-      .map((n) => n[0] ?? "")
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-
-    let pos: PositionId | null = null;
-    if (row.tactical_position && DB_POSITION_TO_LOCAL[row.tactical_position]) {
-      const localId = DB_POSITION_TO_LOCAL[row.tactical_position];
-      if (activePositions.some((p) => p.id === localId)) {
-        pos = localId;
-      }
-    }
-
-    let favPos: PositionId | null = null;
-    const fav = row.user_id ? favByPlayer.get(row.user_id) : null;
-    if (fav) {
-      const localByName = fav.name ? DB_POSITION_TO_LOCAL[fav.name] : undefined;
-      const localByCode = fav.code ? DB_POSITION_CODE_TO_LOCAL[fav.code.toUpperCase()] : undefined;
-      const localId = localByName ?? localByCode ?? null;
-      if (localId && activePositions.some((p) => p.id === localId)) {
-        favPos = localId;
-      }
-    }
+    const fav = row.user_id ? favByPlayer.get(row.user_id) : undefined;
 
     return {
       id: row.user_id ?? row.guest_name ?? "unknown",
       name: fullName,
-      initials,
+      initials: getPlayerInitials(fullName),
       avatar: row.users?.avatar_url ?? null,
-      position: pos,
-      favoritePosition: favPos,
+      position: resolveLocalPosition(row.tactical_position, activePositions),
+      favoritePosition: resolveFavoritePosition(fav, activePositions),
       matchPlayerId: row.id,
       userId: row.user_id ?? null,
       team: row.team ?? null,
     };
   });
 
-  const teamA = players.filter((p) => p.team === "A");
-  const teamB = players.filter((p) => p.team === "B");
-  return { teamA, teamB, all: players };
+  return {
+    teamA: players.filter((p) => p.team === "A"),
+    teamB: players.filter((p) => p.team === "B"),
+    all: players,
+  };
+}
+
+function canUserSelectPosition(
+  target: Player,
+  posId: PositionId | null,
+  currentUserId: string | undefined,
+  isGroupAdmin: boolean,
+  players: Player[],
+): boolean {
+  const isOwn = target.userId === currentUserId;
+  if (!isGroupAdmin && !isOwn) return false;
+  if (posId !== null) {
+    const occupiedByOther = players.some((p) => p.position === posId && p.id !== target.id && p.team === target.team);
+    if (occupiedByOther) return false;
+  }
+  return true;
+}
+
+function updatePositionsOnToggle(
+  prevList: Player[],
+  playerId: string,
+  posId: PositionId | null,
+): Player[] {
+  return prevList.map((p) => {
+    if (p.id !== playerId) return p;
+    const nextPosition = p.position === posId ? null : posId;
+    return { ...p, position: nextPosition };
+  });
+}
+
+function updatePositionsOnRealtime(
+  prevList: Player[],
+  matchPlayerId: string,
+  localPos: PositionId | null,
+): Player[] {
+  return prevList.map((p) => (p.matchPlayerId === matchPlayerId ? { ...p, position: localPos } : p));
 }
 
 function useTacticsBoard(
@@ -462,46 +533,40 @@ function useTacticsBoard(
   const isFirstLoad = useRef(true);
 
   const matchId = nextMatch?.id;
-  const canAccess = !!nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin);
+  const canAccess = Boolean(nextMatch && (nextMatch.myStatus === "confirmed" || isGroupAdmin));
+
+  const applyFetchedData = useCallback((data: FetchedTeams) => {
+    setPlayers(data.all);
+    setTeamA(data.teamA);
+    setTeamB(data.teamB);
+    setError(null);
+  }, []);
 
   const refetch = useCallback(async () => {
     if (!matchId || !canAccess) {
-      setPlayers([]);
-      setTeamA([]);
-      setTeamB([]);
+      applyFetchedData({ teamA: [], teamB: [], all: [] });
       setLoading(false);
       return;
     }
     try {
       const data = await fetchMatchData(matchId, activePositions);
-      setPlayers(data.all);
-      setTeamA(data.teamA);
-      setTeamB(data.teamB);
-      setError(null);
-      setLoading(false);
+      applyFetchedData(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
+    } finally {
       setLoading(false);
     }
-  }, [matchId, activePositions, canAccess]);
+  }, [matchId, activePositions, canAccess, applyFetchedData]);
 
   const refetchSilent = useCallback(async () => {
-    if (!matchId || !canAccess) {
-      setPlayers([]);
-      setTeamA([]);
-      setTeamB([]);
-      return;
-    }
+    if (!matchId || !canAccess) return;
     try {
       const data = await fetchMatchData(matchId, activePositions);
-      setPlayers(data.all);
-      setTeamA(data.teamA);
-      setTeamB(data.teamB);
-      setError(null);
+      applyFetchedData(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido");
     }
-  }, [matchId, activePositions, canAccess]);
+  }, [matchId, activePositions, canAccess, applyFetchedData]);
 
   useEffect(() => {
     let isMounted = true;
@@ -540,9 +605,9 @@ function useTacticsBoard(
             const newRow = (payload as { new?: unknown }).new as { id: string; tactical_position: string | null } | undefined;
             if (!newRow) return;
             const localPos = newRow.tactical_position ? DB_POSITION_TO_LOCAL[newRow.tactical_position] : null;
-            setPlayers((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
-            setTeamA((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
-            setTeamB((prev) => prev.map((p) => (p.matchPlayerId === newRow.id ? { ...p, position: localPos } : p)));
+            setPlayers((prev) => updatePositionsOnRealtime(prev, newRow.id, localPos));
+            setTeamA((prev) => updatePositionsOnRealtime(prev, newRow.id, localPos));
+            setTeamB((prev) => updatePositionsOnRealtime(prev, newRow.id, localPos));
           }
         },
       )
@@ -558,21 +623,17 @@ function useTacticsBoard(
       const target = players.find((p) => p.id === playerId);
       if (!target) return;
 
-      const isOwn = target.userId === currentUserId;
-      if (!isGroupAdmin && !isOwn) return;
-
-      if (posId !== null) {
-        const occupiedByOther = players.some((p) => p.position === posId && p.id !== playerId && p.team === target.team);
-        if (occupiedByOther) return;
+      if (!canUserSelectPosition(target, posId, currentUserId, isGroupAdmin, players)) {
+        return;
       }
 
       const dbName = posId ? LOCAL_TO_DB_POSITION[posId] : null;
       const result = await setTacticalPositionFn(target.matchPlayerId, dbName);
       if (result.error) return;
 
-      setPlayers((prev) => prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)));
-      setTeamA((prev) => prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)));
-      setTeamB((prev) => prev.map((p) => (p.id === playerId ? { ...p, position: p.position === posId ? null : posId } : p)));
+      setPlayers((prev) => updatePositionsOnToggle(prev, playerId, posId));
+      setTeamA((prev) => updatePositionsOnToggle(prev, playerId, posId));
+      setTeamB((prev) => updatePositionsOnToggle(prev, playerId, posId));
     },
     [matchId, players, currentUserId, isGroupAdmin, setTacticalPositionFn],
   );
@@ -662,6 +723,100 @@ interface LayoutPosition {
   label: string;
   x: number;
   y: number;
+}
+
+function QuickTeamSwitchButton({
+  isOpponent,
+  isGroupAdmin,
+  isMyTeam,
+  myTeam,
+  otherTeamKey,
+  onSwitchTeam,
+}: Readonly<{
+  isOpponent: boolean;
+  isGroupAdmin: boolean;
+  isMyTeam: boolean;
+  myTeam: "A" | "B" | null;
+  otherTeamKey: "A" | "B";
+  onSwitchTeam: (team: "A" | "B") => void;
+}>) {
+  if (isOpponent && !isGroupAdmin) {
+    return (
+      <button
+        type="button"
+        onClick={() => onSwitchTeam(otherTeamKey)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-primary bg-primary/10 border border-primary/40 hover:bg-primary/20 rounded-lg transition-colors cursor-pointer"
+      >
+        <MaterialIcon name="arrow_back" className="w-3.5 h-3.5" />
+        Voltar ao Meu Time
+      </button>
+    );
+  }
+
+  if (isMyTeam && !isGroupAdmin && myTeam) {
+    return (
+      <button
+        type="button"
+        onClick={() => onSwitchTeam(otherTeamKey)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-on-surface-variant bg-surface-container-high border border-outline-variant hover:bg-surface-container-highest hover:text-on-surface rounded-lg transition-colors cursor-pointer"
+      >
+        <MaterialIcon name="visibility" className="w-3.5 h-3.5 text-tertiary" />
+        Ver Adversário
+      </button>
+    );
+  }
+
+  return null;
+}
+
+function CourtStatusBanner({
+  teamName,
+  isOpponent,
+  isMyTeam,
+  isGroupAdmin,
+  myTeam,
+}: Readonly<{
+  teamName: string;
+  isOpponent: boolean;
+  isMyTeam: boolean;
+  isGroupAdmin: boolean;
+  myTeam: "A" | "B" | null;
+}>) {
+  if (isOpponent && !isGroupAdmin) {
+    return (
+      <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-tertiary-container/20 border border-tertiary/40 rounded-xl mb-3">
+        <div className="flex items-center gap-2 font-mono text-xs text-tertiary font-bold">
+          <MaterialIcon name="visibility" className="w-4 h-4 shrink-0" />
+          <span>{teamName} — ESCALAÇÃO DO ADVERSÁRIO</span>
+        </div>
+        <span className="text-[10px] bg-tertiary/15 text-tertiary border border-tertiary/40 px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold">
+          Somente Leitura
+        </span>
+      </div>
+    );
+  }
+
+  if (isMyTeam && myTeam) {
+    return (
+      <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-primary/10 border border-primary/30 rounded-xl mb-3">
+        <div className="flex items-center gap-2 font-mono text-xs text-primary font-bold">
+          <MaterialIcon name="shield" className="w-4 h-4 shrink-0" />
+          <span>{teamName} — SEU TIME</span>
+        </div>
+        <span className="font-mono text-[11px] text-on-surface-variant hidden sm:inline">Clique na posição para se escalar</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-surface-container-high border border-outline-variant/40 rounded-xl mb-3">
+      <div className="flex items-center gap-2 font-mono text-xs text-on-surface font-bold">
+        <MaterialIcon name="sports_soccer" className="w-4 h-4 text-primary shrink-0" />
+        <span>{teamName}</span>
+      </div>
+      <span className="font-mono text-[11px] text-on-surface-variant hidden sm:inline">Escalação tática</span>
+    </div>
+  );
 }
 
 const CourtCard = memo(function CourtCard({
@@ -757,55 +912,24 @@ const CourtCard = memo(function CourtCard({
           </button>
         </div>
 
-        {isOpponent && !isGroupAdmin ? (
-          <button
-            type="button"
-            onClick={() => onSwitchTeam(otherTeamKey)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-primary bg-primary/10 border border-primary/40 hover:bg-primary/20 rounded-lg transition-colors cursor-pointer"
-          >
-            <MaterialIcon name="arrow_back" className="w-3.5 h-3.5" />
-            Voltar ao Meu Time
-          </button>
-        ) : isMyTeam && !isGroupAdmin && myTeam ? (
-          <button
-            type="button"
-            onClick={() => onSwitchTeam(otherTeamKey)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-on-surface-variant bg-surface-container-high border border-outline-variant hover:bg-surface-container-highest hover:text-on-surface rounded-lg transition-colors cursor-pointer"
-          >
-            <MaterialIcon name="visibility" className="w-3.5 h-3.5 text-tertiary" />
-            Ver Adversário
-          </button>
-        ) : null}
+        <QuickTeamSwitchButton
+          isOpponent={isOpponent}
+          isGroupAdmin={isGroupAdmin}
+          isMyTeam={isMyTeam}
+          myTeam={myTeam}
+          otherTeamKey={otherTeamKey}
+          onSwitchTeam={onSwitchTeam}
+        />
       </div>
 
       {/* Status Banner */}
-      {isOpponent && !isGroupAdmin ? (
-        <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-tertiary-container/20 border border-tertiary/40 rounded-xl mb-3">
-          <div className="flex items-center gap-2 font-mono text-xs text-tertiary font-bold">
-            <MaterialIcon name="visibility" className="w-4 h-4 shrink-0" />
-            <span>{teamName} — ESCALAÇÃO DO ADVERSÁRIO</span>
-          </div>
-          <span className="text-[10px] bg-tertiary/15 text-tertiary border border-tertiary/40 px-2 py-0.5 rounded font-mono uppercase tracking-wider font-bold">
-            Somente Leitura
-          </span>
-        </div>
-      ) : isMyTeam && myTeam ? (
-        <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-primary/10 border border-primary/30 rounded-xl mb-3">
-          <div className="flex items-center gap-2 font-mono text-xs text-primary font-bold">
-            <MaterialIcon name="shield" className="w-4 h-4 shrink-0" />
-            <span>{teamName} — SEU TIME</span>
-          </div>
-          <span className="font-mono text-[11px] text-on-surface-variant hidden sm:inline">Clique na posição para se escalar</span>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-surface-container-high border border-outline-variant/40 rounded-xl mb-3">
-          <div className="flex items-center gap-2 font-mono text-xs text-on-surface font-bold">
-            <MaterialIcon name="sports_soccer" className="w-4 h-4 text-primary shrink-0" />
-            <span>{teamName}</span>
-          </div>
-          <span className="font-mono text-[11px] text-on-surface-variant hidden sm:inline">Escalação tática</span>
-        </div>
-      )}
+      <CourtStatusBanner
+        teamName={teamName}
+        isOpponent={isOpponent}
+        isMyTeam={isMyTeam}
+        isGroupAdmin={isGroupAdmin}
+        myTeam={myTeam}
+      />
 
       {/* Animated Court Element */}
       <div
