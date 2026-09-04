@@ -1211,6 +1211,11 @@ function getTacticsEarlyState(
   return null;
 }
 
+function getTeamRelationship(activeTeamKey: TeamKey, myTeam: TeamKey | null): TeamRelationship {
+  if (!myTeam) return "neutral";
+  return activeTeamKey === myTeam ? "mine" : "opponent";
+}
+
 export default function Tactics() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
@@ -1299,11 +1304,7 @@ export default function Tactics() {
   const otherTeamKey: TeamKey = activeTeamKey === "A" ? "B" : "A";
   const otherTeamName = activeTeamKey === "A" ? config.teamBName : config.teamAName;
 
-  const relationship: TeamRelationship = myTeam
-    ? activeTeamKey === myTeam
-      ? "mine"
-      : "opponent"
-    : "neutral";
+  const relationship = getTeamRelationship(activeTeamKey, myTeam);
   const role: UserRole = isGroupAdmin ? "admin" : "member";
   const layoutMode: LayoutMode = isDesktop ? "desktop" : "mobile";
 
