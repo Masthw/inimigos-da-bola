@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import type { Database } from "../lib/database.types";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { validateMatchGroup } from "../lib/groupGuard";
+import { performClientSideDraw } from "../lib/teamDrawer";
 
 export interface LivePlayer {
   userId: string;
@@ -180,14 +181,16 @@ export function useLiveMatch(groupId: string | null = null) {
       }
 
       try {
-        await supabase.functions.invoke("generate-lineup", {
+        const res = await supabase.functions.invoke("generate-lineup", {
           body: { matchId, groupId },
         });
+        if (res.error) throw res.error;
       } catch (drawErr) {
-        console.error(
-          "Aviso: sorteio de times falhou, partida inicia com times default",
+        console.warn(
+          "Aviso: sorteio via edge function falhou, executando sorteio direto:",
           drawErr,
         );
+        await performClientSideDraw(matchId);
       }
 
       const { error } = await supabase.from("matches").update({

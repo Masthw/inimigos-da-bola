@@ -188,62 +188,102 @@ interface DraftResult {
   totalPlayers: number;
 }
 
-function distributeTeams(players: PlayerData[], teamSize: number): DraftResult {
-  const goalkeepers = players.filter((p) => p.isGoalkeeper);
-  const fieldPlayers = players.filter((p) => !p.isGoalkeeper);
-
-  const shuffledGK = shuffleArray(goalkeepers);
-  const teamA: PlayerData[] = [];
-  const teamB: PlayerData[] = [];
-
-  if (shuffledGK.length >= 2) {
-    teamA.push(shuffledGK[0]);
-    teamB.push(shuffledGK[1]);
-  } else if (shuffledGK.length === 1) {
-    teamA.push(shuffledGK[0]);
+function assignGoalkeepers(gks: PlayerData[], teamA: PlayerData[], teamB: PlayerData[]): void {
+  if (gks.length >= 2) {
+    teamA.push(gks[0]);
+    teamB.push(gks[1]);
+  } else if (gks.length === 1) {
+    const targetTeam = secureRandom() < 0.5 ? teamA : teamB;
+    targetTeam.push(gks[0]);
   }
+}
 
-  fieldPlayers.sort((a, b) => b.points - a.points);
+function chooseTeamForPlayer(
+  index: number,
+  teamA: PlayerData[],
+  teamB: PlayerData[],
+): PlayerData[] {
+  if (teamA.length < teamB.length) return teamA;
+  if (teamB.length < teamA.length) return teamB;
 
+  const isInitialEmpty = teamA.length === 0 && teamB.length === 0;
+  const chooseA = isInitialEmpty ? secureRandom() < 0.5 : (index % 4 === 0 || index % 4 === 3);
+  return chooseA ? teamA : teamB;
+}
+
+function assignFieldPlayers(
+  fieldPlayers: PlayerData[],
+  teamA: PlayerData[],
+  teamB: PlayerData[],
+): void {
   for (let i = 0; i < fieldPlayers.length; i++) {
-    if (i % 4 === 0 || i % 4 === 3) {
-      teamA.push(fieldPlayers[i]);
-    } else {
-      teamB.push(fieldPlayers[i]);
-    }
+    const targetTeam = chooseTeamForPlayer(i, teamA, teamB);
+    targetTeam.push(fieldPlayers[i]);
   }
+}
 
-  const maxTeam = Math.max(teamSize, 1);
-  const subs: PlayerData[] = [];
-
-  while (teamA.length > maxTeam) {
-    subs.push(teamA.pop()!);
+function trimExcessSubstitutes(
+  team: PlayerData[],
+  maxTeam: number,
+  subs: PlayerData[],
+): void {
+  while (team.length > maxTeam) {
+    const player = team.pop();
+    if (player) subs.push(player);
   }
-  while (teamB.length > maxTeam) {
-    subs.push(teamB.pop()!);
-  }
+}
 
+function transferPlayer(fromTeam: PlayerData[], toTeam: PlayerData[], subs: PlayerData[]): void {
+  const moved = fromTeam.pop();
+  if (moved) {
+    subs.push(moved);
+    toTeam.push(moved);
+  }
+}
+
+function balanceSubstitutes(
+  teamA: PlayerData[],
+  teamB: PlayerData[],
+  subs: PlayerData[],
+): void {
   const diff = teamA.length - teamB.length;
   if (diff > 1 && subs.length >= diff) {
     for (let i = 0; i < diff - 1; i++) {
-      const moved = teamA.pop()!;
-      subs.push(moved);
-      teamB.push(moved);
+      transferPlayer(teamA, teamB, subs);
     }
   } else if (diff < -1 && subs.length >= -diff) {
     for (let i = 0; i < -diff - 1; i++) {
-      const moved = teamB.pop()!;
-      subs.push(moved);
-      teamA.push(moved);
+      transferPlayer(teamB, teamA, subs);
     }
   }
+}
+
+function distributeTeams(players: PlayerData[], teamSize: number): DraftResult {
+  const goalkeepers = shuffleArray(players.filter((p) => p.isGoalkeeper));
+  const fieldPlayers = shuffleArray(players.filter((p) => !p.isGoalkeeper));
+
+  // Sort by points, preserving randomized order for tied points
+  fieldPlayers.sort((a, b) => b.points - a.points);
+
+  const teamA: PlayerData[] = [];
+  const teamB: PlayerData[] = [];
+
+  assignGoalkeepers(goalkeepers, teamA, teamB);
+  assignFieldPlayers(fieldPlayers, teamA, teamB);
+
+  const maxTeam = Math.max(teamSize, Math.ceil(players.length / 2), 1);
+  const subs: PlayerData[] = [];
+
+  trimExcessSubstitutes(teamA, maxTeam, subs);
+  trimExcessSubstitutes(teamB, maxTeam, subs);
+  balanceSubstitutes(teamA, teamB, subs);
 
   return { teamA, teamB, subs, totalPlayers: players.length };
 }
 
 // 5. PERSISTÊNCIA
 
-async function persistDraft(adminClient: SupabaseClient, matchId: string, draft: DraftResult): Promise<void> {
+async function persistDraft(adminClient: SupabaseClient, draft: DraftResult): Promise<void> {
   // Substitutes must still belong to a team (the DB enforces team IN ('A','B')),
   // so we assign each sub to the team with fewer players and flag is_sub.
   let teamACount = draft.teamA.length;
@@ -322,7 +362,7 @@ Deno.serve(async (req: Request) => {
     const { players, teamSize } = await getDraftData(adminClient, matchId);
     const draftResult = distributeTeams(players, teamSize);
 
-    await persistDraft(adminClient, matchId, draftResult);
+    await persistDraft(adminClient, draftResult);
 
     const formatTeam = (team: PlayerData[]) =>
       team.map((p) => ({

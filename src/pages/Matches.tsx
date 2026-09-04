@@ -164,6 +164,7 @@ function FeaturedCard({
   myStatus,
   busy,
   isAdmin,
+  isCreator,
   onConfirm,
   onDesist,
   onCancel,
@@ -173,6 +174,7 @@ function FeaturedCard({
   myStatus: PlayerStatus | undefined;
   busy: boolean;
   isAdmin: boolean;
+  isCreator: boolean;
   onConfirm: () => void;
   onDesist: () => void;
   onCancel: () => void;
@@ -191,38 +193,42 @@ function FeaturedCard({
       <div className="absolute left-0 top-0 w-1 h-full" />
       <div className="flex-1 p-6 md:p-8 flex flex-col justify-between gap-6">
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest ${statusMeta.className}`}>
-              {match.status === "in_progress" && <span className="w-2 h-2 rounded-full bg-error animate-pulse" />}
-              {statusMeta.label}
-            </span>
-            {match.gameTypeName && (
-              <span className="inline-flex px-3 py-1 font-mono text-label-sm uppercase tracking-widest bg-surface-variant text-on-surface-variant">
-                {match.gameTypeName}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest ${statusMeta.className}`}
+              >
+                {match.status === "in_progress" && <span className="w-2 h-2 rounded-full bg-error animate-pulse" />}
+                {statusMeta.label}
               </span>
-            )}
+              {match.gameTypeName && (
+                <span className="inline-flex px-3 py-1 font-mono text-label-sm uppercase tracking-widest bg-surface-variant text-on-surface-variant">
+                  {match.gameTypeName}
+                </span>
+              )}
+            </div>
 
             {isAdmin && isPlayableStatus && (
-              <div className="ml-auto flex items-center gap-2">
+              <div className="flex items-center justify-start sm:justify-end gap-2">
                 {match.status === "open" && (
                   <button
                     type="button"
                     disabled={busy}
                     onClick={onStart}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest text-success bg-success/10 border border-success/40 hover:bg-success/20 transition-colors"
+                    className="inline-flex items-center justify-center gap-1 px-2.5 py-2.5 font-mono text-xs uppercase tracking-wider text-success bg-success/10 border border-success/40 hover:bg-success/20 transition-colors"
                   >
                     <MaterialIcon name="play_arrow" className="w-3.5 h-3.5" />
-                    Iniciar Preparação
+                    Preparação
                   </button>
                 )}
                 <button
                   type="button"
                   disabled={busy}
                   onClick={onCancel}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 px-2.5 py-2.5 font-mono text-xs uppercase tracking-wider text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 transition-colors"
                 >
                   <MaterialIcon name="close" className="w-3.5 h-3.5" />
-                  Cancelar Partida
+                  Cancelar
                 </button>
               </div>
             )}
@@ -274,13 +280,23 @@ function FeaturedCard({
           )}
 
           {match.status === "preparing" && (
-            <Link
-              to={`/matches/${match.id}/prepare`}
-              className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
-            >
-              <MaterialIcon name="settings" className="w-5 h-5" />
-              CONFIGURAR PREPARAÇÃO
-            </Link>
+            isCreator ? (
+              <Link
+                to={`/matches/${match.id}/prepare`}
+                className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+              >
+                <MaterialIcon name="settings" className="w-5 h-5" />
+                CONFIGURAR PREPARAÇÃO
+              </Link>
+            ) : (
+              <Link
+                to={`/matches/${match.id}/tactics`}
+                className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+              >
+                <MaterialIcon name="sports_soccer" className="w-5 h-5" />
+                CONFERIR ESCALAÇÃO
+              </Link>
+            )
           )}
 
           {isPlayableStatus && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
@@ -305,6 +321,7 @@ function MatchListContent({
   myStatus,
   busyMatchId,
   isGroupAdmin,
+  currentUserId,
   expandedFinished,
   onConfirm,
   onDesist,
@@ -319,6 +336,7 @@ function MatchListContent({
   myStatus: Record<string, PlayerStatus | undefined>;
   busyMatchId: string | null;
   isGroupAdmin: boolean;
+  currentUserId: string | undefined;
   expandedFinished: string | null;
   onConfirm: (match: MatchWithMeta) => void;
   onDesist: (match: MatchWithMeta) => void;
@@ -355,6 +373,7 @@ function MatchListContent({
                 myStatus={myStatus[featured.id]}
                 busy={busyMatchId === featured.id}
                 isAdmin={isGroupAdmin}
+                isCreator={currentUserId === featured.organizerId}
                 onConfirm={() => onConfirm(featured)}
                 onDesist={() => onDesist(featured)}
                 onCancel={() => onCancel(featured)}
@@ -620,6 +639,7 @@ export default function Matches() {
         myStatus={myStatus}
         busyMatchId={busyMatchId}
         isGroupAdmin={isGroupAdmin}
+        currentUserId={user?.id}
         expandedFinished={expandedFinished}
         onConfirm={handleConfirm}
         onDesist={handleDesist}
