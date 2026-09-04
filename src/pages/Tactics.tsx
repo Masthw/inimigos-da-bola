@@ -27,6 +27,7 @@ const POSITIONS_SOCIETY = [
 ] as const;
 
 type PositionId = (typeof POSITIONS_FUTSAL)[number]["id"] | (typeof POSITIONS_SOCIETY)[number]["id"];
+type TeamKey = "A" | "B";
 
 const FUTSAL_IDS = new Set<string>(POSITIONS_FUTSAL.map((p) => p.id));
 
@@ -736,9 +737,9 @@ function QuickTeamSwitchButton({
   isOpponent: boolean;
   isGroupAdmin: boolean;
   isMyTeam: boolean;
-  myTeam: "A" | "B" | null;
-  otherTeamKey: "A" | "B";
-  onSwitchTeam: (team: "A" | "B") => void;
+  myTeam: TeamKey | null;
+  otherTeamKey: TeamKey;
+  onSwitchTeam: (team: TeamKey) => void;
 }>) {
   if (isOpponent && !isGroupAdmin) {
     return (
@@ -780,7 +781,7 @@ function CourtStatusBanner({
   isOpponent: boolean;
   isMyTeam: boolean;
   isGroupAdmin: boolean;
-  myTeam: "A" | "B" | null;
+  myTeam: TeamKey | null;
 }>) {
   if (isOpponent && !isGroupAdmin) {
     return (
@@ -837,7 +838,7 @@ const CourtCard = memo(function CourtCard({
   onSwitchTeam,
   courtRef,
 }: Readonly<{
-  teamKey: "A" | "B";
+  teamKey: TeamKey;
   teamName: string;
   teamPlayers: Player[];
   layoutPositions: LayoutPosition[];
@@ -847,11 +848,11 @@ const CourtCard = memo(function CourtCard({
   isGroupAdmin: boolean;
   isMyTeam: boolean;
   isOpponent: boolean;
-  myTeam: "A" | "B" | null;
-  otherTeamKey: "A" | "B";
+  myTeam: TeamKey | null;
+  otherTeamKey: TeamKey;
   otherTeamName: string;
   onSelect: (playerId: string, posId: PositionId | null) => void;
-  onSwitchTeam: (team: "A" | "B") => void;
+  onSwitchTeam: (team: TeamKey) => void;
   courtRef?: React.RefObject<HTMLDivElement | null>;
 }>) {
   const hasPlayers = teamPlayers.length > 0;
@@ -987,13 +988,13 @@ const SidebarTeams = memo(function SidebarTeams({
 }: Readonly<{
   teamA: Player[];
   teamB: Player[];
-  activeTeamKey: "A" | "B";
+  activeTeamKey: TeamKey;
   matchInfo: { opponent: string; date: string; court: string };
   courtName: string;
   currentUserId: string | undefined;
   teamAName: string;
   teamBName: string;
-  myTeam: "A" | "B" | null;
+  myTeam: TeamKey | null;
 }>) {
   const activePlayers = activeTeamKey === "A" ? teamA : teamB;
   const activeTeamLabel = activeTeamKey === "A" ? teamAName : teamBName;
@@ -1124,13 +1125,13 @@ export default function Tactics() {
     setTacticalPosition,
   );
 
-  const myTeam = useMemo(() => {
+  const myTeam = useMemo((): TeamKey | null => {
     if (teamA.some((p) => p.userId === currentUserId)) return "A";
     if (teamB.some((p) => p.userId === currentUserId)) return "B";
     return null;
   }, [teamA, teamB, currentUserId]);
 
-  const [activeTeamKey, setActiveTeamKey] = useState<"A" | "B">("A");
+  const [activeTeamKey, setActiveTeamKey] = useState<TeamKey>("A");
   const userInteractedRef = useRef(false);
 
   useEffect(() => {
@@ -1142,7 +1143,7 @@ export default function Tactics() {
   const courtContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSwitchTeam = useCallback(
-    (newTeam: "A" | "B") => {
+    (newTeam: TeamKey) => {
       if (newTeam === activeTeamKey) return;
       userInteractedRef.current = true;
       const direction = newTeam === "B" ? 1 : -1;
@@ -1186,7 +1187,7 @@ export default function Tactics() {
 
   const activePlayers = activeTeamKey === "A" ? teamA : teamB;
   const activeTeamName = activeTeamKey === "A" ? config.teamAName : config.teamBName;
-  const otherTeamKey: "A" | "B" = activeTeamKey === "A" ? "B" : "A";
+  const otherTeamKey: TeamKey = activeTeamKey === "A" ? "B" : "A";
   const otherTeamName = activeTeamKey === "A" ? config.teamBName : config.teamAName;
   const isMyTeam = myTeam ? activeTeamKey === myTeam : true;
   const isOpponent = myTeam ? activeTeamKey !== myTeam : false;
