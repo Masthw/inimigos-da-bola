@@ -191,38 +191,42 @@ function FeaturedCard({
       <div className="absolute left-0 top-0 w-1 h-full" />
       <div className="flex-1 p-6 md:p-8 flex flex-col justify-between gap-6">
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest ${statusMeta.className}`}>
-              {match.status === "in_progress" && <span className="w-2 h-2 rounded-full bg-error animate-pulse" />}
-              {statusMeta.label}
-            </span>
-            {match.gameTypeName && (
-              <span className="inline-flex px-3 py-1 font-mono text-label-sm uppercase tracking-widest bg-surface-variant text-on-surface-variant">
-                {match.gameTypeName}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest ${statusMeta.className}`}
+              >
+                {match.status === "in_progress" && <span className="w-2 h-2 rounded-full bg-error animate-pulse" />}
+                {statusMeta.label}
               </span>
-            )}
+              {match.gameTypeName && (
+                <span className="inline-flex px-3 py-1 font-mono text-label-sm uppercase tracking-widest bg-surface-variant text-on-surface-variant">
+                  {match.gameTypeName}
+                </span>
+              )}
+            </div>
 
             {isAdmin && isPlayableStatus && (
-              <div className="ml-auto flex items-center gap-2">
+              <div className="flex items-center justify-start sm:justify-end gap-2">
                 {match.status === "open" && (
                   <button
                     type="button"
                     disabled={busy}
                     onClick={onStart}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest text-success bg-success/10 border border-success/40 hover:bg-success/20 transition-colors"
+                    className="inline-flex items-center justify-center gap-1 px-2.5 py-2.5 font-mono text-xs uppercase tracking-wider text-success bg-success/10 border border-success/40 hover:bg-success/20 transition-colors"
                   >
                     <MaterialIcon name="play_arrow" className="w-3.5 h-3.5" />
-                    Iniciar Preparação
+                    Preparação
                   </button>
                 )}
                 <button
                   type="button"
                   disabled={busy}
                   onClick={onCancel}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 px-2.5 py-2.5 font-mono text-xs uppercase tracking-wider text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 transition-colors"
                 >
                   <MaterialIcon name="close" className="w-3.5 h-3.5" />
-                  Cancelar Partida
+                  Cancelar
                 </button>
               </div>
             )}
