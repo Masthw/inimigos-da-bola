@@ -164,6 +164,7 @@ function FeaturedCard({
   myStatus,
   busy,
   isAdmin,
+  isCreator,
   onConfirm,
   onDesist,
   onCancel,
@@ -173,6 +174,7 @@ function FeaturedCard({
   myStatus: PlayerStatus | undefined;
   busy: boolean;
   isAdmin: boolean;
+  isCreator: boolean;
   onConfirm: () => void;
   onDesist: () => void;
   onCancel: () => void;
@@ -278,13 +280,23 @@ function FeaturedCard({
           )}
 
           {match.status === "preparing" && (
-            <Link
-              to={`/matches/${match.id}/prepare`}
-              className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
-            >
-              <MaterialIcon name="settings" className="w-5 h-5" />
-              CONFIGURAR PREPARAÇÃO
-            </Link>
+            isCreator ? (
+              <Link
+                to={`/matches/${match.id}/prepare`}
+                className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+              >
+                <MaterialIcon name="settings" className="w-5 h-5" />
+                CONFIGURAR PREPARAÇÃO
+              </Link>
+            ) : (
+              <Link
+                to={`/matches/${match.id}/tactics`}
+                className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+              >
+                <MaterialIcon name="sports_soccer" className="w-5 h-5" />
+                CONFERIR ESCALAÇÃO
+              </Link>
+            )
           )}
 
           {isPlayableStatus && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
@@ -309,6 +321,7 @@ function MatchListContent({
   myStatus,
   busyMatchId,
   isGroupAdmin,
+  currentUserId,
   expandedFinished,
   onConfirm,
   onDesist,
@@ -323,6 +336,7 @@ function MatchListContent({
   myStatus: Record<string, PlayerStatus | undefined>;
   busyMatchId: string | null;
   isGroupAdmin: boolean;
+  currentUserId: string | undefined;
   expandedFinished: string | null;
   onConfirm: (match: MatchWithMeta) => void;
   onDesist: (match: MatchWithMeta) => void;
@@ -359,6 +373,7 @@ function MatchListContent({
                 myStatus={myStatus[featured.id]}
                 busy={busyMatchId === featured.id}
                 isAdmin={isGroupAdmin}
+                isCreator={currentUserId === featured.organizerId}
                 onConfirm={() => onConfirm(featured)}
                 onDesist={() => onDesist(featured)}
                 onCancel={() => onCancel(featured)}
@@ -624,6 +639,7 @@ export default function Matches() {
         myStatus={myStatus}
         busyMatchId={busyMatchId}
         isGroupAdmin={isGroupAdmin}
+        currentUserId={user?.id}
         expandedFinished={expandedFinished}
         onConfirm={handleConfirm}
         onDesist={handleDesist}

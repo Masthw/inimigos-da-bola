@@ -193,6 +193,11 @@ function distributeTeams(players: PlayerData[], teamSize: number): DraftResult {
   const fieldPlayers = players.filter((p) => !p.isGoalkeeper);
 
   const shuffledGK = shuffleArray(goalkeepers);
+  const shuffledField = shuffleArray(fieldPlayers);
+
+  // Sort by points, preserving randomized order for tied points
+  shuffledField.sort((a, b) => b.points - a.points);
+
   const teamA: PlayerData[] = [];
   const teamB: PlayerData[] = [];
 
@@ -200,20 +205,29 @@ function distributeTeams(players: PlayerData[], teamSize: number): DraftResult {
     teamA.push(shuffledGK[0]);
     teamB.push(shuffledGK[1]);
   } else if (shuffledGK.length === 1) {
-    teamA.push(shuffledGK[0]);
-  }
-
-  fieldPlayers.sort((a, b) => b.points - a.points);
-
-  for (let i = 0; i < fieldPlayers.length; i++) {
-    if (i % 4 === 0 || i % 4 === 3) {
-      teamA.push(fieldPlayers[i]);
+    if (secureRandom() < 0.5) {
+      teamA.push(shuffledGK[0]);
     } else {
-      teamB.push(fieldPlayers[i]);
+      teamB.push(shuffledGK[0]);
     }
   }
 
-  const maxTeam = Math.max(teamSize, 1);
+  for (let i = 0; i < shuffledField.length; i++) {
+    if (teamA.length < teamB.length) {
+      teamA.push(shuffledField[i]);
+    } else if (teamB.length < teamA.length) {
+      teamB.push(shuffledField[i]);
+    } else {
+      const chooseA = teamA.length === 0 && teamB.length === 0 ? secureRandom() < 0.5 : (i % 4 === 0 || i % 4 === 3);
+      if (chooseA) {
+        teamA.push(shuffledField[i]);
+      } else {
+        teamB.push(shuffledField[i]);
+      }
+    }
+  }
+
+  const maxTeam = Math.max(teamSize, Math.ceil(players.length / 2), 1);
   const subs: PlayerData[] = [];
 
   while (teamA.length > maxTeam) {

@@ -8,6 +8,7 @@ import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useAuth } from "../hooks/useAuth";
 import { validateMatchGroup } from "../lib/groupGuard";
 import { supabase } from "../lib/supabaseClient";
+import { performClientSideDraw } from "../lib/teamDrawer";
 
 interface MatchPlayerRow {
   id: string;
@@ -389,11 +390,17 @@ export default function MatchPlayersManagement() {
     setRedrawing(true);
     setFeedback(null);
     try {
-      await supabase.functions.invoke("generate-lineup", { body: { matchId, groupId: activeGroupId } });
+      const res = await supabase.functions.invoke("generate-lineup", { body: { matchId, groupId: activeGroupId } });
+      if (res.error) throw res.error;
       setFeedback("Times sorteados novamente.");
     } catch (drawErr) {
-      console.error("Erro ao sortear times:", drawErr);
-      setFeedback("Erro ao sortear times.");
+      console.warn("Aviso: sorteio via edge function falhou, executando sorteio direto:", drawErr);
+      const { success, error: drawError } = await performClientSideDraw(matchId);
+      if (success) {
+        setFeedback("Times sorteados novamente.");
+      } else {
+        setFeedback(drawError ?? "Erro ao sortear times.");
+      }
     } finally {
       setRedrawing(false);
       fetchAll();

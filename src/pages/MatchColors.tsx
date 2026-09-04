@@ -255,7 +255,7 @@ function MatchColorsContent({
   const teamABg = teamA ?? "#6b7280";
   const teamBBg = teamB ?? "#6b7280";
 
-  let submitLabel = "Iniciar Jogo";
+  let submitLabel = "Iniciar";
   if (step === "a") {
     submitLabel = "Continuar para Time B";
   } else if (saving) {
