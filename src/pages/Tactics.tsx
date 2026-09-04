@@ -718,6 +718,10 @@ function TacticsUnconfirmed({ courtType, hasMatch }: Readonly<{ courtType: strin
 
 // COMPONENTE PRINCIPAL
 
+type LayoutMode = "desktop" | "mobile";
+type TeamRelationship = "mine" | "opponent" | "neutral";
+type UserRole = "admin" | "member";
+
 interface LayoutPosition {
   id: PositionId;
   short: string;
@@ -727,21 +731,19 @@ interface LayoutPosition {
 }
 
 function QuickTeamSwitchButton({
-  isOpponent,
-  isGroupAdmin,
-  isMyTeam,
-  myTeam,
+  relationship,
+  role,
   otherTeamKey,
   onSwitchTeam,
 }: Readonly<{
-  isOpponent: boolean;
-  isGroupAdmin: boolean;
-  isMyTeam: boolean;
-  myTeam: TeamKey | null;
+  relationship: TeamRelationship;
+  role: UserRole;
   otherTeamKey: TeamKey;
   onSwitchTeam: (team: TeamKey) => void;
 }>) {
-  if (isOpponent && !isGroupAdmin) {
+  if (role === "admin") return null;
+
+  if (relationship === "opponent") {
     return (
       <button
         type="button"
@@ -754,7 +756,7 @@ function QuickTeamSwitchButton({
     );
   }
 
-  if (isMyTeam && !isGroupAdmin && myTeam) {
+  if (relationship === "mine") {
     return (
       <button
         type="button"
@@ -772,18 +774,14 @@ function QuickTeamSwitchButton({
 
 function CourtStatusBanner({
   teamName,
-  isOpponent,
-  isMyTeam,
-  isGroupAdmin,
-  myTeam,
+  relationship,
+  role,
 }: Readonly<{
   teamName: string;
-  isOpponent: boolean;
-  isMyTeam: boolean;
-  isGroupAdmin: boolean;
-  myTeam: TeamKey | null;
+  relationship: TeamRelationship;
+  role: UserRole;
 }>) {
-  if (isOpponent && !isGroupAdmin) {
+  if (relationship === "opponent" && role !== "admin") {
     return (
       <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-tertiary-container/20 border border-tertiary/40 rounded-xl mb-3">
         <div className="flex items-center gap-2 font-mono text-xs text-tertiary font-bold">
@@ -797,7 +795,7 @@ function CourtStatusBanner({
     );
   }
 
-  if (isMyTeam && myTeam) {
+  if (relationship === "mine") {
     return (
       <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-primary/10 border border-primary/30 rounded-xl mb-3">
         <div className="flex items-center gap-2 font-mono text-xs text-primary font-bold">
@@ -820,45 +818,100 @@ function CourtStatusBanner({
   );
 }
 
-const CourtCard = memo(function CourtCard({
+function CourtHeaderTabs({
   teamKey,
   teamName,
-  teamPlayers,
-  layoutPositions,
-  courtImage,
-  isDesktop,
-  currentUserId,
-  isGroupAdmin,
-  isMyTeam,
-  isOpponent,
+  otherTeamName,
   myTeam,
   otherTeamKey,
-  otherTeamName,
-  onSelect,
+  relationship,
+  role,
   onSwitchTeam,
-  courtRef,
 }: Readonly<{
   teamKey: TeamKey;
   teamName: string;
-  teamPlayers: Player[];
-  layoutPositions: LayoutPosition[];
-  courtImage: string;
-  isDesktop: boolean;
-  currentUserId: string | undefined;
-  isGroupAdmin: boolean;
-  isMyTeam: boolean;
-  isOpponent: boolean;
+  otherTeamName: string;
   myTeam: TeamKey | null;
   otherTeamKey: TeamKey;
-  otherTeamName: string;
-  onSelect: (playerId: string, posId: PositionId | null) => void;
+  relationship: TeamRelationship;
+  role: UserRole;
   onSwitchTeam: (team: TeamKey) => void;
-  courtRef?: React.RefObject<HTMLDivElement | null>;
 }>) {
+  const teamANameDisplay = teamKey === "A" ? teamName : otherTeamName;
+  const teamBNameDisplay = teamKey === "B" ? teamName : otherTeamName;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+      <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl border border-outline-variant/30">
+        <button
+          type="button"
+          onClick={() => onSwitchTeam("A")}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
+            teamKey === "A"
+              ? "bg-primary text-on-primary font-bold shadow-md"
+              : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
+          }`}
+        >
+          <MaterialIcon name={myTeam === "A" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5" />
+          <span>{teamANameDisplay}</span>
+          {myTeam === "A" && <span className="text-[10px] opacity-80">(Meu Time)</span>}
+          {myTeam === "B" && <span className="text-[10px] opacity-80">(Adversário)</span>}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSwitchTeam("B")}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
+            teamKey === "B"
+              ? "bg-primary text-on-primary font-bold shadow-md"
+              : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
+          }`}
+        >
+          <MaterialIcon name={myTeam === "B" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5" />
+          <span>{teamBNameDisplay}</span>
+          {myTeam === "B" && <span className="text-[10px] opacity-80">(Meu Time)</span>}
+          {myTeam === "A" && <span className="text-[10px] opacity-80">(Adversário)</span>}
+        </button>
+      </div>
+
+      <QuickTeamSwitchButton
+        relationship={relationship}
+        role={role}
+        otherTeamKey={otherTeamKey}
+        onSwitchTeam={onSwitchTeam}
+      />
+    </div>
+  );
+}
+
+function CourtPitchCanvas({
+  layoutPositions,
+  courtImage,
+  layoutMode,
+  relationship,
+  role,
+  teamPlayers,
+  currentUserId,
+  courtRef,
+  onSelect,
+}: Readonly<{
+  layoutPositions: LayoutPosition[];
+  courtImage: string;
+  layoutMode: LayoutMode;
+  relationship: TeamRelationship;
+  role: UserRole;
+  teamPlayers: Player[];
+  currentUserId: string | undefined;
+  courtRef?: React.RefObject<HTMLDivElement | null>;
+  onSelect: (playerId: string, posId: PositionId | null) => void;
+}>) {
+  const isDesktop = layoutMode === "desktop";
+  const isOpponentView = relationship === "opponent" && role !== "admin";
   const hasPlayers = teamPlayers.length > 0;
+
   const nodeOnSelect = useCallback(
     (posId: PositionId | null) => {
-      if (isOpponent && !isGroupAdmin) return;
+      if (isOpponentView) return;
       const occupant = hasPlayers ? teamPlayers.find((p) => p.position === posId) : undefined;
       if (occupant) {
         onSelect(occupant.id, occupant.position === posId ? null : posId);
@@ -871,106 +924,114 @@ const CourtCard = memo(function CourtCard({
         }
       }
     },
-    [isOpponent, isGroupAdmin, hasPlayers, teamPlayers, currentUserId, onSelect],
+    [isOpponentView, hasPlayers, teamPlayers, currentUserId, onSelect],
   );
 
-  const teamANameDisplay = teamKey === "A" ? teamName : otherTeamName;
-  const teamBNameDisplay = teamKey === "B" ? teamName : otherTeamName;
+  return (
+    <div
+      ref={courtRef}
+      className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none mx-auto lg:mx-0 bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 ${
+        isOpponentView ? "border-tertiary/50 ring-2 ring-tertiary/20" : "border-surface-container-highest"
+      } overflow-hidden shadow-2xl transition-colors duration-300 ${isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"}`}
+    >
+      <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+      <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+      <CourtMarkings horizontal={isDesktop} />
 
+      {isOpponentView && (
+        <div className="absolute top-2.5 right-2.5 z-20 px-2 py-1 bg-surface-container-lowest/85 backdrop-blur-xs border border-tertiary/40 rounded-lg flex items-center gap-1.5 pointer-events-none shadow-md">
+          <MaterialIcon name="lock" className="w-3.5 h-3.5 text-tertiary" />
+          <span className="font-mono text-[10px] uppercase text-tertiary tracking-wider font-bold">Adversário (Leitura)</span>
+        </div>
+      )}
+
+      {layoutPositions.map((pos) => {
+        const occupant = hasPlayers ? teamPlayers.find((p) => p.position === pos.id) : undefined;
+        const occupantIsMe = hasPlayers && occupant !== undefined && occupant.userId === currentUserId;
+        const canEdit = role === "admin" || (relationship === "mine" && occupantIsMe);
+        const canSelect = !isOpponentView && hasPlayers && (!occupant || canEdit);
+        return (
+          <TacticalNode
+            key={pos.id}
+            id={pos.id}
+            short={pos.short}
+            label={pos.label}
+            x={pos.x}
+            y={pos.y}
+            occupant={occupant}
+            canSelect={canSelect}
+            isOpponentView={isOpponentView}
+            onSelect={nodeOnSelect}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+const CourtCard = memo(function CourtCard({
+  teamKey,
+  teamName,
+  teamPlayers,
+  layoutPositions,
+  courtImage,
+  layoutMode,
+  currentUserId,
+  role,
+  relationship,
+  myTeam,
+  otherTeamKey,
+  otherTeamName,
+  onSelect,
+  onSwitchTeam,
+  courtRef,
+}: Readonly<{
+  teamKey: TeamKey;
+  teamName: string;
+  teamPlayers: Player[];
+  layoutPositions: LayoutPosition[];
+  courtImage: string;
+  layoutMode: LayoutMode;
+  currentUserId: string | undefined;
+  role: UserRole;
+  relationship: TeamRelationship;
+  myTeam: TeamKey | null;
+  otherTeamKey: TeamKey;
+  otherTeamName: string;
+  onSelect: (playerId: string, posId: PositionId | null) => void;
+  onSwitchTeam: (team: TeamKey) => void;
+  courtRef?: React.RefObject<HTMLDivElement | null>;
+}>) {
   return (
     <div className="w-full flex flex-col">
-      {/* Team Tabs / Selector Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl border border-outline-variant/30">
-          <button
-            type="button"
-            onClick={() => onSwitchTeam("A")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-              teamKey === "A"
-                ? "bg-primary text-on-primary font-bold shadow-md"
-                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-            }`}
-          >
-            <MaterialIcon name={myTeam === "A" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5" />
-            <span>{teamANameDisplay}</span>
-            {myTeam === "A" && <span className="text-[10px] opacity-80">(Meu Time)</span>}
-            {myTeam === "B" && <span className="text-[10px] opacity-80">(Adversário)</span>}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSwitchTeam("B")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-              teamKey === "B"
-                ? "bg-primary text-on-primary font-bold shadow-md"
-                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-            }`}
-          >
-            <MaterialIcon name={myTeam === "B" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5" />
-            <span>{teamBNameDisplay}</span>
-            {myTeam === "B" && <span className="text-[10px] opacity-80">(Meu Time)</span>}
-            {myTeam === "A" && <span className="text-[10px] opacity-80">(Adversário)</span>}
-          </button>
-        </div>
-
-        <QuickTeamSwitchButton
-          isOpponent={isOpponent}
-          isGroupAdmin={isGroupAdmin}
-          isMyTeam={isMyTeam}
-          myTeam={myTeam}
-          otherTeamKey={otherTeamKey}
-          onSwitchTeam={onSwitchTeam}
-        />
-      </div>
-
-      {/* Status Banner */}
-      <CourtStatusBanner
+      <CourtHeaderTabs
+        teamKey={teamKey}
         teamName={teamName}
-        isOpponent={isOpponent}
-        isMyTeam={isMyTeam}
-        isGroupAdmin={isGroupAdmin}
+        otherTeamName={otherTeamName}
         myTeam={myTeam}
+        otherTeamKey={otherTeamKey}
+        relationship={relationship}
+        role={role}
+        onSwitchTeam={onSwitchTeam}
       />
 
-      {/* Animated Court Element */}
-      <div
-        ref={courtRef}
-        className={`relative w-full max-w-85 md:max-w-3xl lg:max-w-none mx-auto lg:mx-0 bg-linear-to-br from-slate-900 to-blue-900 rounded-2xl border-4 ${
-          isOpponent && !isGroupAdmin ? "border-tertiary/50 ring-2 ring-tertiary/20" : "border-surface-container-highest"
-        } overflow-hidden shadow-2xl transition-colors duration-300 ${isDesktop ? "aspect-[1.7/1]" : "aspect-[1/1.7]"}`}
-      >
-        <img src={courtImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-        <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-        <CourtMarkings horizontal={isDesktop} />
+      <CourtStatusBanner
+        teamName={teamName}
+        relationship={relationship}
+        role={role}
+      />
 
-        {isOpponent && !isGroupAdmin && (
-          <div className="absolute top-2.5 right-2.5 z-20 px-2 py-1 bg-surface-container-lowest/85 backdrop-blur-xs border border-tertiary/40 rounded-lg flex items-center gap-1.5 pointer-events-none shadow-md">
-            <MaterialIcon name="lock" className="w-3.5 h-3.5 text-tertiary" />
-            <span className="font-mono text-[10px] uppercase text-tertiary tracking-wider font-bold">Adversário (Leitura)</span>
-          </div>
-        )}
-
-        {layoutPositions.map((pos) => {
-          const occupant = hasPlayers ? teamPlayers.find((p) => p.position === pos.id) : undefined;
-          const occupantIsMe = hasPlayers && occupant !== undefined && occupant.userId === currentUserId;
-          const canEdit = isGroupAdmin || (isMyTeam && occupantIsMe);
-          const canSelect = !isOpponent && hasPlayers && (!occupant || canEdit);
-          return (
-            <TacticalNode
-              key={pos.id}
-              id={pos.id}
-              short={pos.short}
-              label={pos.label}
-              x={pos.x}
-              y={pos.y}
-              occupant={occupant}
-              canSelect={canSelect}
-              isOpponentView={isOpponent && !isGroupAdmin}
-              onSelect={nodeOnSelect}
-            />
-          );
-        })}
-      </div>
+      <CourtPitchCanvas
+        layoutPositions={layoutPositions}
+        courtImage={courtImage}
+        layoutMode={layoutMode}
+        relationship={relationship}
+        role={role}
+        teamPlayers={teamPlayers}
+        currentUserId={currentUserId}
+        courtRef={courtRef}
+        onSelect={onSelect}
+      />
     </div>
   );
 });
@@ -984,7 +1045,7 @@ const SidebarTeams = memo(function SidebarTeams({
   currentUserId,
   teamAName,
   teamBName,
-  myTeam,
+  relationship,
 }: Readonly<{
   teamA: Player[];
   teamB: Player[];
@@ -994,16 +1055,16 @@ const SidebarTeams = memo(function SidebarTeams({
   currentUserId: string | undefined;
   teamAName: string;
   teamBName: string;
-  myTeam: TeamKey | null;
+  relationship: TeamRelationship;
 }>) {
   const activePlayers = activeTeamKey === "A" ? teamA : teamB;
   const activeTeamLabel = activeTeamKey === "A" ? teamAName : teamBName;
-  const isOpponent = myTeam ? activeTeamKey !== myTeam : false;
-  const isMyTeam = myTeam ? activeTeamKey === myTeam : true;
 
   let teamBadge = "";
-  if (myTeam) {
-    teamBadge = isMyTeam ? " • Seu Time" : " • Adversário (Leitura)";
+  if (relationship === "mine") {
+    teamBadge = " • Seu Time";
+  } else if (relationship === "opponent") {
+    teamBadge = " • Adversário (Leitura)";
   }
 
   return (
@@ -1014,7 +1075,7 @@ const SidebarTeams = memo(function SidebarTeams({
         match={matchInfo}
         courtLabel={courtName}
         currentUserId={currentUserId}
-        unconfirmedMessage={isOpponent ? "Visualizando lista do time adversário" : undefined}
+        unconfirmedMessage={relationship === "opponent" ? "Visualizando lista do time adversário" : undefined}
       />
     </div>
   );
@@ -1104,20 +1165,17 @@ function TacticsHeader({
   );
 }
 
-export default function Tactics() {
-  const { matchId } = useParams<{ matchId: string }>();
+function useTacticsMatchData(matchId?: string) {
   const { user } = useAuth();
   const { activeGroupId } = useActiveGroup();
   const { match: nextMatch, loading: nextMatchLoading } = useNextMatch(activeGroupId, matchId ?? null);
   const { isGroupAdmin } = useIsAdmin();
   const { busy, setTacticalPosition } = useLiveMatch(activeGroupId);
   const isDesktop = useIsDesktop();
-  const navigate = useNavigate();
-
   const config = useTacticsConfig(nextMatch, isDesktop, isGroupAdmin);
   const currentUserId = user?.id;
 
-  const { loading, teamA, teamB, error, selectPosition } = useTacticsBoard(
+  const board = useTacticsBoard(
     nextMatch,
     currentUserId,
     config.activePositions,
@@ -1125,27 +1183,62 @@ export default function Tactics() {
     setTacticalPosition,
   );
 
+  return {
+    nextMatch,
+    nextMatchLoading,
+    isGroupAdmin,
+    busy,
+    isDesktop,
+    config,
+    currentUserId,
+    board,
+  };
+}
+
+function getTacticsEarlyState(
+  loading: boolean,
+  error: string | null,
+  canAccess: boolean,
+  canShowBoard: boolean,
+  courtType: string,
+  hasNextMatch: boolean,
+): React.ReactNode | null {
+  if (loading) return <TacticsLoading />;
+  if (error) return <TacticsError message={error} />;
+  if (!canAccess || !canShowBoard) {
+    return <TacticsUnconfirmed courtType={courtType} hasMatch={hasNextMatch} />;
+  }
+  return null;
+}
+
+export default function Tactics() {
+  const { matchId } = useParams<{ matchId: string }>();
+  const navigate = useNavigate();
+  const {
+    nextMatch,
+    nextMatchLoading,
+    isGroupAdmin,
+    busy,
+    isDesktop,
+    config,
+    currentUserId,
+    board,
+  } = useTacticsMatchData(matchId);
+
   const myTeam = useMemo((): TeamKey | null => {
-    if (teamA.some((p) => p.userId === currentUserId)) return "A";
-    if (teamB.some((p) => p.userId === currentUserId)) return "B";
+    if (board.teamA.some((p) => p.userId === currentUserId)) return "A";
+    if (board.teamB.some((p) => p.userId === currentUserId)) return "B";
     return null;
-  }, [teamA, teamB, currentUserId]);
+  }, [board.teamA, board.teamB, currentUserId]);
 
-  const [activeTeamKey, setActiveTeamKey] = useState<TeamKey>("A");
-  const userInteractedRef = useRef(false);
-
-  useEffect(() => {
-    if (!userInteractedRef.current && myTeam) {
-      setActiveTeamKey(myTeam);
-    }
-  }, [myTeam]);
+  const [userSelectedTeam, setUserSelectedTeam] = useState<TeamKey | null>(null);
+  const activeTeamKey: TeamKey = userSelectedTeam ?? myTeam ?? "A";
 
   const courtContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSwitchTeam = useCallback(
     (newTeam: TeamKey) => {
       if (newTeam === activeTeamKey) return;
-      userInteractedRef.current = true;
       const direction = newTeam === "B" ? 1 : -1;
 
       if (courtContainerRef.current) {
@@ -1156,15 +1249,27 @@ export default function Tactics() {
           duration: 340,
           ease: "outCubic",
         });
+
+        const nodes = courtContainerRef.current.querySelectorAll(".tactical-node");
+        if (nodes.length > 0) {
+          animate(nodes, {
+            scale: [0.6, 1],
+            opacity: [0, 1],
+            translateY: [8, 0],
+            delay: stagger(30),
+            duration: 260,
+            ease: "outBack",
+          });
+        }
       }
 
-      setActiveTeamKey(newTeam);
+      setUserSelectedTeam(newTeam);
     },
     [activeTeamKey],
   );
 
   useEffect(() => {
-    if (courtContainerRef.current) {
+    if (courtContainerRef.current && !board.loading && !nextMatchLoading) {
       const nodes = courtContainerRef.current.querySelectorAll(".tactical-node");
       if (nodes.length > 0) {
         animate(nodes, {
@@ -1177,20 +1282,30 @@ export default function Tactics() {
         });
       }
     }
-  }, [activeTeamKey]);
+  }, [board.loading, nextMatchLoading]);
 
-  if (nextMatchLoading || loading) return <TacticsLoading />;
-  if (error) return <TacticsError message={error} />;
-  if (!config.canAccess || !config.canShowBoard) {
-    return <TacticsUnconfirmed courtType={config.courtType} hasMatch={!!nextMatch} />;
-  }
+  const earlyState = getTacticsEarlyState(
+    nextMatchLoading || board.loading,
+    board.error,
+    config.canAccess,
+    config.canShowBoard,
+    config.courtType,
+    Boolean(nextMatch),
+  );
+  if (earlyState) return earlyState;
 
-  const activePlayers = activeTeamKey === "A" ? teamA : teamB;
+  const activePlayers = activeTeamKey === "A" ? board.teamA : board.teamB;
   const activeTeamName = activeTeamKey === "A" ? config.teamAName : config.teamBName;
   const otherTeamKey: TeamKey = activeTeamKey === "A" ? "B" : "A";
   const otherTeamName = activeTeamKey === "A" ? config.teamBName : config.teamAName;
-  const isMyTeam = myTeam ? activeTeamKey === myTeam : true;
-  const isOpponent = myTeam ? activeTeamKey !== myTeam : false;
+
+  const relationship: TeamRelationship = myTeam
+    ? activeTeamKey === myTeam
+      ? "mine"
+      : "opponent"
+    : "neutral";
+  const role: UserRole = isGroupAdmin ? "admin" : "member";
+  const layoutMode: LayoutMode = isDesktop ? "desktop" : "mobile";
 
   return (
     <AppShell>
@@ -1213,30 +1328,29 @@ export default function Tactics() {
               teamPlayers={activePlayers}
               layoutPositions={config.layoutPositions}
               courtImage={config.courtImage}
-              isDesktop={isDesktop}
+              layoutMode={layoutMode}
               currentUserId={currentUserId}
-              isGroupAdmin={isGroupAdmin}
-              isMyTeam={isMyTeam}
-              isOpponent={isOpponent}
+              role={role}
+              relationship={relationship}
               myTeam={myTeam}
               otherTeamKey={otherTeamKey}
               otherTeamName={otherTeamName}
-              onSelect={selectPosition}
+              onSelect={board.selectPosition}
               onSwitchTeam={handleSwitchTeam}
               courtRef={courtContainerRef}
             />
           </div>
 
           <SidebarTeams
-            teamA={teamA}
-            teamB={teamB}
+            teamA={board.teamA}
+            teamB={board.teamB}
             activeTeamKey={activeTeamKey}
             matchInfo={config.matchInfo}
             courtName={config.courtName}
             currentUserId={currentUserId}
             teamAName={config.teamAName}
             teamBName={config.teamBName}
-            myTeam={myTeam}
+            relationship={relationship}
           />
         </div>
       </div>
