@@ -44,18 +44,11 @@ export function useLeaderboard(groupId: string | null = null) {
         .from("group_seasons")
         .select("id")
         .eq("group_id", groupIdString)
-        .lte("start_date", new Date().toISOString())
-        .gte("end_date", new Date().toISOString())
+        .order("start_date", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (cancelled) return;
-
-      if (!season) {
-        setEntries([]);
-        setSeasonStarted(false);
-        setLoading(false);
-        return;
-      }
 
       const { data: members } = await supabase
         .from("group_members")
@@ -69,52 +62,88 @@ export function useLeaderboard(groupId: string | null = null) {
 
       if (memberIds.length === 0) {
         setEntries([]);
-        setSeasonStarted(true);
+        setSeasonStarted(false);
         setLoading(false);
         return;
       }
 
-      const { data: leaderboard } = await supabase
-        .from("season_leaderboards")
-        .select("user_id, points")
-        .eq("season_id", season.id)
-        .in("user_id", memberIds);
-
-      if (cancelled) return;
-
-      const userIds = (leaderboard ?? []).map((entry) => entry.user_id);
-
-      const { data: users } = userIds.length > 0
-        ? await supabase
+      const [{ data: leaderboard }, { data: matchPlayers }, { data: awards }, { data: users }] = await Promise.all([
+        season
+          ? supabase
+              .from("season_leaderboards")
+              .select("user_id, points")
+              .eq("season_id", season.id)
+              .in("user_id", memberIds)
+          : Promise.resolve({ data: [] as { user_id: string; points: number | null }[] }),
+        supabase
+          .from("match_players")
+          .select("user_id, team, goals_scored, assists, matches!inner(status, team_a_score, team_b_score, group_id)")
+          .eq("matches.status", "finished")
+          .is("matches.deleted_at", null)
+          .eq("matches.group_id", groupIdString)
+          .in("user_id", memberIds),
+        supabase
+          .from("match_awards")
+          .select("user_id, awards(name)")
+          .in("user_id", memberIds),
+        supabase
           .from("users")
           .select("id, name, avatar_url")
-          .in("id", userIds)
-          .is("deleted_at", null)
-          .order("name", { ascending: true })
-        : {
-          data: [] as {
-            id: string;
-            name: string | null;
-            avatar_url: string | null;
-          }[],
-        };
+          .in("id", memberIds)
+          .is("deleted_at", null),
+      ]);
 
       if (cancelled) return;
 
-      const pointsMap = new Map(
+      const pointsFromLeaderboard = new Map(
         (leaderboard ?? []).map((entry) => [entry.user_id, entry.points ?? 0]),
       );
 
-      setEntries(
-        (users ?? []).map((row) => ({
-          id: row.id,
-          name: getFirstName(row.name ?? "Jogador"),
-          avatarUrl: row.avatar_url,
-          points: pointsMap.get(row.id) ?? 0,
-          isCurrentUser: row.id === currentUserId,
-        })),
-      );
-      setSeasonStarted(true);
+      // Calcular pontos a partir das partidas se season_leaderboards não tiver dados
+      const matchPointsMap = new Map<string, number>();
+      for (const row of matchPlayers ?? []) {
+        if (!row.user_id || !row.matches) continue;
+        const curPts = matchPointsMap.get(row.user_id) ?? 0;
+        const homeScore = row.matches.team_a_score ?? 0;
+        const awayScore = row.matches.team_b_score ?? 0;
+        let matchPts: number;
+        if (homeScore === awayScore) {
+          matchPts = 1;
+        } else {
+          const teamAWon = homeScore > awayScore;
+          const won = (row.team === "A" && teamAWon) || (row.team === "B" && !teamAWon);
+          matchPts = won ? 3 : 0;
+        }
+        matchPointsMap.set(row.user_id, curPts + matchPts);
+      }
+
+      for (const award of awards ?? []) {
+        if (!award.user_id || !award.awards?.name) continue;
+        if (award.awards.name.toLowerCase().includes("craque")) {
+          matchPointsMap.set(award.user_id, (matchPointsMap.get(award.user_id) ?? 0) + 1);
+        }
+      }
+
+      const hasPlayedMatches = (matchPlayers ?? []).length > 0;
+      const hasLeaderboardPoints = pointsFromLeaderboard.size > 0;
+
+      const formattedEntries = (users ?? [])
+        .map((row) => {
+          const lbPoints = pointsFromLeaderboard.get(row.id);
+          const computedPoints = matchPointsMap.get(row.id) ?? 0;
+          const finalPoints = lbPoints != null && lbPoints > 0 ? lbPoints : computedPoints;
+          return {
+            id: row.id,
+            name: getFirstName(row.name ?? "Jogador"),
+            avatarUrl: row.avatar_url,
+            points: finalPoints,
+            isCurrentUser: row.id === currentUserId,
+          };
+        })
+        .toSorted((a, b) => b.points - a.points);
+
+      setEntries(formattedEntries);
+      setSeasonStarted(hasPlayedMatches || hasLeaderboardPoints || season != null);
       setLoading(false);
     }
 
