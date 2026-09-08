@@ -172,7 +172,6 @@ async function fetchRankingData(userId?: string, groupId?: string | null): Promi
     const lbPoints = pointsMap.get(u.id);
     const points = lbPoints != null && lbPoints > 0 ? lbPoints : computedPoints;
     const matchesPlayed = matchesPlayedMap.get(u.id) ?? stats.matchesPlayed;
-    if (matchesPlayed === 0 && points === 0) continue;
     result.push({
       id: u.id,
       name: u.name ?? "Jogador",
@@ -188,7 +187,7 @@ async function fetchRankingData(userId?: string, groupId?: string | null): Promi
       isCurrentUser: u.id === userId,
     });
   }
-  return result.sort((a, b) => b.points - a.points || b.goals - a.goals || b.assists - a.assists);
+  return result.sort((a, b) => b.points - a.points || b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name));
 }
 
 // COMPONENTE PRINCIPAL
