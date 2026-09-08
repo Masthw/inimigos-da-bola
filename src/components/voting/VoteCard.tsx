@@ -22,7 +22,16 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
 
   const awardMeta = getAwardMeta(award.name);
   const icon = awardMeta.icon;
-  const eligiblePlayers = players.filter((p) => p.userId !== "" && p.userId !== currentUserId);
+
+  // Jogadores elegíveis para voto no modal (o usuário não pode votar em si mesmo)
+  const eligiblePlayers = useMemo(() => {
+    return players.filter((p) => p.userId !== "" && p.userId !== currentUserId);
+  }, [players, currentUserId]);
+
+  // Todos os jogadores válidos para exibição da votação / placar (inclui o usuário para acompanhar seu resultado)
+  const validPlayers = useMemo(() => {
+    return players.filter((p) => p.userId !== "");
+  }, [players]);
 
   const allVoteCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -38,8 +47,8 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
   }, [players, award.voteCounts]);
 
   const sortedPlayers = useMemo(() => {
-    return eligiblePlayers.toSorted((a, b) => (allVoteCounts[b.userId] || 0) - (allVoteCounts[a.userId] || 0));
-  }, [eligiblePlayers, allVoteCounts]);
+    return validPlayers.toSorted((a, b) => (allVoteCounts[b.userId] || 0) - (allVoteCounts[a.userId] || 0));
+  }, [validPlayers, allVoteCounts]);
 
   const maxVotes = Math.max(...Object.values(allVoteCounts), 1);
 
@@ -110,8 +119,8 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
         {hasVoted && votedPlayers.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {votedPlayers.map((vp) => (
-              <div key={vp.userId} className={`flex items-center gap-1 px-2 py-1 rounded-lg ${awardMeta.chip}`}>
-                <Avatar src={null} alt={vp.name} className="w-4 h-4 rounded-full" />
+              <div key={vp.userId} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${awardMeta.chip}`}>
+                <Avatar src={vp.avatarUrl} alt={vp.name} className="w-4 h-4 rounded-full" />
                 <span className="font-mono text-[10px]">{vp.name}</span>
               </div>
             ))}
@@ -123,11 +132,13 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
             const votes = allVoteCounts[player.userId] || 0;
             const pct = maxVotes > 0 ? (votes / maxVotes) * 100 : 0;
             const isLeader = idx === 0 && votes > 0;
+            const isCurrentUser = player.userId === currentUserId;
             return (
               <div key={player.userId} className="flex items-center gap-2">
-                <span className="font-mono text-[10px] text-on-surface-variant w-16 truncate flex items-center gap-1">
+                <Avatar src={player.avatarUrl} alt={player.name} className="w-4 h-4 rounded-full shrink-0" />
+                <span className={`font-mono text-[10px] w-16 truncate flex items-center gap-1 ${isCurrentUser ? "text-primary font-bold" : "text-on-surface-variant"}`}>
                   {isLeader && <MaterialIcon name="crown" className="w-3 h-3 text-amber-500 shrink-0" />}
-                  {player.name}
+                  {player.name.split(" ")[0]}
                 </span>
                 <div className="flex-1 h-4 bg-surface-variant/50 rounded overflow-hidden">
                   <div className={`h-full rounded transition-all ${awardMeta.chip.split(" ")[0]}`} style={{ width: `${pct}%` }} />
@@ -175,7 +186,7 @@ export const VoteCard = memo(function VoteCard({ award, players, currentUserId, 
                         : "bg-surface-variant/50 border border-transparent active:bg-surface-variant"
                     }`}
                   >
-                    <Avatar src={null} alt={player.name} className="w-10 h-10 rounded-full" />
+                    <Avatar src={player.avatarUrl} alt={player.name} className="w-10 h-10 rounded-full shrink-0" />
                     <div className="flex-1 text-left">
                       <p className="font-mono text-label-sm text-on-surface">{player.name}</p>
                       {player.team && (

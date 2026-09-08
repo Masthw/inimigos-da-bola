@@ -41,17 +41,20 @@ function RemoveActions({
   if (!hasAny) return null;
 
   return (
-    <div className="space-y-2">
-      <p className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest">Remover</p>
+    <div className="space-y-2 p-3 bg-surface-container rounded-xl border border-outline-variant/40">
+      <p className="font-mono text-[10px] text-error uppercase tracking-widest flex items-center gap-1">
+        <MaterialIcon name="remove_circle_outline" className="w-3.5 h-3.5" />
+        Remover marcações
+      </p>
       <div className="flex flex-wrap gap-2">
         {goalCount > 0 && (
           <button
             type="button"
             disabled={disabled}
             onClick={onRemoveGoal}
-            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors rounded"
           >
-            <MaterialIcon name="remove_circle" className="w-4 h-4" />
+            <MaterialIcon name="remove" className="w-4 h-4" />
             {goalCount} {goalCount === 1 ? "Gol" : "Gols"}
           </button>
         )}
@@ -60,9 +63,9 @@ function RemoveActions({
             type="button"
             disabled={disabled}
             onClick={onRemoveAssist}
-            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors rounded"
           >
-            <MaterialIcon name="remove_circle" className="w-4 h-4" />
+            <MaterialIcon name="remove" className="w-4 h-4" />
             {assistCount} {assistCount === 1 ? "Assist." : "Assists."}
           </button>
         )}
@@ -71,9 +74,9 @@ function RemoveActions({
             type="button"
             disabled={disabled}
             onClick={onRemoveOwnGoal}
-            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-error/10 text-error font-mono text-label-sm border border-error/20 active:bg-error/20 transition-colors rounded"
           >
-            <MaterialIcon name="remove_circle" className="w-4 h-4" />
+            <MaterialIcon name="remove" className="w-4 h-4" />
             {ownGoalCount} {ownGoalCount === 1 ? "Gol Contra" : "Gols Contra"}
           </button>
         )}
@@ -135,6 +138,7 @@ function ReviewManagePhase({
       />
 
       <div className="space-y-2">
+        <p className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest">Adicionar Registro</p>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -143,26 +147,26 @@ function ReviewManagePhase({
             className="flex flex-col items-center gap-2 py-4 bg-primary-container text-primary font-mono text-label-bold border border-primary/30 active:bg-primary/20 transition-colors"
           >
             <MaterialIcon name="sports_soccer" className="w-6 h-6" />
-            Gol
+            + Gol
           </button>
           <button
             type="button"
             disabled={disabled}
-            onClick={onOwnGoal}
-            className="flex flex-col items-center gap-2 py-4 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors"
+            onClick={onAddAssistOnly}
+            className="flex flex-col items-center gap-2 py-4 bg-secondary-container text-secondary font-mono text-label-bold border border-secondary/30 active:bg-secondary/20 transition-colors"
           >
-            <MaterialIcon name="error" className="w-6 h-6" />
-            Gol Contra
+            <MaterialIcon name="send" className="w-6 h-6" />
+            + Assistência
           </button>
         </div>
         <button
           type="button"
           disabled={disabled}
-          onClick={onAddAssistOnly}
-          className="w-full flex flex-col items-center gap-2 py-4 bg-secondary-container text-secondary font-mono text-label-bold border border-secondary/30 active:bg-secondary/20 transition-colors"
+          onClick={onOwnGoal}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-warning/15 text-warning font-mono text-label-bold border border-warning/30 active:bg-warning/25 transition-colors"
         >
-          <MaterialIcon name="send" className="w-6 h-6" />
-          Assistência
+          <MaterialIcon name="error" className="w-5 h-5" />
+          + Gol Contra
         </button>
       </div>
     </div>
@@ -212,7 +216,7 @@ function ReviewAssistPhase({
             onClick={() => onAssistSelect(p)}
             className="w-full flex items-center gap-3 py-3 px-4 bg-surface-variant border border-outline-variant active:bg-surface-container-high transition-colors"
           >
-            <Avatar src={null} alt={p.name} className="w-8 h-8 rounded-full" />
+            <Avatar src={p.avatarUrl} alt={p.name} className="w-8 h-8 rounded-full" />
             <span className="font-mono text-label-sm text-on-surface">{p.name}</span>
           </button>
         ))}
@@ -237,7 +241,7 @@ export function MatchReviewSheet({
   onRemoveOwnGoal,
   onAssistSelect,
 }: Readonly<MatchReviewSheetProps>) {
-  if (!selectedPlayer) return null;
+  if (!selectedPlayer || sheetPhase === "closed") return null;
 
   return (
     <>

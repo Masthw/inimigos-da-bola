@@ -10,6 +10,7 @@ interface AwardResult {
   awardName: string;
   winnerName: string | null;
   winnerId: string | null;
+  winnerAvatarUrl?: string | null;
   voteCount: number;
   isAutomatic: boolean;
   givesPoints: boolean;
@@ -92,7 +93,7 @@ export default function MatchResults() {
           .eq("match_id", id),
         supabase
           .from("match_players")
-          .select("user_id, guest_name, users(name)")
+          .select("user_id, guest_name, users(name, avatar_url)")
           .eq("match_id", id)
           .eq("status", "confirmed"),
       ]);
@@ -105,9 +106,13 @@ export default function MatchResults() {
       }
 
       const playerMap = new Map<string, string>();
+      const avatarMap = new Map<string, string | null>();
       playersRes.data?.forEach((p) => {
         const pid = p.user_id ?? "";
-        playerMap.set(pid, p.users?.name ?? p.guest_name ?? "Convidado");
+        const name = (Array.isArray(p.users) ? p.users[0]?.name : p.users?.name) ?? p.guest_name ?? "Convidado";
+        const avatar = (Array.isArray(p.users) ? p.users[0]?.avatar_url : p.users?.avatar_url) ?? null;
+        playerMap.set(pid, name);
+        avatarMap.set(pid, avatar);
       });
 
       const voteCountsByAward = new Map<number, Map<string, number>>();
@@ -125,22 +130,29 @@ export default function MatchResults() {
         winnerByAward.set(ma.award_id, ma.user_id);
       });
 
-      const awardResults: AwardResult[] = (awardsRes.data ?? []).map((award) => {
-        const winnerId = winnerByAward.get(award.id) ?? null;
-        const winnerName = winnerId ? (playerMap.get(winnerId) ?? null) : null;
+      const awardResults: AwardResult[] = [];
+      for (const award of awardsRes.data ?? []) {
+        if (award.name.toLowerCase().includes("inimigo da bola")) continue;
+        const winnerId = winnerByAward.get(award.id);
+        if (!winnerId) continue;
+
+        const winnerName = playerMap.get(winnerId) ?? "Jogador";
+        const winnerAvatarUrl = avatarMap.get(winnerId) ?? null;
 
         const awardVoteMap = voteCountsByAward.get(award.id);
-        const winnerVoteCount = winnerId && awardVoteMap ? (awardVoteMap.get(winnerId) ?? 0) : 0;
+        const winnerVoteCount = awardVoteMap ? (awardVoteMap.get(winnerId) ?? 0) : 0;
+        const isCraque = award.name.toLowerCase().includes("craque");
 
-        return {
+        awardResults.push({
           awardName: award.name,
           winnerName,
           winnerId,
+          winnerAvatarUrl,
           voteCount: winnerVoteCount,
           isAutomatic: !award.is_voting_based,
-          givesPoints: false,
-        };
-      });
+          givesPoints: isCraque,
+        });
+      }
 
       dispatch({
         type: "fetchSuccess",

@@ -14,6 +14,10 @@ export function useUserProfile(userId: string | undefined) {
     if (!targetId) return
 
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional state refresh on user change
+    setLoaded(false)
+    setName(null)
+    setAvatarUrl(null)
 
     const load = async () => {
       const { data } = await supabase.from('users').select('id, name, avatar_url').eq('id', targetId).maybeSingle()

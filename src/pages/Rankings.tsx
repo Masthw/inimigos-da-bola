@@ -108,34 +108,35 @@ function buildLeaderboardMaps(leaderboard: LeaderboardRow[] | null) {
 async function fetchRankingData(userId?: string, groupId?: string | null): Promise<PlayerRank[]> {
   if (!groupId) return [];
 
-  const { data: season } = await supabase
-    .from("group_seasons")
-    .select("id")
-    .eq("group_id", groupId)
-    .lte("start_date", new Date().toISOString())
-    .gte("end_date", new Date().toISOString())
-    .maybeSingle();
-
-  if (!season) return [];
-
-  const { data: members } = await supabase
-    .from("group_members")
-    .select("user_id")
-    .eq("group_id", groupId)
-    .eq("status", "approved");
+  const [{ data: season }, { data: members }] = await Promise.all([
+    supabase
+      .from("group_seasons")
+      .select("id")
+      .eq("group_id", groupId)
+      .order("start_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("group_members")
+      .select("user_id")
+      .eq("group_id", groupId)
+      .eq("status", "approved"),
+  ]);
 
   const memberIds = (members ?? []).map((m) => m.user_id);
   if (memberIds.length === 0) return [];
 
   const [{ data: leaderboard }, { data: matchPlayers }, { data: awards }] = await Promise.all([
-    supabase
-      .from("season_leaderboards")
-      .select("*")
-      .eq("season_id", season.id)
-      .in("user_id", memberIds),
+    season
+      ? supabase
+          .from("season_leaderboards")
+          .select("*")
+          .eq("season_id", season.id)
+          .in("user_id", memberIds)
+      : Promise.resolve({ data: [] as LeaderboardRow[] }),
     supabase
       .from("match_players")
-      .select("user_id, goals_scored, assists, matches!inner(status, team_a_score, team_b_score, date_time, group_id)")
+      .select("user_id, team, goals_scored, assists, matches!inner(status, team_a_score, team_b_score, date_time, group_id)")
       .eq("matches.status", "finished")
       .is("matches.deleted_at", null)
       .eq("matches.group_id", groupId)
@@ -167,9 +168,11 @@ async function fetchRankingData(userId?: string, groupId?: string | null): Promi
   const result: PlayerRank[] = [];
   for (const u of users ?? []) {
     const stats = statsMap.get(u.id) ?? EMPTY_STATS;
-    const points = pointsMap.get(u.id) ?? 0;
+    const craqueCount = (badgesMap.get(u.id) ?? []).filter((b) => b.toLowerCase().includes("craque")).length;
+    const computedPoints = (stats.wins * 3) + (stats.draws * 1) + craqueCount;
+    const lbPoints = pointsMap.get(u.id);
+    const points = lbPoints != null && lbPoints > 0 ? lbPoints : computedPoints;
     const matchesPlayed = matchesPlayedMap.get(u.id) ?? stats.matchesPlayed;
-    if (matchesPlayed === 0 && points === 0) continue;
     result.push({
       id: u.id,
       name: u.name ?? "Jogador",
@@ -185,7 +188,7 @@ async function fetchRankingData(userId?: string, groupId?: string | null): Promi
       isCurrentUser: u.id === userId,
     });
   }
-  return result.sort((a, b) => b.points - a.points || b.goals - a.goals || b.assists - a.assists);
+  return result.sort((a, b) => b.points - a.points || b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name));
 }
 
 // COMPONENTE PRINCIPAL

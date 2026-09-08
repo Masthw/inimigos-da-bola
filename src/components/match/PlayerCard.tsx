@@ -41,7 +41,7 @@ export const PlayerCard = React.memo(function PlayerCard({ player, teamColor, st
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="w-full flex items-center gap-3 p-3 transition-colors text-left"
+      className="w-full flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 transition-colors text-left"
       style={{
         backgroundColor: withAlpha(teamColor, 0.05),
         borderColor: isDarkColor(teamColor) ? "rgba(156,163,175,0.4)" : withAlpha(teamColor, 0.2),
@@ -57,19 +57,38 @@ export const PlayerCard = React.memo(function PlayerCard({ player, teamColor, st
       <Avatar
         src={player.avatarUrl}
         alt={player.name}
-        className="w-10 h-10 rounded-full shrink-0"
+        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shrink-0"
         style={{ borderColor: isDarkColor(teamColor) ? "rgba(156,163,175,0.5)" : withAlpha(teamColor, 0.3), borderWidth: "2px" }}
       />
       <div className="flex-1 min-w-0">
-        <p className="font-mono text-label-sm text-on-surface truncate leading-tight">{player.name}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          {stats.goals > 0 && (
-            <span className="font-mono text-[10px] font-bold" style={{ color: teamColor }}>
-              {stats.goals}G
+        <p className="font-mono text-label-sm sm:text-label-md font-bold text-on-surface truncate leading-tight">
+          {player.name.split(" ")[0]}
+        </p>
+        <div className="grid grid-cols-3 gap-1 mt-1.5 pt-1.5 border-t border-outline-variant/30 text-center">
+          <div className="flex flex-col items-center">
+            <span className="font-mono text-xs sm:text-label-sm font-bold leading-none" style={{ color: teamColor }}>
+              {stats.goals}
             </span>
-          )}
-          {stats.assists > 0 && <span className="font-mono text-[10px] text-on-surface-variant">{stats.assists}A</span>}
-          {stats.ownGoals > 0 && <span className="font-mono text-[10px] font-bold text-error">{stats.ownGoals}GC</span>}
+            <span className="font-mono text-[8px] sm:text-[9px] uppercase tracking-tighter text-on-surface-variant leading-tight mt-0.5">
+              Gols
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="font-mono text-xs sm:text-label-sm font-bold leading-none text-on-surface">
+              {stats.assists}
+            </span>
+            <span className="font-mono text-[8px] sm:text-[9px] uppercase tracking-tighter text-on-surface-variant leading-tight mt-0.5">
+              Assist
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className={`font-mono text-xs sm:text-label-sm font-bold leading-none ${stats.ownGoals > 0 ? "text-error" : "text-on-surface-variant"}`}>
+              {stats.ownGoals}
+            </span>
+            <span className="font-mono text-[8px] sm:text-[9px] uppercase tracking-tighter text-on-surface-variant leading-tight mt-0.5">
+              Contra
+            </span>
+          </div>
         </div>
       </div>
     </button>

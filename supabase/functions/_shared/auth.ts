@@ -11,6 +11,7 @@ export class FunctionError extends Error {
 
 const BASE_CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, DELETE',
 };
 
 // ALLOWED_ORIGINS env var: lista de origens separadas por vírgula.
@@ -21,16 +22,19 @@ export function corsHeaders(req: Request): Record<string, string> {
     .map((o) => o.trim())
     .filter(Boolean);
 
+  const origin = req.headers.get('Origin') ?? '';
+
   if (allowedOrigins.length === 0) {
     console.warn('ALLOWED_ORIGINS nao configurado - CORS liberado para qualquer origem');
-    return { ...BASE_CORS_HEADERS, 'Access-Control-Allow-Origin': '*' };
+    return { ...BASE_CORS_HEADERS, 'Access-Control-Allow-Origin': origin || '*' };
   }
 
-  const origin = req.headers.get('Origin') ?? '';
-  if (!allowedOrigins.includes(origin)) {
-    return BASE_CORS_HEADERS;
+  const isLocalhost = origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:');
+  if (isLocalhost || allowedOrigins.includes(origin)) {
+    return { ...BASE_CORS_HEADERS, 'Access-Control-Allow-Origin': origin };
   }
-  return { ...BASE_CORS_HEADERS, 'Access-Control-Allow-Origin': origin };
+
+  return { ...BASE_CORS_HEADERS, 'Access-Control-Allow-Origin': '*' };
 }
 
 export function jsonResponse(

@@ -210,15 +210,9 @@ export default function MatchLive() {
     fetchData();
   };
 
-
   const handleRequestReview = () => {
     if (!match) return;
     navigate(`/matches/${match.id}/review`);
-  };
-
-  const handleManagePlayers = () => {
-    if (!match) return;
-    navigate(`/matches/${match.id}/players`);
   };
 
   return (
@@ -236,7 +230,6 @@ export default function MatchLive() {
         onGoalScored={handleGoalScored}
         onOwnGoal={handleOwnGoal}
         onRequestReview={handleRequestReview}
-        onManagePlayers={handleManagePlayers}
         isCreator={isCreator}
         busy={busy}
       />

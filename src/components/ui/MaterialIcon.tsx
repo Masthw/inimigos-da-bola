@@ -55,6 +55,8 @@ import {
   Users,
   type LucideIcon,
   Palette,
+  Trash2,
+  UserMinus,
 } from "lucide-react";
 
 const iconRegistry: Record<string, LucideIcon> = {
@@ -62,6 +64,8 @@ const iconRegistry: Record<string, LucideIcon> = {
   event_available: CalendarCheck,
   grid_view: LayoutGrid,
   military_tech: Trophy,
+  emoji_events: Trophy,
+  trophy: Trophy,
   history: History,
   analytics: BarChart3,
   dashboard: LayoutDashboard,
@@ -113,6 +117,10 @@ const iconRegistry: Record<string, LucideIcon> = {
   crown: Crown,
   group: Users,
   palette: Palette,
+  delete: Trash2,
+  trash: Trash2,
+  person_remove: UserMinus,
+  user_minus: UserMinus,
 };
 
 interface MaterialIconProps {

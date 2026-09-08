@@ -34,6 +34,16 @@ export function useMatchReviewSheet() {
 
   const sheetOpen = sheetPhase !== "closed";
 
+  const getStats = useCallback(
+    (userId: string) => {
+      const goals = match?.goals.filter((g) => g.playerId === userId).length ?? 0;
+      const assists = match?.assists.filter((a) => a.assistPlayerId === userId).length ?? 0;
+      const ownGoals = match?.ownGoals.filter((og) => og.playerId === userId).length ?? 0;
+      return { goals, assists, ownGoals };
+    },
+    [match],
+  );
+
   const handleStartVoting = useCallback(async () => {
     const scoreUpdated = await updateScore(currentScoreA, currentScoreB);
     if (!scoreUpdated) return;
@@ -49,26 +59,21 @@ export function useMatchReviewSheet() {
     setSelectedPlayer(null);
   }, []);
 
-  const handlePlayerClick = useCallback((player: { userId: string; name: string; team: string }) => {
-    if (saving || !player.userId) return;
+  const handlePlayerClick = useCallback(
+    (player: MatchPlayer) => {
+      if (saving || !player.userId) return;
 
-    setSelectedPlayer({
-      userId: player.userId,
-      name: player.name,
-      avatarUrl: null,
-      team: player.team as "A" | "B",
-    });
+      setSelectedPlayer({
+        userId: player.userId,
+        name: player.name,
+        avatarUrl: player.avatarUrl ?? null,
+        team: player.team as "A" | "B",
+      });
 
-    const goalCount = match?.goals.filter((g) => g.playerId === player.userId).length ?? 0;
-    const assistCount = match?.assists.filter((a) => a.assistPlayerId === player.userId).length ?? 0;
-    const ownGoalCount = match?.ownGoals.filter((og) => og.playerId === player.userId).length ?? 0;
-
-    if (goalCount > 0 || assistCount > 0 || ownGoalCount > 0) {
       setSheetPhase("manage");
-    } else {
-      setSheetPhase("goal_type");
-    }
-  }, [saving, match]);
+    },
+    [saving],
+  );
 
   const handleGoal = useCallback(() => {
     setSheetPhase("assist");
@@ -124,6 +129,7 @@ export function useMatchReviewSheet() {
     teamBGoals,
     assistCandidates,
     sheetOpen,
+    getStats,
     handleStartVoting,
     handlePlayerClick,
     handleGoal,

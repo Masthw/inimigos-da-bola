@@ -44,6 +44,17 @@ export interface MatchReviewData {
 
 type SupabaseUpdatePromise = PromiseLike<{ error: PostgrestError | null }>;
 
+function getPlayerQuery(matchId: string, playerIdentifier: string) {
+  const query = supabase
+    .from("match_players")
+    .select("id, goals_scored, assists, own_goals_scored, team")
+    .eq("match_id", matchId);
+  if (playerIdentifier.startsWith("guest-")) {
+    return query.eq("guest_name", playerIdentifier.replace(/^guest-/, "")).maybeSingle();
+  }
+  return query.eq("user_id", playerIdentifier).maybeSingle();
+}
+
 export function useMatchReview(matchId: string | undefined, groupId: string | null = null) {
   const [match, setMatch] = useState<MatchReviewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +75,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       supabase
         .from("match_players")
         .select(
-          "user_id, guest_name, team, goals_scored, assists, own_goals_scored, users(name)",
+          "user_id, guest_name, team, goals_scored, assists, own_goals_scored, users(name, avatar_url)",
         )
         .eq("match_id", matchId)
         .eq("status", "confirmed"),
@@ -86,7 +97,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       userId: row.user_id ?? `guest-${row.guest_name}`,
       name: row.users?.name ?? row.guest_name ?? "Convidado",
       team: row.team as "A" | "B",
-      avatarUrl: null,
+      avatarUrl: row.users?.avatar_url ?? null,
     }));
 
     const goals: MatchGoal[] = [];
@@ -234,12 +245,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         }
 
         const [scorerRes, matchRes] = await Promise.all([
-          supabase
-            .from("match_players")
-            .select("id, goals_scored")
-            .eq("match_id", matchId)
-            .eq("user_id", scorerUserId)
-            .maybeSingle(),
+          getPlayerQuery(matchId, scorerUserId),
           supabase
             .from("matches")
             .select("team_a_score, team_b_score")
@@ -277,12 +283,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         ];
 
         if (assistUserId) {
-          const assistRes = await supabase
-            .from("match_players")
-            .select("id, assists")
-            .eq("match_id", matchId)
-            .eq("user_id", assistUserId)
-            .maybeSingle();
+          const assistRes = await getPlayerQuery(matchId, assistUserId);
 
           if (assistRes.data) {
             const currentAssists = assistRes.data.assists ?? 0;
@@ -330,14 +331,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
             .select("team_a_score, team_b_score")
             .eq("id", matchId)
             .single(),
-          scorerUserId
-            ? supabase
-              .from("match_players")
-              .select("id, own_goals_scored")
-              .eq("match_id", matchId)
-              .eq("user_id", scorerUserId)
-              .maybeSingle()
-            : null,
+          scorerUserId ? getPlayerQuery(matchId, scorerUserId) : null,
         ]);
 
         if (matchRes.error || !matchRes.data) {
@@ -397,12 +391,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         return false;
       }
 
-      const playerRes = await supabase
-        .from("match_players")
-        .select("id, goals_scored, team")
-        .eq("match_id", matchId)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const playerRes = await getPlayerQuery(matchId, userId);
 
       if (
         playerRes.error || !playerRes.data ||
@@ -453,12 +442,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         return false;
       }
 
-      const playerRes = await supabase
-        .from("match_players")
-        .select("id, assists")
-        .eq("match_id", matchId)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const playerRes = await getPlayerQuery(matchId, userId);
 
       if (
         playerRes.error || !playerRes.data || (playerRes.data.assists ?? 0) <= 0
@@ -487,12 +471,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         return false;
       }
 
-      const playerRes = await supabase
-        .from("match_players")
-        .select("id, own_goals_scored, team")
-        .eq("match_id", matchId)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const playerRes = await getPlayerQuery(matchId, userId);
 
       if (
         playerRes.error || !playerRes.data ||
@@ -544,12 +523,7 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
         return false;
       }
 
-      const playerRes = await supabase
-        .from("match_players")
-        .select("id, assists")
-        .eq("match_id", matchId)
-        .eq("user_id", userId)
-        .maybeSingle();
+      const playerRes = await getPlayerQuery(matchId, userId);
 
       if (playerRes.error || !playerRes.data) {
         return false;

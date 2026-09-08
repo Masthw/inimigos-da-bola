@@ -31,5 +31,6 @@ graphify-out
 
 #Claude
 CLAUDE.md
+session-*.md
 .env.local
 .env*.local

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export interface HistoryPlayer {
+  userId?: string | null
   name: string
   goals: number
   assists: number
@@ -94,7 +95,7 @@ function buildPlayersByMatch(
   for (const row of rows) {
     const name = row.users?.name ?? row.guest_name ?? 'Convidado'
     const awards = row.user_id ? (awardMap.get(`${row.match_id}:${row.user_id}`) ?? []) : []
-    const player: HistoryPlayer = { name, goals: row.goals_scored ?? 0, assists: row.assists ?? 0, awards }
+    const player: HistoryPlayer = { userId: row.user_id, name, goals: row.goals_scored ?? 0, assists: row.assists ?? 0, awards }
     const entry = playersByMatch.get(row.match_id) ?? { home: [], away: [] }
     if (row.team === 'B') entry.away.push(player)
     else entry.home.push(player)

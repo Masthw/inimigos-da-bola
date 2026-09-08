@@ -1,26 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
+import { GroupCodeCard } from "../components/groups/GroupCodeCard";
+import { PendingRequestsList } from "../components/groups/PendingRequestsList";
+import { GroupMembersList } from "../components/groups/GroupMembersList";
+import { RemoveMemberModal } from "../components/groups/RemoveMemberModal";
+import type { Member, PendingMember } from "../components/groups/types";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabaseClient";
-
-interface PendingMember {
-  user_id: string;
-  group_id: string;
-  role: string;
-  status: string;
-  joined_at: string;
-  users: { name: string | null; avatar_url: string | null } | null;
-}
-
-interface Member {
-  user_id: string;
-  role: string;
-  status: string;
-  joined_at: string;
-  users: { name: string | null; avatar_url: string | null } | null;
-}
 
 export default function GroupManagement() {
   const { user } = useAuth();
@@ -28,8 +16,9 @@ export default function GroupManagement() {
   const [pending, setPending] = useState<PendingMember[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!activeGroupId || !user) {
@@ -72,7 +61,7 @@ export default function GroupManagement() {
   }, [fetchData]);
 
   async function handleApprove(userId: string) {
-    if (!activeGroupId) return;
+    if (!activeGroupId || busyUserId) return;
     setBusyUserId(userId);
     try {
       const payload = { status: "approved" };
@@ -85,7 +74,7 @@ export default function GroupManagement() {
   }
 
   async function handleReject(userId: string) {
-    if (!activeGroupId) return;
+    if (!activeGroupId || busyUserId) return;
     setBusyUserId(userId);
     try {
       await supabase.from("group_members").delete().eq("group_id", activeGroupId).eq("user_id", userId);
@@ -97,7 +86,7 @@ export default function GroupManagement() {
   }
 
   async function handleSetRole(userId: string, role: "admin" | "member") {
-    if (!activeGroupId) return;
+    if (!activeGroupId || busyUserId) return;
     setBusyUserId(userId);
     try {
       const payload = { role };
@@ -109,11 +98,21 @@ export default function GroupManagement() {
     }
   }
 
-  async function handleCopyCode() {
-    if (!activeGroup?.code) return;
-    await navigator.clipboard.writeText(activeGroup.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function handleRemoveMember() {
+    if (!activeGroupId || !memberToRemove || isRemoving) return;
+    setIsRemoving(true);
+    try {
+      await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", activeGroupId)
+        .eq("user_id", memberToRemove.user_id);
+      await fetchData();
+      refreshGroup();
+      setMemberToRemove(null);
+    } finally {
+      setIsRemoving(false);
+    }
   }
 
   if (loading) {
@@ -149,110 +148,31 @@ export default function GroupManagement() {
       <div className="p-4 max-w-2xl mx-auto">
         <h1 className="text-headline-lg font-display font-black text-on-surface tracking-tighter mb-6">GERENCIAR GRUPO</h1>
 
-        <section className="mb-8 p-4 bg-surface-container-high border border-outline-variant rounded-xl">
-          <h2 className="text-title-md font-mono text-on-surface mb-3">Código do grupo</h2>
-          <p className="text-body-sm text-on-surface-variant mb-3">Compartilhe este código com quem você quer que entre no grupo:</p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 px-3 py-2 bg-surface-container font-mono text-headline-sm text-on-surface border border-outline-variant rounded text-center tracking-widest">
-              {activeGroup.code}
-            </code>
-            <button
-              type="button"
-              onClick={handleCopyCode}
-              className="px-4 py-2 bg-primary text-on-primary font-mono text-label-sm brutal-shadow hover:scale-105 transition-transform flex items-center gap-2"
-            >
-              <MaterialIcon name={copied ? "check" : "content_copy"} className="w-4 h-4" />
-              {copied ? "COPIADO!" : "COPIAR"}
-            </button>
-          </div>
-          <p className="text-label-sm text-on-surface-variant mt-2">
-            Nome: <span className="text-on-surface font-bold">{activeGroup.name}</span>
-          </p>
-        </section>
+        <GroupCodeCard code={activeGroup.code} groupName={activeGroup.name} />
 
-        <section className="mb-8">
-          <h2 className="text-title-md font-mono text-on-surface mb-3">Solicitações pendentes ({pending.length})</h2>
-          {pending.length === 0 ? (
-            <p className="text-body-sm text-on-surface-variant">Nenhuma solicitação no momento.</p>
-          ) : (
-            <div className="space-y-2">
-              {pending.map((p) => (
-                <div
-                  key={p.user_id}
-                  className="flex items-center justify-between p-3 bg-surface-container-high border border-outline-variant rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center">
-                      <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
-                    </div>
-                    <span className="font-mono text-label-sm text-on-surface">{p.users?.name ?? p.user_id}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={busyUserId === p.user_id}
-                      onClick={() => handleApprove(p.user_id)}
-                      className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm hover:scale-105 transition-transform disabled:opacity-50"
-                    >
-                      {busyUserId === p.user_id ? "..." : "ACEITAR"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busyUserId === p.user_id}
-                      onClick={() => handleReject(p.user_id)}
-                      className="px-3 py-1 bg-error-container text-on-error-container font-mono text-label-sm hover:scale-105 transition-transform disabled:opacity-50"
-                    >
-                      RECUSAR
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <PendingRequestsList
+          pending={pending}
+          busyUserId={busyUserId}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
 
-        <section>
-          <h2 className="text-title-md font-mono text-on-surface mb-3">Membros ({members.length})</h2>
-          <div className="space-y-2">
-            {members.map((m) => (
-              <div
-                key={m.user_id}
-                className="flex items-center justify-between p-3 bg-surface-container-high border border-outline-variant rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center">
-                    <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
-                  </div>
-                  <span className="font-mono text-label-sm text-on-surface">{m.users?.name ?? m.user_id}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {m.role === "admin" ? (
-                    <button
-                      type="button"
-                      disabled={busyUserId === m.user_id}
-                      onClick={() => handleSetRole(m.user_id, "member")}
-                      className="font-mono text-label-sm px-2 py-0.5 rounded bg-primary-container text-on-primary-container hover:scale-105 transition-transform disabled:opacity-50"
-                      title="Rebaixar para membro"
-                    >
-                      ADMIN
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={busyUserId === m.user_id}
-                      onClick={() => handleSetRole(m.user_id, "admin")}
-                      className="font-mono text-label-sm px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant hover:scale-105 transition-transform disabled:opacity-50"
-                      title="Promover a admin do grupo"
-                    >
-                      MEMBRO
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <GroupMembersList
+          members={members}
+          currentUserId={user?.id}
+          busyUserId={busyUserId}
+          onSetRole={handleSetRole}
+          onRemove={(m) => setMemberToRemove(m)}
+        />
       </div>
+
+      <RemoveMemberModal
+        member={memberToRemove}
+        groupName={activeGroup.name}
+        isRemoving={isRemoving}
+        onConfirm={handleRemoveMember}
+        onClose={() => setMemberToRemove(null)}
+      />
     </AppShell>
   );
 }
