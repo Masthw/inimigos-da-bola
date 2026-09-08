@@ -55,6 +55,8 @@ import {
   Users,
   type LucideIcon,
   Palette,
+  Trash2,
+  UserMinus,
 } from "lucide-react";
 
 const iconRegistry: Record<string, LucideIcon> = {
@@ -115,6 +117,10 @@ const iconRegistry: Record<string, LucideIcon> = {
   crown: Crown,
   group: Users,
   palette: Palette,
+  delete: Trash2,
+  trash: Trash2,
+  person_remove: UserMinus,
+  user_minus: UserMinus,
 };
 
 interface MaterialIconProps {

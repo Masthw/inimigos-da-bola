@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "../components/ui/AppShell";
+import { Avatar } from "../components/ui/Avatar";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
+import { Modal } from "../components/ui/Modal";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabaseClient";
@@ -30,6 +32,8 @@ export default function GroupManagement() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!activeGroupId || !user) {
@@ -109,6 +113,23 @@ export default function GroupManagement() {
     }
   }
 
+  async function handleRemoveMember() {
+    if (!activeGroupId || !memberToRemove) return;
+    setIsRemoving(true);
+    try {
+      await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", activeGroupId)
+        .eq("user_id", memberToRemove.user_id);
+      await fetchData();
+      refreshGroup();
+      setMemberToRemove(null);
+    } finally {
+      setIsRemoving(false);
+    }
+  }
+
   async function handleCopyCode() {
     if (!activeGroup?.code) return;
     await navigator.clipboard.writeText(activeGroup.code);
@@ -182,9 +203,11 @@ export default function GroupManagement() {
                   className="flex items-center justify-between p-3 bg-surface-container-high border border-outline-variant rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center">
-                      <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
-                    </div>
+                    <Avatar
+                      src={p.users?.avatar_url ?? null}
+                      alt={p.users?.name ?? "Membro pendente"}
+                      className="w-8 h-8 rounded-full"
+                    />
                     <span className="font-mono text-label-sm text-on-surface">{p.users?.name ?? p.user_id}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -214,45 +237,110 @@ export default function GroupManagement() {
         <section>
           <h2 className="text-title-md font-mono text-on-surface mb-3">Membros ({members.length})</h2>
           <div className="space-y-2">
-            {members.map((m) => (
-              <div
-                key={m.user_id}
-                className="flex items-center justify-between p-3 bg-surface-container-high border border-outline-variant rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-surface-variant rounded-full flex items-center justify-center">
-                    <MaterialIcon name="person" className="w-5 h-5 text-on-surface-variant" />
+            {members.map((m) => {
+              const isCurrentUser = m.user_id === user?.id;
+
+              return (
+                <div
+                  key={m.user_id}
+                  className="flex items-center justify-between p-3 bg-surface-container-high border border-outline-variant rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      src={m.users?.avatar_url ?? null}
+                      alt={m.users?.name ?? "Membro"}
+                      className="w-8 h-8 rounded-full"
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-label-sm text-on-surface">{m.users?.name ?? m.user_id}</span>
+                      {isCurrentUser && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-on-surface-variant">
+                          VOCÊ
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="font-mono text-label-sm text-on-surface">{m.users?.name ?? m.user_id}</span>
+                  <div className="flex items-center gap-2">
+                    {m.role === "admin" ? (
+                      <button
+                        type="button"
+                        disabled={busyUserId === m.user_id || isCurrentUser}
+                        onClick={() => handleSetRole(m.user_id, "member")}
+                        className="font-mono text-label-sm px-2 py-0.5 rounded bg-primary-container text-on-primary-container hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"
+                        title={isCurrentUser ? "Você é o admin" : "Rebaixar para membro"}
+                      >
+                        ADMIN
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busyUserId === m.user_id}
+                        onClick={() => handleSetRole(m.user_id, "admin")}
+                        className="font-mono text-label-sm px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant hover:scale-105 transition-transform disabled:opacity-50"
+                        title="Promover a admin do grupo"
+                      >
+                        MEMBRO
+                      </button>
+                    )}
+
+                    {!isCurrentUser && (
+                      <button
+                        type="button"
+                        disabled={busyUserId === m.user_id}
+                        onClick={() => setMemberToRemove(m)}
+                        className="p-1.5 rounded text-error hover:bg-error-container hover:text-on-error-container transition-colors disabled:opacity-50"
+                        title="Remover do grupo"
+                      >
+                        <MaterialIcon name="delete" className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {m.role === "admin" ? (
-                    <button
-                      type="button"
-                      disabled={busyUserId === m.user_id}
-                      onClick={() => handleSetRole(m.user_id, "member")}
-                      className="font-mono text-label-sm px-2 py-0.5 rounded bg-primary-container text-on-primary-container hover:scale-105 transition-transform disabled:opacity-50"
-                      title="Rebaixar para membro"
-                    >
-                      ADMIN
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={busyUserId === m.user_id}
-                      onClick={() => handleSetRole(m.user_id, "admin")}
-                      className="font-mono text-label-sm px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant hover:scale-105 transition-transform disabled:opacity-50"
-                      title="Promover a admin do grupo"
-                    >
-                      MEMBRO
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>
+
+      <Modal
+        open={!!memberToRemove}
+        onClose={() => !isRemoving && setMemberToRemove(null)}
+        title="Remover Membro"
+        icon="delete"
+        actions={
+          <>
+            <button
+              type="button"
+              disabled={isRemoving}
+              onClick={() => setMemberToRemove(null)}
+              className="px-4 py-2 font-mono text-label-sm border border-outline-variant hover:bg-surface-variant transition-colors disabled:opacity-50"
+            >
+              CANCELAR
+            </button>
+            <button
+              type="button"
+              disabled={isRemoving}
+              onClick={handleRemoveMember}
+              className="px-4 py-2 bg-error text-on-error font-mono text-label-sm brutal-shadow hover:scale-105 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isRemoving ? (
+                <>
+                  <MaterialIcon name="pending" className="w-4 h-4 animate-spin" />
+                  REMOVENDO...
+                </>
+              ) : (
+                "REMOVER"
+              )}
+            </button>
+          </>
+        }
+      >
+        <p className="text-body-md text-on-surface-variant">
+          Tem certeza que deseja remover{" "}
+          <strong className="text-on-surface font-semibold">{memberToRemove?.users?.name ?? "este membro"}</strong> do grupo{" "}
+          <strong className="text-on-surface font-semibold">{activeGroup.name}</strong>?
+        </p>
+      </Modal>
     </AppShell>
   );
 }
