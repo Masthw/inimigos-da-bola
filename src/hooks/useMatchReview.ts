@@ -44,6 +44,17 @@ export interface MatchReviewData {
 
 type SupabaseUpdatePromise = PromiseLike<{ error: PostgrestError | null }>;
 
+function getPlayerQuery(matchId: string, playerIdentifier: string) {
+  const query = supabase
+    .from("match_players")
+    .select("id, goals_scored, assists, own_goals_scored, team")
+    .eq("match_id", matchId);
+  if (playerIdentifier.startsWith("guest-")) {
+    return query.eq("guest_name", playerIdentifier.replace(/^guest-/, "")).maybeSingle();
+  }
+  return query.eq("user_id", playerIdentifier).maybeSingle();
+}
+
 export function useMatchReview(matchId: string | undefined, groupId: string | null = null) {
   const [match, setMatch] = useState<MatchReviewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -217,17 +228,6 @@ export function useMatchReview(matchId: string | undefined, groupId: string | nu
       setSaving(false);
     }
   }, [matchId, groupId]);
-
-function getPlayerQuery(matchId: string, playerIdentifier: string) {
-  const query = supabase
-    .from("match_players")
-    .select("id, goals_scored, assists, own_goals_scored, team")
-    .eq("match_id", matchId);
-  if (playerIdentifier.startsWith("guest-")) {
-    return query.eq("guest_name", playerIdentifier.replace(/^guest-/, "")).maybeSingle();
-  }
-  return query.eq("user_id", playerIdentifier).maybeSingle();
-}
 
   const addGoal = useCallback(
     async (
