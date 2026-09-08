@@ -130,31 +130,29 @@ export default function MatchResults() {
         winnerByAward.set(ma.award_id, ma.user_id);
       });
 
-      const awardResults: AwardResult[] = (awardsRes.data ?? [])
-        .filter((award) => {
-          if (award.name.toLowerCase().includes("inimigo da bola")) return false;
-          const winnerId = winnerByAward.get(award.id);
-          return Boolean(winnerId);
-        })
-        .map((award) => {
-          const winnerId = winnerByAward.get(award.id) ?? null;
-          const winnerName = winnerId ? (playerMap.get(winnerId) ?? "Jogador") : null;
-          const winnerAvatarUrl = winnerId ? (avatarMap.get(winnerId) ?? null) : null;
+      const awardResults: AwardResult[] = [];
+      for (const award of awardsRes.data ?? []) {
+        if (award.name.toLowerCase().includes("inimigo da bola")) continue;
+        const winnerId = winnerByAward.get(award.id);
+        if (!winnerId) continue;
 
-          const awardVoteMap = voteCountsByAward.get(award.id);
-          const winnerVoteCount = winnerId && awardVoteMap ? (awardVoteMap.get(winnerId) ?? 0) : 0;
-          const isCraque = award.name.toLowerCase().includes("craque");
+        const winnerName = playerMap.get(winnerId) ?? "Jogador";
+        const winnerAvatarUrl = avatarMap.get(winnerId) ?? null;
 
-          return {
-            awardName: award.name,
-            winnerName,
-            winnerId,
-            winnerAvatarUrl,
-            voteCount: winnerVoteCount,
-            isAutomatic: !award.is_voting_based,
-            givesPoints: isCraque,
-          };
+        const awardVoteMap = voteCountsByAward.get(award.id);
+        const winnerVoteCount = awardVoteMap ? (awardVoteMap.get(winnerId) ?? 0) : 0;
+        const isCraque = award.name.toLowerCase().includes("craque");
+
+        awardResults.push({
+          awardName: award.name,
+          winnerName,
+          winnerId,
+          winnerAvatarUrl,
+          voteCount: winnerVoteCount,
+          isAutomatic: !award.is_voting_based,
+          givesPoints: isCraque,
         });
+      }
 
       dispatch({
         type: "fetchSuccess",

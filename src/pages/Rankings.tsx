@@ -108,19 +108,20 @@ function buildLeaderboardMaps(leaderboard: LeaderboardRow[] | null) {
 async function fetchRankingData(userId?: string, groupId?: string | null): Promise<PlayerRank[]> {
   if (!groupId) return [];
 
-  const { data: season } = await supabase
-    .from("group_seasons")
-    .select("id")
-    .eq("group_id", groupId)
-    .order("start_date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: members } = await supabase
-    .from("group_members")
-    .select("user_id")
-    .eq("group_id", groupId)
-    .eq("status", "approved");
+  const [{ data: season }, { data: members }] = await Promise.all([
+    supabase
+      .from("group_seasons")
+      .select("id")
+      .eq("group_id", groupId)
+      .order("start_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("group_members")
+      .select("user_id")
+      .eq("group_id", groupId)
+      .eq("status", "approved"),
+  ]);
 
   const memberIds = (members ?? []).map((m) => m.user_id);
   if (memberIds.length === 0) return [];
