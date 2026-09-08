@@ -13,6 +13,7 @@ export interface VotingAward {
 export interface VotingPlayer {
   userId: string;
   name: string;
+  avatarUrl: string | null;
   team: "A" | "B";
   goalsScored: number;
   assists: number;
@@ -59,7 +60,7 @@ export function useVoting(matchId: string | undefined, groupId: string | null = 
         .single(),
       supabase
         .from("match_players")
-        .select("user_id, guest_name, team, goals_scored, assists, users(name)")
+        .select("user_id, guest_name, team, goals_scored, assists, users(name, avatar_url)")
         .eq("match_id", matchId)
         .eq("status", "confirmed"),
       supabase
@@ -86,7 +87,8 @@ export function useVoting(matchId: string | undefined, groupId: string | null = 
 
     const players: VotingPlayer[] = (playersRes.data ?? []).map((row) => ({
       userId: row.user_id ?? "",
-      name: row.users?.name ?? row.guest_name ?? "Convidado",
+      name: (Array.isArray(row.users) ? row.users[0]?.name : row.users?.name) ?? row.guest_name ?? "Convidado",
+      avatarUrl: (Array.isArray(row.users) ? row.users[0]?.avatar_url : row.users?.avatar_url) ?? null,
       team: row.team as "A" | "B",
       goalsScored: row.goals_scored ?? 0,
       assists: row.assists ?? 0,

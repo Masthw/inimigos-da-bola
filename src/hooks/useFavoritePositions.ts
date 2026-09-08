@@ -14,8 +14,9 @@ export interface FavoritePosition {
   is_primary: boolean
 }
 
-export function useFavoritePositions() {
+export function useFavoritePositions(targetUserId?: string) {
   const { user } = useAuth()
+  const effectiveUserId = targetUserId || user?.id
   const [positions, setPositions] = useState<Position[]>([])
   const [favorites, setFavorites] = useState<Map<number, FavoritePosition>>(new Map())
   const [gameTypeIds, setGameTypeIds] = useState<{ futsal: number | null; society: number | null }>({ futsal: null, society: null })
@@ -25,13 +26,11 @@ export function useFavoritePositions() {
   const [error, setError] = useState<string | null>(null)
 
   const refetchFavorites = useCallback(async () => {
-    if (!user) return
-
-    const userId = user.id
+    if (!effectiveUserId) return
 
     const [{ data: positionsData }, { data: favoritesData }, { data: gameTypesData }] = await Promise.all([
       supabase.from('positions').select('id, name, code, game_type_id').order('name', { ascending: true }),
-      supabase.from('user_favorite_positions').select('position_id, is_primary').eq('user_id', userId),
+      supabase.from('user_favorite_positions').select('position_id, is_primary').eq('user_id', effectiveUserId),
       supabase.from('game_types').select('id, name'),
     ])
 
@@ -47,10 +46,10 @@ export function useFavoritePositions() {
     const society = gameTypesData?.find((gt) => gt.name.toLowerCase() === 'society')
     setGameTypeIds({ futsal: futsal?.id ?? null, society: society?.id ?? null })
     setGameTypeNames({ futsal: futsal?.name ?? 'Futsal', society: society?.name ?? 'Society' })
-  }, [user])
+  }, [effectiveUserId])
 
   const loadFavorites = useCallback(async () => {
-    if (!user) return
+    if (!effectiveUserId) return
 
     setLoading(true)
     setError(null)
@@ -60,24 +59,26 @@ export function useFavoritePositions() {
     } finally {
       setLoading(false)
     }
-  }, [user, refetchFavorites])
+  }, [effectiveUserId, refetchFavorites])
 
   useEffect(() => {
-    if (!user) return
+    if (!effectiveUserId) return
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional state refresh on user change
+    setFavorites(new Map())
+    setLoading(true)
     loadFavorites()
-  }, [user, loadFavorites])
+  }, [effectiveUserId, loadFavorites])
 
   useEffect(() => {
-    if (!user) return
+    if (!effectiveUserId) return
 
     const channel = supabase
-      .channel(uniqueChannelTopic(`fav-${user.id}`))
+      .channel(uniqueChannelTopic(`fav-${effectiveUserId}`))
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'user_favorite_positions',
-        filter: `user_id=eq.${user.id}`,
+        filter: `user_id=eq.${effectiveUserId}`,
       }, () => {
         refetchFavorites()
       })
@@ -87,7 +88,7 @@ export function useFavoritePositions() {
       channel.unsubscribe()
       supabase.removeChannel(channel)
     }
-  }, [user, refetchFavorites])
+  }, [effectiveUserId, refetchFavorites])
 
   const toggleFavorite = async (positionId: number, isPrimary: boolean) => {
     if (!user) return

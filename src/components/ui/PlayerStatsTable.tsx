@@ -1,8 +1,10 @@
 import { memo } from "react";
+import { Link } from "react-router-dom";
 import { MaterialIcon } from "./MaterialIcon";
 import { getAwardMeta } from "../../lib/awards";
 
-interface PlayerStats {
+export interface PlayerStats {
+  userId?: string | null;
   name: string;
   goals: number;
   assists: number;
@@ -28,8 +30,19 @@ export const PlayerStatsTable = memo(function PlayerStatsTable({
           </thead>
           <tbody>
             {players.map((player) => (
-              <tr key={`${player.name}-${title}`} className="border-t border-outline-variant/20">
-                <td className="px-3 py-2 font-mono text-label-sm text-on-surface whitespace-nowrap">{player.name}</td>
+              <tr key={`${player.userId ?? player.name}-${title}`} className="border-t border-outline-variant/20">
+                <td className="px-3 py-2 font-mono text-label-sm text-on-surface whitespace-nowrap">
+                  {player.userId ? (
+                    <Link
+                      to={`/profile/${player.userId}`}
+                      className="hover:text-primary hover:underline transition-colors"
+                    >
+                      {player.name}
+                    </Link>
+                  ) : (
+                    player.name
+                  )}
+                </td>
                 <td className="px-2 py-2 text-center font-mono text-label-sm text-on-surface">{player.goals}</td>
                 <td className="px-2 py-2 text-center font-mono text-label-sm text-on-surface">{player.assists}</td>
                 <td className="px-3 py-2">

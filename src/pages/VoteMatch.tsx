@@ -31,8 +31,8 @@ function VotingHeaderScore({
   assistKing,
 }: Readonly<{
   votingData: NonNullable<ReturnType<typeof useVoting>["votingData"]>;
-  goalScorer: { name: string; goalsScored: number } | null;
-  assistKing: { name: string; assists: number } | null;
+  goalScorer: { name: string; goalsScored: number; avatarUrl: string | null } | null;
+  assistKing: { name: string; assists: number; avatarUrl: string | null } | null;
 }>) {
   return (
     <div className="px-4 py-3 bg-surface-container-high border-b border-outline-variant">
@@ -60,7 +60,7 @@ function VotingHeaderScore({
         {goalScorer && (
           <div className="flex items-center gap-2 p-2 bg-primary-container/30 rounded-lg">
             <MaterialIcon name="sports_soccer" className="w-4 h-4 text-primary" />
-            <Avatar src={null} alt={goalScorer.name} className="w-5 h-5 rounded-full" />
+            <Avatar src={goalScorer.avatarUrl} alt={goalScorer.name} className="w-5 h-5 rounded-full" />
             <span className="font-mono text-[10px] text-on-surface truncate">{goalScorer.name}</span>
             <span className="font-mono text-[9px] text-on-surface-variant ml-auto">{goalScorer.goalsScored}G</span>
           </div>
@@ -68,7 +68,7 @@ function VotingHeaderScore({
         {assistKing && (
           <div className="flex items-center gap-2 p-2 bg-secondary-container/30 rounded-lg">
             <MaterialIcon name="send" className="w-4 h-4 text-secondary" />
-            <Avatar src={null} alt={assistKing.name} className="w-5 h-5 rounded-full" />
+            <Avatar src={assistKing.avatarUrl} alt={assistKing.name} className="w-5 h-5 rounded-full" />
             <span className="font-mono text-[10px] text-on-surface truncate">{assistKing.name}</span>
             <span className="font-mono text-[9px] text-on-surface-variant ml-auto">{assistKing.assists}A</span>
           </div>
@@ -207,13 +207,23 @@ export default function VoteMatch() {
         body: { matchId, groupId: activeGroupId },
       });
       if (fnError) {
-        const msg = fnError.message ?? (fnError.context as { error?: string } | undefined)?.error ?? "Erro ao encerrar votação.";
-        setEndingError(msg);
+        console.error("Erro no tally-match-votes:", fnError);
+        let msg = fnError.message;
+        try {
+          if (fnError.context && typeof fnError.context.json === "function") {
+            const body = await fnError.context.json();
+            if (body?.error) msg = body.error;
+          }
+        } catch {
+          // fallback
+        }
+        setEndingError(msg || "Erro ao encerrar votação.");
         setEnding(false);
         return;
       }
       navigate(`/matches/${matchId}/results`);
     } catch (err: unknown) {
+      console.error("Exceção no tally-match-votes:", err);
       const msg = err instanceof Error ? err.message : "Erro ao encerrar votação.";
       setEndingError(msg);
       setEnding(false);

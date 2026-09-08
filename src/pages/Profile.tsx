@@ -11,6 +11,7 @@ import { useUserRank } from "../hooks/useUserRank";
 import { usePlayerMatchHistory, type HistoryMatch } from "../hooks/usePlayerMatchHistory";
 import { useFavoritePositions } from "../hooks/useFavoritePositions";
 import { useActiveGroup } from "../hooks/useActiveGroup";
+import { useAuth } from "../hooks/useAuth";
 import { getFirstName } from "../lib/profile";
 import { PHOTOS } from "../lib/courts";
 import { AWARD_BADGES, getAwardMeta } from "../lib/awards";
@@ -65,8 +66,7 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: HistoryMatch
   const outcome = OUTCOME_CLASSES[match.outcome];
 
   return (
-    <div className="p-4 bg-surface-container-high rounded-xl border border-outline-variant/30  transition-colors">
-      m{" "}
+    <div className="p-4 bg-surface-container-high rounded-xl border border-outline-variant/30 transition-colors">
       <button
         type="button"
         onClick={onToggle}
@@ -128,11 +128,23 @@ function MatchCard({ match, expanded, onToggle }: Readonly<{ match: HistoryMatch
 
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
-  const { name, avatarUrl, loading } = useUserProfile(userId);
+  const { user } = useAuth();
+  const isOwnProfile = !userId || (user != null && user.id === userId);
+  const targetUserId = userId ?? user?.id;
+
+  const { name, avatarUrl, loading } = useUserProfile(targetUserId);
   const { activeGroupId } = useActiveGroup();
-  const { rank } = useUserRank(userId, activeGroupId);
-  const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(userId, activeGroupId);
-  const { loading: favPositionsLoading, saving: favPositionsSaving, error: favPositionsError, getFavoritesByGameType, toggleFavorite, getPositionsByGameType, isFavorite } = useFavoritePositions();
+  const { rank } = useUserRank(targetUserId, activeGroupId);
+  const { matches, badgeCounts, loading: historyLoading } = usePlayerMatchHistory(targetUserId, activeGroupId);
+  const {
+    loading: favPositionsLoading,
+    saving: favPositionsSaving,
+    error: favPositionsError,
+    getFavoritesByGameType,
+    toggleFavorite,
+    getPositionsByGameType,
+    isFavorite,
+  } = useFavoritePositions(targetUserId);
 
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [showPositionsModal, setShowPositionsModal] = useState(false);
@@ -229,7 +241,9 @@ export default function Profile() {
   return (
     <AppShell>
       <header className="flex items-center px-margin-mobile md:px-margin-desktop w-full h-16 border-b border-outline-variant">
-        <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase">Perfil do Jogador</h2>
+        <h2 className="text-headline-md font-display font-black tracking-tighter text-primary uppercase">
+          {isOwnProfile ? "Meu Perfil" : "Perfil do Jogador"}
+        </h2>
       </header>
 
       <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop pt-8 space-y-12">
@@ -266,53 +280,74 @@ export default function Profile() {
 
             <div className="mt-6 md:mt-8">
               <p className="font-mono text-label-sm uppercase text-on-surface tracking-widest mb-3">Conquistas</p>
-              {/* O ternário confuso virou apenas isso: */}
               {renderBadges()}
             </div>
           </div>
         </section>
 
-        <section>
-          <div className="bg-surface-container rounded-2xl p-6 md:p-8 border border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h4 className="text-headline-md font-display uppercase text-primary">Preferências Táticas</h4>
-                <MaterialIcon name="sports_soccer" className="w-5 h-5 text-primary" />
-              </div>
-              <p className="font-mono text-label-sm text-on-surface-variant">
-                Defina suas posições favoritas em quadra para o balanceamento automático do sorteio de times.
-              </p>
-              {!favPositionsLoading && (() => {
-                const grouped = getFavoritesByGameType()
-                if (grouped.length === 0) return null
-                return (
-                  <div className="flex flex-col gap-3 mt-3">
-                    {grouped.map((group) => (
-                      <div key={group.gameType} className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[10px] uppercase tracking-widest text-on-surface-variant mr-1">{group.label}:</span>
-                        {group.positions.map((pos) => (
-                          <span
-                            key={pos.id}
-                            className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm rounded"
-                          >
-                            {pos.name}
-                          </span>
-                        ))}
-                      </div>
-                    ))}
+        {/* Preferências Táticas */}
+        {(() => {
+          const grouped = getFavoritesByGameType();
+          if (!isOwnProfile && grouped.length === 0 && !favPositionsLoading) {
+            return null;
+          }
+
+          const firstName = getFirstName(name ?? "Jogador");
+
+          return (
+            <section>
+              <div className="bg-surface-container rounded-2xl p-6 md:p-8 border border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h4 className="text-headline-md font-display uppercase text-primary">
+                      {isOwnProfile ? "Preferências Táticas" : "Posições Preferidas"}
+                    </h4>
+                    <MaterialIcon name="sports_soccer" className="w-5 h-5 text-primary" />
                   </div>
-                )
-              })()}
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowPositionsModal(true)}
-              className="py-3 px-6 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover transition-transform whitespace-nowrap text-center"
-            >
-              CONFIGURAR
-            </button>
-          </div>
-        </section>
+                  <p className="font-mono text-label-sm text-on-surface-variant">
+                    {isOwnProfile
+                      ? "Defina suas posições favoritas em quadra para o balanceamento automático do sorteio de times."
+                      : `Posições favoritas de ${firstName} em quadra para o sorteio de times.`}
+                  </p>
+                  {!favPositionsLoading && grouped.length > 0 && (
+                    <div className="flex flex-col gap-3 mt-3">
+                      {grouped.map((group) => (
+                        <div key={group.gameType} className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-on-surface-variant mr-1">
+                            {group.label}:
+                          </span>
+                          {group.positions.map((pos) => (
+                            <span
+                              key={pos.id}
+                              className="px-3 py-1 bg-primary-container text-on-primary-container font-mono text-label-sm rounded"
+                            >
+                              {pos.name}
+                            </span>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!favPositionsLoading && grouped.length === 0 && isOwnProfile && (
+                    <p className="font-mono text-label-sm text-on-surface-variant/70 italic mt-2">
+                      Nenhuma posição configurada ainda.
+                    </p>
+                  )}
+                </div>
+
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPositionsModal(true)}
+                    className="py-3 px-6 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover transition-transform whitespace-nowrap text-center shrink-0"
+                  >
+                    CONFIGURAR
+                  </button>
+                )}
+              </div>
+            </section>
+          );
+        })()}
 
         {/* Estatísticas */}
         <section>
@@ -341,16 +376,18 @@ export default function Profile() {
           </div>
         </section>
       </div>
-      <FavoritePositionsModal
-        open={showPositionsModal}
-        onClose={() => setShowPositionsModal(false)}
-        loading={favPositionsLoading}
-        saving={favPositionsSaving}
-        error={favPositionsError}
-        toggleFavorite={toggleFavorite}
-        getPositionsByGameType={getPositionsByGameType}
-        isFavorite={isFavorite}
-      />
+      {isOwnProfile && (
+        <FavoritePositionsModal
+          open={showPositionsModal}
+          onClose={() => setShowPositionsModal(false)}
+          loading={favPositionsLoading}
+          saving={favPositionsSaving}
+          error={favPositionsError}
+          toggleFavorite={toggleFavorite}
+          getPositionsByGameType={getPositionsByGameType}
+          isFavorite={isFavorite}
+        />
+      )}
     </AppShell>
   );
 }

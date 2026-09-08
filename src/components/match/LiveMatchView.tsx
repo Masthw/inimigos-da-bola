@@ -17,7 +17,6 @@ interface LiveMatchViewProps {
   onGoalScored: (scorer: MatchPlayer, assist: MatchPlayer | null) => void;
   onOwnGoal: (teamBenefited: string, scorerId: string | null, scorerTeam: string | null) => void;
   onRequestReview: () => void;
-  onManagePlayers?: () => void;
   isCreator?: boolean;
   busy?: boolean;
 }
@@ -34,7 +33,6 @@ export function LiveMatchView({
   onGoalScored,
   onOwnGoal,
   onRequestReview,
-  onManagePlayers,
   isCreator,
   busy = false,
 }: Readonly<LiveMatchViewProps>) {
@@ -94,10 +92,10 @@ export function LiveMatchView({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 max-w-3xl mx-auto">
           <div>
-            <div className="space-y-2">
+            <div className="space-y-2.5 sm:space-y-3">
               {teamAPlayers.map((p) => (
                 <PlayerCard
                   key={p.id ?? p.userId ?? p.name}
@@ -111,7 +109,7 @@ export function LiveMatchView({
             </div>
           </div>
           <div>
-            <div className="space-y-2">
+            <div className="space-y-2.5 sm:space-y-3">
               {teamBPlayers.map((p) => (
                 <PlayerCard
                   key={p.id ?? p.userId ?? p.name}
@@ -128,22 +126,12 @@ export function LiveMatchView({
       </div>
 
       {isCreator && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 px-4 py-3 border-t border-outline-variant bg-surface-container flex gap-3">
-          {onManagePlayers && (
-            <button
-              type="button"
-              onClick={onManagePlayers}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-secondary-container text-on-secondary-container font-mono text-label-bold border border-outline-variant active:bg-surface-variant transition-colors"
-            >
-              <MaterialIcon name="group" className="w-4 h-4" />
-              Jogadores
-            </button>
-          )}
+        <div className="px-4 py-3 border-t border-outline-variant bg-surface-container shrink-0">
           <button
             type="button"
             disabled={busy}
             onClick={onRequestReview}
-            className={`${onManagePlayers ? "flex-1" : "w-full"} flex items-center justify-center gap-2 py-3 bg-success/15 text-success font-mono text-label-bold border border-success/30 active:bg-success/25 transition-colors`}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-success/15 text-success font-mono text-label-bold border border-success/30 active:bg-success/25 transition-colors"
           >
             <MaterialIcon name="flag" className="w-4 h-4" />
             Finalizar

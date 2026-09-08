@@ -62,6 +62,8 @@ const iconRegistry: Record<string, LucideIcon> = {
   event_available: CalendarCheck,
   grid_view: LayoutGrid,
   military_tech: Trophy,
+  emoji_events: Trophy,
+  trophy: Trophy,
   history: History,
   analytics: BarChart3,
   dashboard: LayoutDashboard,

@@ -131,10 +131,21 @@ function ConfirmedPlayersList({ players, waitlist }: Readonly<{ players: MatchPl
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {players.map((player) => (
-          <div key={player.name} className="flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1">
-            <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-            <span className="font-mono text-label-sm text-on-surface">{player.name}</span>
-          </div>
+          player.userId ? (
+            <Link
+              key={player.id ?? player.name}
+              to={`/profile/${player.userId}`}
+              className="flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 hover:border-primary/50 hover:bg-surface-container transition-colors group"
+            >
+              <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
+              <span className="font-mono text-label-sm text-on-surface group-hover:text-primary transition-colors">{player.name}</span>
+            </Link>
+          ) : (
+            <div key={player.id ?? player.name} className="flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1">
+              <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
+              <span className="font-mono text-label-sm text-on-surface">{player.name}</span>
+            </div>
+          )
         ))}
         {players.length === 0 && <span className="font-mono text-label-sm text-on-surface-variant">Ninguém confirmado ainda — seja o primeiro!</span>}
       </div>
@@ -147,10 +158,21 @@ function ConfirmedPlayersList({ players, waitlist }: Readonly<{ players: MatchPl
           </div>
           <div className="flex flex-wrap gap-2">
             {waitlist.map((player) => (
-              <div key={player.name} className="flex items-center gap-2 bg-surface-variant/60 border border-tertiary/30 rounded-full pl-1 pr-3 py-1">
-                <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-                <span className="font-mono text-label-sm text-on-surface-variant">{player.name}</span>
-              </div>
+              player.userId ? (
+                <Link
+                  key={player.id ?? player.name}
+                  to={`/profile/${player.userId}`}
+                  className="flex items-center gap-2 bg-surface-variant/60 border border-tertiary/30 rounded-full pl-1 pr-3 py-1 hover:border-primary/50 hover:bg-surface-container transition-colors group"
+                >
+                  <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
+                  <span className="font-mono text-label-sm text-on-surface-variant group-hover:text-primary transition-colors">{player.name}</span>
+                </Link>
+              ) : (
+                <div key={player.id ?? player.name} className="flex items-center gap-2 bg-surface-variant/60 border border-tertiary/30 rounded-full pl-1 pr-3 py-1">
+                  <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
+                  <span className="font-mono text-label-sm text-on-surface-variant">{player.name}</span>
+                </div>
+              )
             ))}
           </div>
         </div>

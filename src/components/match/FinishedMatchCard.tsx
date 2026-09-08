@@ -1,6 +1,6 @@
 import React from "react";
 import { MaterialIcon } from "../ui/MaterialIcon";
-import { PlayerStatsTable } from "../ui/PlayerStatsTable";
+import { PlayerStatsTable, type PlayerStats } from "../ui/PlayerStatsTable";
 
 interface FinishedMatchCardProps {
   matchId: string;
@@ -10,8 +10,8 @@ interface FinishedMatchCardProps {
   teamBName: string;
   teamAScore: number;
   teamBScore: number;
-  teamAPlayers: { name: string; goals: number; assists: number; awards: string[] }[];
-  teamBPlayers: { name: string; goals: number; assists: number; awards: string[] }[];
+  teamAPlayers: PlayerStats[];
+  teamBPlayers: PlayerStats[];
   expanded: boolean;
   onToggle: () => void;
 }
