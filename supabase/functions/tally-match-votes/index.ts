@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       if (error.code === '42501') {
         throw new FunctionError(403, 'Partida não pertence ao grupo informado');
       }
-      throw new FunctionError(400, `Erro ao processar votação: ${error.message}`);
+      throw new FunctionError(400, 'Erro ao processar a votação');
     }
 
     return jsonResponse(data ?? { success: true }, 200, headers);
@@ -56,13 +56,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: error.message }, error.status, headers);
     }
     console.error('tally-match-votes:', error);
-    const detailMsg = error instanceof Error
-      ? error.message
-      : typeof error === 'object' && error !== null && 'message' in error
-      ? String((error as { message: unknown }).message)
-      : String(error);
     return jsonResponse(
-      { error: `Erro ao encerrar a partida: ${detailMsg}` },
+      { error: 'Erro interno ao encerrar a partida. Tente novamente.' },
       500,
       headers,
     );

@@ -34,7 +34,7 @@ export function corsHeaders(req: Request): Record<string, string> {
     return { ...BASE_CORS_HEADERS, 'Access-Control-Allow-Origin': origin };
   }
 
-  return { ...BASE_CORS_HEADERS, 'Access-Control-Allow-Origin': '*' };
+  return { ...BASE_CORS_HEADERS };
 }
 
 export function jsonResponse(
