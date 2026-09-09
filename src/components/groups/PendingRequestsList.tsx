@@ -1,4 +1,5 @@
 import { Avatar } from "../ui/Avatar";
+import { formatShortName } from "../../lib/profile";
 import type { PendingMember } from "./types";
 
 interface PendingRequestsListProps {
@@ -25,6 +26,7 @@ export function PendingRequestsList({
         <div className="space-y-2">
           {pending.map((p) => {
             const isBusy = busyUserId === p.user_id;
+            const displayName = p.users?.name ? formatShortName(p.users.name) : p.user_id;
 
             return (
               <div
@@ -34,11 +36,11 @@ export function PendingRequestsList({
                 <div className="flex items-center gap-3">
                   <Avatar
                     src={p.users?.avatar_url ?? null}
-                    alt={p.users?.name ?? "Membro pendente"}
+                    alt={displayName}
                     className="w-8 h-8 rounded-full"
                   />
                   <span className="font-mono text-label-sm text-on-surface">
-                    {p.users?.name ?? p.user_id}
+                    {displayName}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

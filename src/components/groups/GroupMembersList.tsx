@@ -1,5 +1,6 @@
 import { Avatar } from "../ui/Avatar";
 import { MaterialIcon } from "../ui/MaterialIcon";
+import { formatShortName } from "../../lib/profile";
 import type { Member } from "./types";
 
 interface GroupMembersListProps {
@@ -24,6 +25,7 @@ export function GroupMembersList({
         {members.map((m) => {
           const isCurrentUser = m.user_id === currentUserId;
           const isBusy = busyUserId === m.user_id;
+          const displayName = m.users?.name ? formatShortName(m.users.name) : m.user_id;
 
           return (
             <div
@@ -33,12 +35,12 @@ export function GroupMembersList({
               <div className="flex items-center gap-3">
                 <Avatar
                   src={m.users?.avatar_url ?? null}
-                  alt={m.users?.name ?? "Membro"}
+                  alt={displayName}
                   className="w-8 h-8 rounded-full"
                 />
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-label-sm text-on-surface">
-                    {m.users?.name ?? m.user_id}
+                    {displayName}
                   </span>
                   {isCurrentUser && (
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-variant text-on-surface-variant">
