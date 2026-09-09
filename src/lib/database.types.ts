@@ -10,15 +10,69 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      award_game_types: {
+        Row: {
+          award_id: number
+          game_type_id: number
+        }
+        Insert: {
+          award_id: number
+          game_type_id: number
+        }
+        Update: {
+          award_id?: number
+          game_type_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_game_types_award_id_fkey"
+            columns: ["award_id"]
+            isOneToOne: false
+            referencedRelation: "awards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "award_game_types_game_type_id_fkey"
+            columns: ["game_type_id"]
+            isOneToOne: false
+            referencedRelation: "game_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       awards: {
         Row: {
           created_at: string
           description: string | null
-          game_type_id: number | null
           id: number
           is_voting_based: boolean
           name: string
@@ -27,7 +81,6 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
-          game_type_id?: number | null
           id?: never
           is_voting_based?: boolean
           name: string
@@ -36,20 +89,12 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
-          game_type_id?: number | null
           id?: never
           is_voting_based?: boolean
           name?: string
           sport_id?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "awards_game_type_id_fkey"
-            columns: ["game_type_id"]
-            isOneToOne: false
-            referencedRelation: "game_types"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "awards_sport_id_fkey"
             columns: ["sport_id"]
@@ -181,7 +226,7 @@ export type Database = {
           name: string
         }
         Insert: {
-          code?: string
+          code: string
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -197,86 +242,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      lineup_players: {
-        Row: {
-          created_at: string | null
-          id: string
-          is_sub: boolean | null
-          lineup_id: string
-          position: string
-          team: string
-          user_id: string
-          x: number
-          y: number
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          is_sub?: boolean | null
-          lineup_id: string
-          position: string
-          team: string
-          user_id: string
-          x: number
-          y: number
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          is_sub?: boolean | null
-          lineup_id?: string
-          position?: string
-          team?: string
-          user_id?: string
-          x?: number
-          y?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lineup_players_lineup_id_fkey"
-            columns: ["lineup_id"]
-            isOneToOne: false
-            referencedRelation: "lineups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lineup_players_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lineups: {
-        Row: {
-          created_at: string | null
-          id: string
-          match_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          match_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          match_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lineups_match_id_fkey"
-            columns: ["match_id"]
-            isOneToOne: false
-            referencedRelation: "matches"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       match_awards: {
         Row: {
@@ -746,16 +711,22 @@ export type Database = {
     Functions: {
       close_expired_votings: { Args: never; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
+      is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
+      is_group_member: { Args: { p_group_id: string }; Returns: boolean }
       join_group_by_code: { Args: { p_code: string }; Returns: string }
+      tally_match_votes: {
+        Args: { p_group_id?: string; p_match_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       match_status_enum:
         | "open"
-        | "preparing"
         | "in_progress"
         | "finished"
         | "cancelled"
         | "voting"
+        | "preparing"
       player_status_enum: "confirmed" | "waitlist" | "cancelled"
       user_role_enum: "admin" | "member"
     }
@@ -773,12 +744,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -802,11 +773,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -827,11 +798,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -852,11 +823,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -869,11 +840,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -882,4 +853,22 @@ export type CompositeTypes<
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
-
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      match_status_enum: [
+        "open",
+        "in_progress",
+        "finished",
+        "cancelled",
+        "voting",
+        "preparing",
+      ],
+      player_status_enum: ["confirmed", "waitlist", "cancelled"],
+      user_role_enum: ["admin", "member"],
+    },
+  },
+} as const
