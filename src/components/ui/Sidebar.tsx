@@ -121,20 +121,18 @@ export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
             <span className="font-mono text-label-bold">{item.label}</span>
           </Link>
         ))}
-        {isGroupAdmin && (
-          <Link
-            to="/group/management"
-            onClick={onClose}
-            className={`flex items-center gap-3 py-3 px-4 rounded-lg mx-2 transition-all ${
-              isActive("/group/management")
-                ? "bg-primary-container text-on-primary-container translate-x-1"
-                : "text-on-surface-variant hover:bg-surface-variant"
-            }`}
-          >
-            <MaterialIcon name="group" className="w-5 h-5" />
-            <span className="font-mono text-label-bold">Grupo</span>
-          </Link>
-        )}
+        <Link
+          to="/group/management"
+          onClick={onClose}
+          className={`flex items-center gap-3 py-3 px-4 rounded-lg mx-2 transition-all ${
+            isActive("/group/management")
+              ? "bg-primary-container text-on-primary-container translate-x-1"
+              : "text-on-surface-variant hover:bg-surface-variant"
+          }`}
+        >
+          <MaterialIcon name="group" className="w-5 h-5" />
+          <span className="font-mono text-label-bold">Grupo</span>
+        </Link>
       </div>
 
       <div className="px-4 mt-auto pt-4 space-y-1">
