@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { GroupCodeCard } from "../components/groups/GroupCodeCard";
 import { PendingRequestsList } from "../components/groups/PendingRequestsList";
 import { GroupMembersList } from "../components/groups/GroupMembersList";
 import { RemoveMemberModal } from "../components/groups/RemoveMemberModal";
+import { LeaveGroupModal } from "../components/groups/LeaveGroupModal";
 import type { Member, PendingMember } from "../components/groups/types";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabaseClient";
 
 export default function GroupManagement() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { activeGroup, activeGroupId, isGroupAdmin, refresh: refreshGroup } = useActiveGroup();
   const [pending, setPending] = useState<PendingMember[]>([]);
@@ -19,9 +22,14 @@ export default function GroupManagement() {
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!activeGroupId || !user) {
+    if (!activeGroupId || !user || !isGroupAdmin) {
+      setPending([]);
+      setMembers([]);
       setLoading(false);
       return;
     }
@@ -43,7 +51,7 @@ export default function GroupManagement() {
     setPending((pendingRes.data ?? []) as PendingMember[]);
     setMembers((membersRes.data ?? []) as Member[]);
     setLoading(false);
-  }, [activeGroupId, user]);
+  }, [activeGroupId, user, isGroupAdmin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,6 +123,27 @@ export default function GroupManagement() {
     }
   }
 
+  async function handleLeaveGroup() {
+    if (!activeGroupId || !user || isLeaving) return;
+    setIsLeaving(true);
+    setLeaveError(null);
+    try {
+      const { error } = await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", activeGroupId)
+        .eq("user_id", user.id);
+      if (error) throw error;
+      setShowLeaveModal(false);
+      await refreshGroup();
+      navigate("/");
+    } catch {
+      setLeaveError("Não foi possível sair do grupo. Tente novamente.");
+    } finally {
+      setIsLeaving(false);
+    }
+  }
+
   if (loading) {
     return (
       <AppShell>
@@ -132,13 +161,40 @@ export default function GroupManagement() {
   if (!isGroupAdmin) {
     return (
       <AppShell>
-        <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center p-4">
-          <div className="text-center">
-            <MaterialIcon name="lock" className="w-12 h-12 text-on-surface-variant mx-auto mb-4" />
-            <h2 className="text-headline-md font-display font-black text-on-surface">ACESSO RESTRITO</h2>
-            <p className="text-body-md text-on-surface-variant mt-2">Apenas administradores deste grupo podem gerenciá-lo.</p>
-          </div>
+        <div className="p-4 max-w-2xl mx-auto">
+          <h1 className="text-headline-lg font-display font-black text-on-surface tracking-tighter mb-6">MEU GRUPO</h1>
+
+          <section className="p-4 bg-surface-container-high border border-outline-variant rounded-xl mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <MaterialIcon name="groups" className="w-6 h-6 text-primary shrink-0" />
+              <h2 className="text-title-md font-mono text-on-surface truncate">{activeGroup.name}</h2>
+            </div>
+            <p className="text-body-sm text-on-surface-variant">
+              Ao sair do grupo, você perde o acesso às partidas, rankings e conquistas dele.
+            </p>
+          </section>
+
+          <button
+            type="button"
+            onClick={() => setShowLeaveModal(true)}
+            className="w-full py-4 bg-error text-on-error font-mono text-label-bold brutal-shadow hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"
+          >
+            <MaterialIcon name="logout" className="w-5 h-5" />
+            SAIR DO GRUPO
+          </button>
         </div>
+
+        <LeaveGroupModal
+          open={showLeaveModal}
+          groupName={activeGroup.name}
+          isLeaving={isLeaving}
+          error={leaveError}
+          onConfirm={handleLeaveGroup}
+          onClose={() => {
+            setShowLeaveModal(false);
+            setLeaveError(null);
+          }}
+        />
       </AppShell>
     );
   }
