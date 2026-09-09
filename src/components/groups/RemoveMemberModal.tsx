@@ -1,5 +1,6 @@
 import { MaterialIcon } from "../ui/MaterialIcon";
 import { Modal } from "../ui/Modal";
+import { formatShortName } from "../../lib/profile";
 import type { Member } from "./types";
 
 interface RemoveMemberModalProps {
@@ -54,7 +55,7 @@ export function RemoveMemberModal({
       <p className="text-body-md text-on-surface-variant">
         Tem certeza que deseja remover{" "}
         <strong className="text-on-surface font-semibold">
-          {member?.users?.name ?? "este membro"}
+          {member?.users?.name ? formatShortName(member.users.name) : "este membro"}
         </strong>{" "}
         do grupo <strong className="text-on-surface font-semibold">{groupName}</strong>?
       </p>
