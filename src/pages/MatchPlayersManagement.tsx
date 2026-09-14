@@ -345,6 +345,7 @@ export default function MatchPlayersManagement() {
       return;
     }
     await supabase.from("match_players").delete().eq("id", playerId);
+    await supabase.rpc("promote_waitlist_player", { p_match_id: matchId });
     fetchAll();
   }
 

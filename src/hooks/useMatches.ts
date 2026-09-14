@@ -417,7 +417,7 @@ export function useMatches(groupId: string | null = null) {
 
   const setAttendance = useCallback(
     async (matchId: string, status: PlayerStatus) => {
-      if (!userId) return;
+      if (!userId) return false;
 
       setBusyMatchId(matchId);
 
@@ -436,10 +436,11 @@ export function useMatches(groupId: string | null = null) {
 
       if (result.error) {
         console.error("Erro ao atualizar presença:", result.error);
-        return;
+        return false;
       }
 
       refetch();
+      return true;
     },
     [userId, refetch],
   );
