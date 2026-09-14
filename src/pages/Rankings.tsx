@@ -126,8 +126,8 @@ export default function Rankings() {
                     <td className="px-4 py-3 text-center font-label-bold text-primary">{player.goals}</td>
                     <td className="px-4 py-3 text-center font-label-bold text-secondary">{player.assists}</td>
                     <td className="px-4 py-3 text-center font-label-bold text-on-surface">{player.wins}</td>
-                    <td className="px-4 py-3 text-center font-label-bold text-on-surface">{player.draws}</td>
-                    <td className="px-4 py-3 text-center font-label-bold text-on-surface-variant">{player.losses}</td>
+                    <td className="px-4 py-3 text-center font-label-bold text-on-surface">{player.losses}</td>
+                    <td className="px-4 py-3 text-center font-label-bold text-on-surface-variant">{player.draws}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`font-label-bold ${isCurrent ? "text-tertiary" : "text-on-surface-variant"}`}>{player.points}</span>
                     </td>
