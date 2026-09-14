@@ -9,7 +9,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { ATMOSPHERE_PHOTOS, getCourtPhotos } from "../../lib/courts";
 import type { Database } from "../../lib/database.types";
 
-type ConfirmStatus = "idle" | "confirming" | "confirmed" | "error";
+type ConfirmStatus = "idle" | "confirming" | "confirmed" | "waitlist" | "desisting" | "error";
 type MatchPlayerInsert = Database["public"]["Tables"]["match_players"]["Insert"];
 
 interface MatchActionsProps {
@@ -18,19 +18,66 @@ interface MatchActionsProps {
   hasMatch: boolean;
   isAdmin: boolean;
   onConfirm: () => void;
+  onDesist: () => void;
   onRetry: () => void;
 }
 
-function MatchActions({ status, loading, hasMatch, isAdmin, onConfirm, onRetry }: Readonly<MatchActionsProps>) {
+function MatchActions({ status, loading, hasMatch, isAdmin, onConfirm, onDesist, onRetry }: Readonly<MatchActionsProps>) {
   if (status === "confirmed") {
+    return (
+      <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <button
+          type="button"
+          disabled
+          className="w-full sm:w-auto bg-green-800 text-white px-8 py-4 font-mono text-label-bold rounded-none flex items-center justify-center gap-3 cursor-not-allowed"
+        >
+          <MaterialIcon name="verified" className="w-5 h-5 text-white" />
+          PRESENÇA CONFIRMADA!
+        </button>
+        <button
+          type="button"
+          onClick={onDesist}
+          className="w-full sm:w-auto bg-error text-on-error px-8 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+        >
+          <MaterialIcon name="close" className="w-5 h-5" />
+          DESISTIR
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "waitlist") {
+    return (
+      <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <button
+          type="button"
+          disabled
+          className="w-full sm:w-auto bg-tertiary-container text-on-tertiary-container px-8 py-4 font-mono text-label-bold rounded-none flex items-center justify-center gap-3 cursor-not-allowed"
+        >
+          <MaterialIcon name="pending" className="w-5 h-5" />
+          NA FILA DE ESPERA
+        </button>
+        <button
+          type="button"
+          onClick={onDesist}
+          className="w-full sm:w-auto bg-error text-on-error px-8 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+        >
+          <MaterialIcon name="close" className="w-5 h-5" />
+          DESISTIR
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "desisting") {
     return (
       <button
         type="button"
         disabled
-        className="w-full md:w-auto bg-green-800 text-white px-10 py-4 font-mono text-label-bold rounded-none transition-transform flex items-center justify-center gap-3"
+        className="w-full md:w-auto bg-error text-on-error px-10 py-4 font-mono text-label-bold rounded-none flex items-center justify-center gap-3 cursor-not-allowed opacity-80"
       >
-        <MaterialIcon name="verified" className="w-5 h-5 text-white" />
-        PRESENÇA CONFIRMADA!
+        <MaterialIcon name="pending" className="w-5 h-5 animate-spin" />
+        CANCELANDO PRESENÇA...
       </button>
     );
   }
@@ -81,9 +128,10 @@ function MatchActions({ status, loading, hasMatch, isAdmin, onConfirm, onRetry }
     <button
       type="button"
       onClick={onConfirm}
-      className="w-full md:w-auto bg-primary-container text-primary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
+      disabled={confirming}
+      className="w-full md:w-auto bg-primary-container text-primary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3 disabled:opacity-50"
     >
-      <MaterialIcon name={confirming ? "pending" : "check_circle"} className="w-5 h-5" />
+      <MaterialIcon name={confirming ? "pending" : "check_circle"} className={`w-5 h-5 ${confirming ? "animate-spin" : ""}`} />
       {confirming ? "CONFIRMANDO..." : "EU VOU!"}
     </button>
   );
@@ -104,19 +152,25 @@ function getImageSrc(match: NextMatchData | null, photoIndex: number): string | 
   return pool.length > 0 ? pool[photoIndex % pool.length] : null;
 }
 
-function resolveConfirmStatus(busy: boolean, hasError: boolean, isConfirmed: boolean): ConfirmStatus {
-  if (busy) return "confirming";
+function resolveConfirmStatus(
+  busyAction: "confirming" | "desisting" | null,
+  hasError: boolean,
+  myStatus: NextMatchData["myStatus"],
+): ConfirmStatus {
+  if (busyAction === "confirming") return "confirming";
+  if (busyAction === "desisting") return "desisting";
   if (hasError) return "error";
-  if (isConfirmed) return "confirmed";
+  if (myStatus === "confirmed") return "confirmed";
+  if (myStatus === "waitlist") return "waitlist";
   return "idle";
 }
 
 export function NextMatch() {
   const { activeGroupId } = useActiveGroup();
-  const { match, loading } = useNextMatch(activeGroupId);
+  const { match, loading, refetch } = useNextMatch(activeGroupId);
   const { user } = useAuth();
   const { isGroupAdmin } = useIsAdmin();
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<"confirming" | "desisting" | null>(null);
   const [hasError, setHasError] = useState(false);
   const [photoIndex] = useState(() => {
     const array = new Uint32Array(1);
@@ -126,14 +180,13 @@ export function NextMatch() {
 
   const imageSrc = getImageSrc(match, photoIndex);
   const { title, subtitle } = getCardMeta(loading, match);
-  const isConfirmed = match?.myStatus === "confirmed";
 
-  const status: ConfirmStatus = resolveConfirmStatus(busy, hasError, isConfirmed);
+  const status: ConfirmStatus = resolveConfirmStatus(busyAction, hasError, match?.myStatus ?? null);
 
   async function handleConfirm() {
-    if (!match || !user || busy) return;
+    if (!match || !user || busyAction) return;
 
-    setBusy(true);
+    setBusyAction("confirming");
     setHasError(false);
 
     try {
@@ -153,9 +206,48 @@ export function NextMatch() {
       if (result.error) {
         console.error("Erro ao confirmar presença:", result.error);
         setHasError(true);
+      } else {
+        await refetch();
       }
+    } catch (err) {
+      console.error("Erro ao confirmar presença:", err);
+      setHasError(true);
     } finally {
-      setBusy(false);
+      setBusyAction(null);
+    }
+  }
+
+  async function handleDesist() {
+    if (!match || !user || busyAction) return;
+
+    setBusyAction("desisting");
+    setHasError(false);
+
+    try {
+      const { error: updateError } = await supabase
+        .from("match_players")
+        .update({ status: "cancelled" })
+        .eq("match_id", match.id)
+        .eq("user_id", user.id);
+
+      if (updateError) {
+        console.error("Erro ao desistir:", updateError);
+        setHasError(true);
+        return;
+      }
+
+      const { error: promoteError } = await supabase.rpc("promote_waitlist_player", {
+        p_match_id: match.id,
+      });
+      if (promoteError) {
+        console.error("Erro ao promover fila de espera:", promoteError);
+      }
+      await refetch();
+    } catch (err) {
+      console.error("Erro ao desistir:", err);
+      setHasError(true);
+    } finally {
+      setBusyAction(null);
     }
   }
 
@@ -210,13 +302,29 @@ export function NextMatch() {
 
           <div className="mt-stack-lg flex flex-col gap-3">
             {match?.status === "preparing" ? (
-              <Link
-                to="/tactics"
-                className="w-full md:w-auto bg-tertiary text-on-tertiary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
-              >
-                <MaterialIcon name="sports_soccer" className="w-5 h-5" />
-                Conferir Escalação
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <Link
+                  to="/tactics"
+                  className="w-full sm:w-auto bg-tertiary text-on-tertiary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
+                >
+                  <MaterialIcon name="sports_soccer" className="w-5 h-5" />
+                  Conferir Escalação
+                </Link>
+                {(match.myStatus === "confirmed" || match.myStatus === "waitlist") && (
+                  <button
+                    type="button"
+                    disabled={Boolean(busyAction)}
+                    onClick={handleDesist}
+                    className="w-full sm:w-auto bg-error text-on-error px-8 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <MaterialIcon
+                      name={busyAction === "desisting" ? "pending" : "close"}
+                      className={`w-5 h-5 ${busyAction === "desisting" ? "animate-spin" : ""}`}
+                    />
+                    {busyAction === "desisting" ? "SAINDO..." : "DESISTIR"}
+                  </button>
+                )}
+              </div>
             ) : (
               <>
                 <MatchActions
@@ -225,6 +333,7 @@ export function NextMatch() {
                   hasMatch={Boolean(match)}
                   isAdmin={isGroupAdmin}
                   onConfirm={handleConfirm}
+                  onDesist={handleDesist}
                   onRetry={() => setHasError(false)}
                 />
 

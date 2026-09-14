@@ -421,16 +421,25 @@ export function useMatches(groupId: string | null = null) {
 
       setBusyMatchId(matchId);
 
-      const insertPayload: MatchPlayerInsert = {
-        match_id: matchId,
-        user_id: userId,
-        status: status,
-        team: "A",
-      };
+      let result;
+      if (status === "cancelled") {
+        result = await supabase
+          .from("match_players")
+          .update({ status: "cancelled" })
+          .eq("match_id", matchId)
+          .eq("user_id", userId);
+      } else {
+        const insertPayload: MatchPlayerInsert = {
+          match_id: matchId,
+          user_id: userId,
+          status: status,
+          team: "A",
+        };
 
-      const result = await supabase
-        .from("match_players")
-        .upsert(insertPayload, { onConflict: "match_id,user_id" });
+        result = await supabase
+          .from("match_players")
+          .upsert(insertPayload, { onConflict: "match_id,user_id" });
+      }
 
       setBusyMatchId(null);
 

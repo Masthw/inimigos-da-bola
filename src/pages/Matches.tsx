@@ -220,6 +220,7 @@ function FeaturedCard({
   const progress = Math.min(100, Math.round((match.confirmedCount / match.maxPlayers) * 100));
 
   const isPlayableStatus = match.status === "open" || match.status === "in_progress";
+  const canDesistInPreparing = match.status === "preparing" && (myStatus === "confirmed" || myStatus === "waitlist");
 
   return (
     <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-primary/30 flex flex-col md:flex-row transition-colors hover:border-primary/50">
@@ -333,6 +334,18 @@ function FeaturedCard({
           )}
 
           {isPlayableStatus && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
+
+          {canDesistInPreparing && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onDesist}
+              className="w-full py-3 bg-error text-on-error font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <MaterialIcon name="close" className="w-5 h-5" />
+              DESISTIR DA PARTIDA
+            </button>
+          )}
         </div>
       </div>
 
@@ -576,11 +589,17 @@ const UpcomingRow = React.memo(function UpcomingRow({
       </div>
 
       <div className="sm:w-56">
-        {myStatus === "confirmed" ? (
+        {myStatus === "confirmed" || myStatus === "waitlist" ? (
           <div className="flex flex-col gap-1.5">
-            <span className="flex items-center justify-center gap-2 w-full py-2.5 px-4 font-mono text-label-sm text-green-400 bg-green-800/20 border border-green-700/40 rounded-none">
-              <MaterialIcon name="verified" className="w-4 h-4" />
-              CONFIRMADO
+            <span
+              className={`flex items-center justify-center gap-2 w-full py-2.5 px-4 font-mono text-label-sm rounded-none border ${
+                myStatus === "confirmed"
+                  ? "text-green-400 bg-green-800/20 border-green-700/40"
+                  : "text-tertiary bg-tertiary-container/30 border-tertiary/40"
+              }`}
+            >
+              <MaterialIcon name={myStatus === "confirmed" ? "verified" : "pending"} className="w-4 h-4" />
+              {myStatus === "confirmed" ? "CONFIRMADO" : "NA ESPERA"}
             </span>
             <button
               type="button"
