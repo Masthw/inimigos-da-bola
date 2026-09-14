@@ -730,48 +730,6 @@ interface LayoutPosition {
   y: number;
 }
 
-function QuickTeamSwitchButton({
-  relationship,
-  role,
-  otherTeamKey,
-  onSwitchTeam,
-}: Readonly<{
-  relationship: TeamRelationship;
-  role: UserRole;
-  otherTeamKey: TeamKey;
-  onSwitchTeam: (team: TeamKey) => void;
-}>) {
-  if (role === "admin") return null;
-
-  if (relationship === "opponent") {
-    return (
-      <button
-        type="button"
-        onClick={() => onSwitchTeam(otherTeamKey)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-primary bg-primary/10 border border-primary/40 hover:bg-primary/20 rounded-lg transition-colors cursor-pointer"
-      >
-        <MaterialIcon name="arrow_back" className="w-3.5 h-3.5" />
-        Voltar ao Meu Time
-      </button>
-    );
-  }
-
-  if (relationship === "mine") {
-    return (
-      <button
-        type="button"
-        onClick={() => onSwitchTeam(otherTeamKey)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-on-surface-variant bg-surface-container-high border border-outline-variant hover:bg-surface-container-highest hover:text-on-surface rounded-lg transition-colors cursor-pointer"
-      >
-        <MaterialIcon name="visibility" className="w-3.5 h-3.5 text-tertiary" />
-        Ver Adversário
-      </button>
-    );
-  }
-
-  return null;
-}
-
 function CourtStatusBanner({
   teamName,
   relationship,
@@ -823,63 +781,53 @@ function CourtHeaderTabs({
   teamName,
   otherTeamName,
   myTeam,
-  otherTeamKey,
-  relationship,
-  role,
   onSwitchTeam,
 }: Readonly<{
   teamKey: TeamKey;
   teamName: string;
   otherTeamName: string;
   myTeam: TeamKey | null;
-  otherTeamKey: TeamKey;
-  relationship: TeamRelationship;
-  role: UserRole;
   onSwitchTeam: (team: TeamKey) => void;
 }>) {
   const teamANameDisplay = teamKey === "A" ? teamName : otherTeamName;
   const teamBNameDisplay = teamKey === "B" ? teamName : otherTeamName;
 
+  const mobileTabA = myTeam === "A" ? "Meu Time" : myTeam === "B" ? "Adversário" : teamANameDisplay;
+  const mobileTabB = myTeam === "B" ? "Meu Time" : myTeam === "A" ? "Adversário" : teamBNameDisplay;
+
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-      <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl border border-outline-variant/30">
-        <button
-          type="button"
-          onClick={() => onSwitchTeam("A")}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-            teamKey === "A"
-              ? "bg-primary text-on-primary font-bold shadow-md"
-              : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-          }`}
-        >
-          <MaterialIcon name={myTeam === "A" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5" />
-          <span>{teamANameDisplay}</span>
-          {myTeam === "A" && <span className="text-[10px] opacity-80">(Meu Time)</span>}
-          {myTeam === "B" && <span className="text-[10px] opacity-80">(Adversário)</span>}
-        </button>
+    <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl border border-outline-variant/30 mb-3">
+      <button
+        type="button"
+        onClick={() => onSwitchTeam("A")}
+        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
+          teamKey === "A"
+            ? "bg-primary text-on-primary font-bold shadow-md"
+            : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
+        }`}
+      >
+        <MaterialIcon name={myTeam === "A" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5 shrink-0" />
+        <span className="lg:hidden max-w-[92px] truncate">{mobileTabA}</span>
+        <span className="hidden lg:inline truncate">{teamANameDisplay}</span>
+        {myTeam === "A" && <span className="hidden lg:inline text-[10px] opacity-80">(Meu Time)</span>}
+        {myTeam === "B" && <span className="hidden lg:inline text-[10px] opacity-80">(Adversário)</span>}
+      </button>
 
-        <button
-          type="button"
-          onClick={() => onSwitchTeam("B")}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-            teamKey === "B"
-              ? "bg-primary text-on-primary font-bold shadow-md"
-              : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-          }`}
-        >
-          <MaterialIcon name={myTeam === "B" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5" />
-          <span>{teamBNameDisplay}</span>
-          {myTeam === "B" && <span className="text-[10px] opacity-80">(Meu Time)</span>}
-          {myTeam === "A" && <span className="text-[10px] opacity-80">(Adversário)</span>}
-        </button>
-      </div>
-
-      <QuickTeamSwitchButton
-        relationship={relationship}
-        role={role}
-        otherTeamKey={otherTeamKey}
-        onSwitchTeam={onSwitchTeam}
-      />
+      <button
+        type="button"
+        onClick={() => onSwitchTeam("B")}
+        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
+          teamKey === "B"
+            ? "bg-primary text-on-primary font-bold shadow-md"
+            : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
+        }`}
+      >
+        <MaterialIcon name={myTeam === "B" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5 shrink-0" />
+        <span className="lg:hidden max-w-[92px] truncate">{mobileTabB}</span>
+        <span className="hidden lg:inline truncate">{teamBNameDisplay}</span>
+        {myTeam === "B" && <span className="hidden lg:inline text-[10px] opacity-80">(Meu Time)</span>}
+        {myTeam === "A" && <span className="hidden lg:inline text-[10px] opacity-80">(Adversário)</span>}
+      </button>
     </div>
   );
 }
@@ -980,7 +928,6 @@ const CourtCard = memo(function CourtCard({
   role,
   relationship,
   myTeam,
-  otherTeamKey,
   otherTeamName,
   onSelect,
   onSwitchTeam,
@@ -996,7 +943,6 @@ const CourtCard = memo(function CourtCard({
   role: UserRole;
   relationship: TeamRelationship;
   myTeam: TeamKey | null;
-  otherTeamKey: TeamKey;
   otherTeamName: string;
   onSelect: (playerId: string, posId: PositionId | null) => void;
   onSwitchTeam: (team: TeamKey) => void;
@@ -1009,9 +955,6 @@ const CourtCard = memo(function CourtCard({
         teamName={teamName}
         otherTeamName={otherTeamName}
         myTeam={myTeam}
-        otherTeamKey={otherTeamKey}
-        relationship={relationship}
-        role={role}
         onSwitchTeam={onSwitchTeam}
       />
 
@@ -1301,7 +1244,6 @@ export default function Tactics() {
 
   const activePlayers = activeTeamKey === "A" ? board.teamA : board.teamB;
   const activeTeamName = activeTeamKey === "A" ? config.teamAName : config.teamBName;
-  const otherTeamKey: TeamKey = activeTeamKey === "A" ? "B" : "A";
   const otherTeamName = activeTeamKey === "A" ? config.teamBName : config.teamAName;
 
   const relationship = getTeamRelationship(activeTeamKey, myTeam);
@@ -1334,7 +1276,6 @@ export default function Tactics() {
               role={role}
               relationship={relationship}
               myTeam={myTeam}
-              otherTeamKey={otherTeamKey}
               otherTeamName={otherTeamName}
               onSelect={board.selectPosition}
               onSwitchTeam={handleSwitchTeam}
