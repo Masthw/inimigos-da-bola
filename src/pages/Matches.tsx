@@ -11,6 +11,7 @@ import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useIsAdmin } from "../hooks/useIsAdmin";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useAuth } from "../hooks/useAuth";
+import { supabase } from "../lib/supabaseClient";
 import { getCourtPhotos } from "../lib/courts";
 
 const PT_BR = "pt-BR";
@@ -127,56 +128,66 @@ function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Reado
 }
 
 function ConfirmedPlayersList({ players, waitlist }: Readonly<{ players: MatchPlayer[]; waitlist: MatchPlayer[] }>) {
+  const [expanded, setExpanded] = useState(false);
+
+  const confirmedLabel = `${players.length} confirmado${players.length === 1 ? "" : "s"}`;
+  const waitlistLabel = `${waitlist.length} na espera`;
+  const needsToggle = players.length + waitlist.length > 6;
+
+  const chips = (list: MatchPlayer[], className: string) =>
+    list.map((player) =>
+      player.userId ? (
+        <Link
+          key={player.id ?? player.name}
+          to={`/profile/${player.userId}`}
+          className={`flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 hover:border-primary/50 hover:bg-surface-container transition-colors group ${className}`}
+        >
+          <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
+          <span className="font-mono text-label-sm text-on-surface group-hover:text-primary transition-colors">{player.name}</span>
+        </Link>
+      ) : (
+        <div key={player.id ?? player.name} className={`flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 ${className}`}>
+          <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
+          <span className="font-mono text-label-sm text-on-surface">{player.name}</span>
+        </div>
+      )
+    );
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {players.map((player) => (
-          player.userId ? (
-            <Link
-              key={player.id ?? player.name}
-              to={`/profile/${player.userId}`}
-              className="flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 hover:border-primary/50 hover:bg-surface-container transition-colors group"
-            >
-              <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-              <span className="font-mono text-label-sm text-on-surface group-hover:text-primary transition-colors">{player.name}</span>
-            </Link>
-          ) : (
-            <div key={player.id ?? player.name} className="flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1">
-              <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-              <span className="font-mono text-label-sm text-on-surface">{player.name}</span>
-            </div>
-          )
-        ))}
-        {players.length === 0 && <span className="font-mono text-label-sm text-on-surface-variant">Ninguém confirmado ainda — seja o primeiro!</span>}
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-label-sm">
+        <span className="inline-flex items-center gap-1.5 text-primary">
+          <MaterialIcon name="verified" className="w-4 h-4" />
+          {confirmedLabel}
+        </span>
+        {waitlist.length > 0 && (
+          <span className="inline-flex items-center gap-1.5 text-tertiary">
+            <MaterialIcon name="pending" className="w-4 h-4" />
+            {waitlistLabel}
+          </span>
+        )}
+        {needsToggle && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="md:hidden inline-flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors cursor-pointer underline underline-offset-2"
+          >
+            <MaterialIcon name={expanded ? "expand_less" : "expand_more"} className="w-4 h-4" />
+            {expanded ? "recolher" : "ver lista"}
+          </button>
+        )}
       </div>
 
-      {waitlist.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2">
+      <div className={`${needsToggle && !expanded ? "hidden" : "flex"} md:flex flex-wrap gap-2`}>
+        {chips(players, "")}
+        {players.length === 0 && <span className="font-mono text-label-sm text-on-surface-variant">Ninguém confirmado ainda — seja o primeiro!</span>}
+        {waitlist.length > 0 && (
+          <div className="flex items-center gap-2 w-full">
             <span className="font-mono text-label-sm text-on-surface-variant uppercase tracking-widest">Lista de espera</span>
-            <span className="font-mono text-label-bold text-tertiary">{waitlist.length}</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {waitlist.map((player) => (
-              player.userId ? (
-                <Link
-                  key={player.id ?? player.name}
-                  to={`/profile/${player.userId}`}
-                  className="flex items-center gap-2 bg-surface-variant/60 border border-tertiary/30 rounded-full pl-1 pr-3 py-1 hover:border-primary/50 hover:bg-surface-container transition-colors group"
-                >
-                  <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-                  <span className="font-mono text-label-sm text-on-surface-variant group-hover:text-primary transition-colors">{player.name}</span>
-                </Link>
-              ) : (
-                <div key={player.id ?? player.name} className="flex items-center gap-2 bg-surface-variant/60 border border-tertiary/30 rounded-full pl-1 pr-3 py-1">
-                  <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-                  <span className="font-mono text-label-sm text-on-surface-variant">{player.name}</span>
-                </div>
-              )
-            ))}
-          </div>
-        </div>
-      )}
+        )}
+        {chips(waitlist, "bg-surface-variant/60 border-tertiary/30 hover:border-primary/50")}
+      </div>
     </div>
   );
 }
@@ -420,6 +431,7 @@ function MatchListContent({
                       myStatus={myStatus[match.id]}
                       busy={busyMatchId === match.id}
                       onConfirm={() => onConfirm(match)}
+                      onDesist={() => onDesist(match)}
                     />
                   ))}
                 </div>
@@ -503,11 +515,13 @@ const UpcomingRow = React.memo(function UpcomingRow({
   myStatus,
   busy,
   onConfirm,
+  onDesist,
 }: Readonly<{
   match: MatchWithMeta;
   myStatus: PlayerStatus | undefined;
   busy: boolean;
   onConfirm: () => void;
+  onDesist: () => void;
 }>) {
   const date = new Date(match.dateTime);
   const isFull = match.confirmedCount >= match.maxPlayers;
@@ -563,10 +577,21 @@ const UpcomingRow = React.memo(function UpcomingRow({
 
       <div className="sm:w-56">
         {myStatus === "confirmed" ? (
-          <span className="flex items-center justify-center gap-2 w-full py-2.5 px-4 font-mono text-label-sm text-green-400 bg-green-800/20 border border-green-700/40 rounded-none">
-            <MaterialIcon name="verified" className="w-4 h-4" />
-            CONFIRMADO
-          </span>
+          <div className="flex flex-col gap-1.5">
+            <span className="flex items-center justify-center gap-2 w-full py-2.5 px-4 font-mono text-label-sm text-green-400 bg-green-800/20 border border-green-700/40 rounded-none">
+              <MaterialIcon name="verified" className="w-4 h-4" />
+              CONFIRMADO
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onDesist}
+              className="w-full py-2 px-4 font-mono text-label-sm text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 rounded-none transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <MaterialIcon name="close" className="w-3.5 h-3.5" />
+              DESISTIR
+            </button>
+          </div>
         ) : (
           <button
             type="button"
@@ -599,8 +624,17 @@ export default function Matches() {
     setAttendance(match.id, waiting ? "waitlist" : "confirmed");
   };
 
-  const handleDesist = (match: MatchWithMeta) => {
-    setAttendance(match.id, "cancelled");
+  const handleDesist = async (match: MatchWithMeta) => {
+    const ok = await setAttendance(match.id, "cancelled");
+    if (!ok) return;
+
+    const { error } = await supabase.rpc("promote_waitlist_player", {
+      p_match_id: match.id,
+    });
+    if (error) {
+      console.error("Erro ao promover fila de espera:", error);
+    }
+    refetch();
   };
 
   const handleCancelConfirm = () => {

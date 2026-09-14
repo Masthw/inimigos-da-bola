@@ -292,6 +292,7 @@ export type Database = {
       match_players: {
         Row: {
           assists: number | null
+          created_at: string
           goals_scored: number | null
           guest_name: string | null
           id: string
@@ -305,6 +306,7 @@ export type Database = {
         }
         Insert: {
           assists?: number | null
+          created_at?: string
           goals_scored?: number | null
           guest_name?: string | null
           id?: string
@@ -318,6 +320,7 @@ export type Database = {
         }
         Update: {
           assists?: number | null
+          created_at?: string
           goals_scored?: number | null
           guest_name?: string | null
           id?: string
@@ -714,6 +717,7 @@ export type Database = {
       is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
       join_group_by_code: { Args: { p_code: string }; Returns: string }
+      promote_waitlist_player: { Args: { p_match_id: string }; Returns: Json }
       tally_match_votes: {
         Args: { p_group_id?: string; p_match_id: string }
         Returns: Json

@@ -195,9 +195,7 @@ const TacticalNode = memo(function TacticalNode({
           )}
         </div>
 
-        <span className={`mt-1 font-mono text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${labelClass}`}>
-          {occupant ? occupant.name : label}
-        </span>
+        <span className={`mt-1 font-mono text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap ${labelClass}`}>{occupant ? occupant.name : label}</span>
       </div>
     </div>
   );
@@ -383,9 +381,7 @@ interface FetchedTeams {
   all: Player[];
 }
 
-async function fetchFavoritePositionsMap(
-  playerUserIds: string[],
-): Promise<Map<string, { name: string | null; code: string | null }>> {
+async function fetchFavoritePositionsMap(playerUserIds: string[]): Promise<Map<string, { name: string | null; code: string | null }>> {
   const favByPlayer = new Map<string, { name: string | null; code: string | null }>();
   if (playerUserIds.length === 0) return favByPlayer;
 
@@ -412,10 +408,7 @@ async function fetchFavoritePositionsMap(
   return favByPlayer;
 }
 
-function resolveLocalPosition(
-  dbPosition: string | null,
-  activePositions: readonly { id: string }[],
-): PositionId | null {
+function resolveLocalPosition(dbPosition: string | null, activePositions: readonly { id: string }[]): PositionId | null {
   if (!dbPosition || !DB_POSITION_TO_LOCAL[dbPosition]) return null;
   const localId = DB_POSITION_TO_LOCAL[dbPosition];
   return activePositions.some((p) => p.id === localId) ? localId : null;
@@ -499,11 +492,7 @@ function canUserSelectPosition(
   return true;
 }
 
-function updatePositionsOnToggle(
-  prevList: Player[],
-  playerId: string,
-  posId: PositionId | null,
-): Player[] {
+function updatePositionsOnToggle(prevList: Player[], playerId: string, posId: PositionId | null): Player[] {
   return prevList.map((p) => {
     if (p.id !== playerId) return p;
     const nextPosition = p.position === posId ? null : posId;
@@ -511,11 +500,7 @@ function updatePositionsOnToggle(
   });
 }
 
-function updatePositionsOnRealtime(
-  prevList: Player[],
-  matchPlayerId: string,
-  localPos: PositionId | null,
-): Player[] {
+function updatePositionsOnRealtime(prevList: Player[], matchPlayerId: string, localPos: PositionId | null): Player[] {
   return prevList.map((p) => (p.matchPlayerId === matchPlayerId ? { ...p, position: localPos } : p));
 }
 
@@ -776,6 +761,47 @@ function CourtStatusBanner({
   );
 }
 
+function TeamTabButton({
+  teamKey,
+  teamNameDisplay,
+  myTeam,
+  isActive,
+  onSwitchTeam,
+}: Readonly<{
+  teamKey: TeamKey;
+  teamNameDisplay: string;
+  myTeam: TeamKey | null;
+  isActive: boolean;
+  onSwitchTeam: (team: TeamKey) => void;
+}>) {
+  const isMyTeam = myTeam === teamKey;
+  const isOpponent = myTeam !== null && myTeam !== teamKey;
+
+  let label: string;
+  if (isMyTeam) {
+    label = "Meu Time";
+  } else if (isOpponent) {
+    label = "Adversário";
+  } else {
+    label = teamNameDisplay;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSwitchTeam(teamKey)}
+      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
+        isActive
+          ? "bg-primary text-on-primary font-bold shadow-md"
+          : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
+      }`}
+    >
+      <MaterialIcon name={isMyTeam ? "shield" : "sports_soccer"} className="w-3.5 h-3.5 shrink-0" />
+      <span className="max-w-23 truncate">{label}</span>
+    </button>
+  );
+}
+
 function CourtHeaderTabs({
   teamKey,
   teamName,
@@ -792,42 +818,10 @@ function CourtHeaderTabs({
   const teamANameDisplay = teamKey === "A" ? teamName : otherTeamName;
   const teamBNameDisplay = teamKey === "B" ? teamName : otherTeamName;
 
-  const mobileTabA = myTeam === "A" ? "Meu Time" : myTeam === "B" ? "Adversário" : teamANameDisplay;
-  const mobileTabB = myTeam === "B" ? "Meu Time" : myTeam === "A" ? "Adversário" : teamBNameDisplay;
-
   return (
     <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl border border-outline-variant/30 mb-3">
-      <button
-        type="button"
-        onClick={() => onSwitchTeam("A")}
-        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-          teamKey === "A"
-            ? "bg-primary text-on-primary font-bold shadow-md"
-            : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-        }`}
-      >
-        <MaterialIcon name={myTeam === "A" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5 shrink-0" />
-        <span className="lg:hidden max-w-[92px] truncate">{mobileTabA}</span>
-        <span className="hidden lg:inline truncate">{teamANameDisplay}</span>
-        {myTeam === "A" && <span className="hidden lg:inline text-[10px] opacity-80">(Meu Time)</span>}
-        {myTeam === "B" && <span className="hidden lg:inline text-[10px] opacity-80">(Adversário)</span>}
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onSwitchTeam("B")}
-        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-          teamKey === "B"
-            ? "bg-primary text-on-primary font-bold shadow-md"
-            : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-        }`}
-      >
-        <MaterialIcon name={myTeam === "B" ? "shield" : "sports_soccer"} className="w-3.5 h-3.5 shrink-0" />
-        <span className="lg:hidden max-w-[92px] truncate">{mobileTabB}</span>
-        <span className="hidden lg:inline truncate">{teamBNameDisplay}</span>
-        {myTeam === "B" && <span className="hidden lg:inline text-[10px] opacity-80">(Meu Time)</span>}
-        {myTeam === "A" && <span className="hidden lg:inline text-[10px] opacity-80">(Adversário)</span>}
-      </button>
+      <TeamTabButton teamKey="A" teamNameDisplay={teamANameDisplay} myTeam={myTeam} isActive={teamKey === "A"} onSwitchTeam={onSwitchTeam} />
+      <TeamTabButton teamKey="B" teamNameDisplay={teamBNameDisplay} myTeam={myTeam} isActive={teamKey === "B"} onSwitchTeam={onSwitchTeam} />
     </div>
   );
 }
@@ -950,19 +944,9 @@ const CourtCard = memo(function CourtCard({
 }>) {
   return (
     <div className="w-full flex flex-col">
-      <CourtHeaderTabs
-        teamKey={teamKey}
-        teamName={teamName}
-        otherTeamName={otherTeamName}
-        myTeam={myTeam}
-        onSwitchTeam={onSwitchTeam}
-      />
+      <CourtHeaderTabs teamKey={teamKey} teamName={teamName} otherTeamName={otherTeamName} myTeam={myTeam} onSwitchTeam={onSwitchTeam} />
 
-      <CourtStatusBanner
-        teamName={teamName}
-        relationship={relationship}
-        role={role}
-      />
+      <CourtStatusBanner teamName={teamName} relationship={relationship} role={role} />
 
       <CourtPitchCanvas
         layoutPositions={layoutPositions}
@@ -1118,13 +1102,7 @@ function useTacticsMatchData(matchId?: string) {
   const config = useTacticsConfig(nextMatch, isDesktop, isGroupAdmin);
   const currentUserId = user?.id;
 
-  const board = useTacticsBoard(
-    nextMatch,
-    currentUserId,
-    config.activePositions,
-    isGroupAdmin,
-    setTacticalPosition,
-  );
+  const board = useTacticsBoard(nextMatch, currentUserId, config.activePositions, isGroupAdmin, setTacticalPosition);
 
   return {
     nextMatch,
@@ -1162,16 +1140,7 @@ function getTeamRelationship(activeTeamKey: TeamKey, myTeam: TeamKey | null): Te
 export default function Tactics() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
-  const {
-    nextMatch,
-    nextMatchLoading,
-    isGroupAdmin,
-    busy,
-    isDesktop,
-    config,
-    currentUserId,
-    board,
-  } = useTacticsMatchData(matchId);
+  const { nextMatch, nextMatchLoading, isGroupAdmin, busy, isDesktop, config, currentUserId, board } = useTacticsMatchData(matchId);
 
   const myTeam = useMemo((): TeamKey | null => {
     if (board.teamA.some((p) => p.userId === currentUserId)) return "A";
