@@ -110,11 +110,7 @@ export default function GroupManagement() {
     if (!activeGroupId || !memberToRemove || isRemoving) return;
     setIsRemoving(true);
     try {
-      await supabase
-        .from("group_members")
-        .delete()
-        .eq("group_id", activeGroupId)
-        .eq("user_id", memberToRemove.user_id);
+      await supabase.from("group_members").delete().eq("group_id", activeGroupId).eq("user_id", memberToRemove.user_id);
       await fetchData();
       refreshGroup();
       setMemberToRemove(null);
@@ -128,14 +124,10 @@ export default function GroupManagement() {
     setIsLeaving(true);
     setLeaveError(null);
     try {
-      const { error } = await supabase
-        .from("group_members")
-        .delete()
-        .eq("group_id", activeGroupId)
-        .eq("user_id", user.id);
+      const { error } = await supabase.from("group_members").delete().eq("group_id", activeGroupId).eq("user_id", user.id);
       if (error) throw error;
       setShowLeaveModal(false);
-      await refreshGroup();
+      refreshGroup();
       navigate("/");
     } catch {
       setLeaveError("Não foi possível sair do grupo. Tente novamente.");
@@ -169,9 +161,7 @@ export default function GroupManagement() {
               <MaterialIcon name="groups" className="w-6 h-6 text-primary shrink-0" />
               <h2 className="text-title-md font-mono text-on-surface truncate">{activeGroup.name}</h2>
             </div>
-            <p className="text-body-sm text-on-surface-variant">
-              Ao sair do grupo, você perde o acesso às partidas, rankings e conquistas dele.
-            </p>
+            <p className="text-body-sm text-on-surface-variant">Ao sair do grupo, você perde o acesso às partidas, rankings e conquistas dele.</p>
           </section>
 
           <button
@@ -206,12 +196,7 @@ export default function GroupManagement() {
 
         <GroupCodeCard code={activeGroup.code} groupName={activeGroup.name} />
 
-        <PendingRequestsList
-          pending={pending}
-          busyUserId={busyUserId}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        />
+        <PendingRequestsList pending={pending} busyUserId={busyUserId} onApprove={handleApprove} onReject={handleReject} />
 
         <GroupMembersList
           members={members}
