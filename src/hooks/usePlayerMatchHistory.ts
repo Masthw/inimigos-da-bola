@@ -155,6 +155,7 @@ export function usePlayerMatchHistory(userId: string | undefined, groupId: strin
               .from('match_players')
               .select('match_id, goals_scored, assists, team')
               .eq('user_id', id)
+              .eq('status', 'confirmed')
               .in('match_id', matchIds)
           : { data: [] as { match_id: string; goals_scored: number | null; assists: number | null; team: string }[] }
 
@@ -168,6 +169,7 @@ export function usePlayerMatchHistory(userId: string | undefined, groupId: strin
           supabase
             .from('match_players')
             .select('match_id, user_id, guest_name, goals_scored, assists, team, users(name)')
+            .eq('status', 'confirmed')
             .in('match_id', playedIds),
           supabase
             .from('match_awards')

@@ -2,6 +2,8 @@ import React from "react";
 import { MaterialIcon } from "../ui/MaterialIcon";
 import { PlayerStatsTable, type PlayerStats } from "../ui/PlayerStatsTable";
 
+export type MatchOutcome = "victory" | "defeat" | "draw";
+
 interface FinishedMatchCardProps {
   matchId: string;
   dateTime: string;
@@ -14,18 +16,14 @@ interface FinishedMatchCardProps {
   teamBPlayers: PlayerStats[];
   expanded: boolean;
   onToggle: () => void;
+  myOutcome?: MatchOutcome | null;
 }
 
-const OUTCOMEClasses = {
+const OUTCOMEClasses: Record<string, { chip: string; score: string }> = {
   victory: { chip: "bg-success text-white", score: "text-success" },
   defeat: { chip: "bg-danger text-white", score: "text-danger" },
   draw: { chip: "bg-slate-500 text-white", score: "text-on-surface" },
-} as const;
-
-function getOutcome(homeScore: number, awayScore: number): "victory" | "defeat" | "draw" {
-  if (homeScore === awayScore) return "draw";
-  return homeScore > awayScore ? "victory" : "defeat";
-}
+};
 
 const OUTCOME_LABELS: Record<string, string> = {
   victory: "Vitória",
@@ -52,9 +50,9 @@ export const FinishedMatchCard = React.memo(function FinishedMatchCard({
   teamBPlayers,
   expanded,
   onToggle,
+  myOutcome = null,
 }: Readonly<FinishedMatchCardProps>) {
-  const outcome = getOutcome(teamAScore, teamBScore);
-  const outcomeMeta = OUTCOMEClasses[outcome];
+  const outcomeMeta = myOutcome ? OUTCOMEClasses[myOutcome] : null;
 
   return (
     <div className="bg-surface-container hover:bg-surface-container-high transition-colors border border-outline-variant rounded-xl p-4">
@@ -65,9 +63,11 @@ export const FinishedMatchCard = React.memo(function FinishedMatchCard({
       >
         <div className="flex justify-between items-center gap-3 mb-2">
           <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-mono text-label-bold uppercase px-2 py-0.5 rounded ${outcomeMeta.chip}`}>
-              {OUTCOME_LABELS[outcome]}
-            </span>
+            {myOutcome && outcomeMeta && (
+              <span className={`text-[10px] font-mono text-label-bold uppercase px-2 py-0.5 rounded ${outcomeMeta.chip}`}>
+                {OUTCOME_LABELS[myOutcome]}
+              </span>
+            )}
             {gameTypeName && (
               <span className="text-[10px] font-mono text-label-bold uppercase px-2 py-0.5 rounded bg-surface-container text-on-surface border border-outline-variant/30">
                 {gameTypeName}
@@ -80,7 +80,7 @@ export const FinishedMatchCard = React.memo(function FinishedMatchCard({
         <div className="flex items-center gap-4">
           <p className="flex-1 min-w-0 font-body text-on-surface leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
             {teamAName}{" "}
-            <span className={`font-bold ${outcomeMeta.score}`}>
+            <span className={`font-bold ${outcomeMeta?.score ?? "text-on-surface"}`}>
               {teamAScore} — {teamBScore}
             </span>{" "}
             {teamBName}

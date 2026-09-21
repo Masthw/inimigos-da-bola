@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase, uniqueChannelTopic } from "../lib/supabaseClient";
 import { useAuth } from "./useAuth";
 
@@ -111,6 +111,17 @@ export function useNextMatch(groupId: string | null = null, matchId?: string | n
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const refetch = useCallback(async () => {
+    try {
+      const data = await fetchNextMatch(userId, groupId, matchId);
+      setMatch(data);
+      setLoading(false);
+      setError(null);
+    } catch (error) {
+      console.error("Erro ao atualizar próxima partida:", error);
+    }
+  }, [userId, groupId, matchId]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -142,23 +153,11 @@ export function useNextMatch(groupId: string | null = null, matchId?: string | n
   }, [userId, groupId, matchId]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const refetch = async () => {
-      try {
-        const data = await fetchNextMatch(userId, groupId, matchId);
-        if (cancelled) return;
-        setMatch(data);
-        setLoading(false);
-        setError(null);
-      } catch (error) {
-        console.error("Erro ao atualizar próxima partida:", error);
-      }
-    };
-
     const channel = supabase
       .channel(uniqueChannelTopic("next-match-realtime"))
-      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, refetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
+        refetch();
+      })
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "match_players" },
@@ -180,11 +179,10 @@ export function useNextMatch(groupId: string | null = null, matchId?: string | n
       .subscribe();
 
     return () => {
-      cancelled = true;
       channel.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [userId, groupId, matchId]);
+  }, [refetch]);
 
-  return { match, loading, error };
+  return { match, loading, error, refetch };
 }

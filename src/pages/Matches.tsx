@@ -5,12 +5,13 @@ import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { Avatar } from "../components/ui/Avatar";
 import { Modal } from "../components/ui/Modal";
 import { LiveMatchView } from "../components/match/LiveMatchView";
-import { FinishedMatchCard } from "../components/match/FinishedMatchCard";
+import { FinishedMatchCard, type MatchOutcome } from "../components/match/FinishedMatchCard";
 import { useMatches, type MatchWithMeta, type MatchPlayer, type PlayerStatus } from "../hooks/useMatches";
 import { useLiveMatch } from "../hooks/useLiveMatch";
 import { useIsAdmin } from "../hooks/useIsAdmin";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { useAuth } from "../hooks/useAuth";
+import { formatShortName } from "../lib/profile";
 import { supabase } from "../lib/supabaseClient";
 import { getCourtPhotos } from "../lib/courts";
 
@@ -44,6 +45,18 @@ function formatTime(iso: string): string {
 
 function matchTitle(match: MatchWithMeta): string {
   return `${match.teamAName ?? "Time A"} vs ${match.teamBName ?? "Time B"}`;
+}
+
+function getMyOutcome(match: MatchWithMeta, currentUserId: string | undefined): MatchOutcome | null {
+  if (!currentUserId) return null;
+  const scoreA = match.teamAScore ?? 0;
+  const scoreB = match.teamBScore ?? 0;
+  const inTeamA = match.teamAPlayers.some((p) => p.userId === currentUserId);
+  if (!inTeamA && !match.teamBPlayers.some((p) => p.userId === currentUserId)) return null;
+  const myScore = inTeamA ? scoreA : scoreB;
+  const oppScore = inTeamA ? scoreB : scoreA;
+  if (myScore === oppScore) return "draw";
+  return myScore > oppScore ? "victory" : "defeat";
 }
 
 interface AttendanceButtonsProps {
@@ -143,12 +156,19 @@ function ConfirmedPlayersList({ players, waitlist }: Readonly<{ players: MatchPl
           className={`flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 hover:border-primary/50 hover:bg-surface-container transition-colors group ${className}`}
         >
           <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-          <span className="font-mono text-label-sm text-on-surface group-hover:text-primary transition-colors">{player.name}</span>
+          <span
+            title={player.name}
+            className="font-mono text-label-sm text-on-surface group-hover:text-primary transition-colors max-w-[10rem] truncate"
+          >
+            {formatShortName(player.name)}
+          </span>
         </Link>
       ) : (
         <div key={player.id ?? player.name} className={`flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 ${className}`}>
           <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-          <span className="font-mono text-label-sm text-on-surface">{player.name}</span>
+          <span title={player.name} className="font-mono text-label-sm text-on-surface max-w-[10rem] truncate">
+            {formatShortName(player.name)}
+          </span>
         </div>
       )
     );
@@ -198,6 +218,7 @@ function FeaturedCard({
   busy,
   isAdmin,
   isCreator,
+  canVote,
   onConfirm,
   onDesist,
   onCancel,
@@ -208,6 +229,7 @@ function FeaturedCard({
   busy: boolean;
   isAdmin: boolean;
   isCreator: boolean;
+  canVote: boolean;
   onConfirm: () => void;
   onDesist: () => void;
   onCancel: () => void;
@@ -220,6 +242,7 @@ function FeaturedCard({
   const progress = Math.min(100, Math.round((match.confirmedCount / match.maxPlayers) * 100));
 
   const isPlayableStatus = match.status === "open" || match.status === "in_progress";
+  const canDesistInPreparing = match.status === "preparing" && (myStatus === "confirmed" || myStatus === "waitlist");
 
   return (
     <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-primary/30 flex flex-col md:flex-row transition-colors hover:border-primary/50">
@@ -302,7 +325,7 @@ function FeaturedCard({
             </div>
           </div>
 
-          {match.status === "voting" && (
+          {match.status === "voting" && canVote && (
             <Link
               to={`/matches/${match.id}/vote`}
               className="w-full py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
@@ -333,6 +356,18 @@ function FeaturedCard({
           )}
 
           {isPlayableStatus && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
+
+          {canDesistInPreparing && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onDesist}
+              className="w-full py-3 bg-error text-on-error font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <MaterialIcon name="close" className="w-5 h-5" />
+              DESISTIR DA PARTIDA
+            </button>
+          )}
         </div>
       </div>
 
@@ -407,6 +442,7 @@ function MatchListContent({
                 busy={busyMatchId === featured.id}
                 isAdmin={isGroupAdmin}
                 isCreator={currentUserId === featured.organizerId}
+                canVote={featured.confirmedPlayers.some((p) => p.userId === currentUserId)}
                 onConfirm={() => onConfirm(featured)}
                 onDesist={() => onDesist(featured)}
                 onCancel={() => onCancel(featured)}
@@ -457,6 +493,7 @@ function MatchListContent({
                       teamBScore={match.teamBScore ?? 0}
                       teamAPlayers={match.teamAPlayers}
                       teamBPlayers={match.teamBPlayers}
+                      myOutcome={getMyOutcome(match, currentUserId)}
                       expanded={expandedFinished === match.id}
                       onToggle={() => onToggle(match.id)}
                     />
@@ -576,11 +613,17 @@ const UpcomingRow = React.memo(function UpcomingRow({
       </div>
 
       <div className="sm:w-56">
-        {myStatus === "confirmed" ? (
+        {myStatus === "confirmed" || myStatus === "waitlist" ? (
           <div className="flex flex-col gap-1.5">
-            <span className="flex items-center justify-center gap-2 w-full py-2.5 px-4 font-mono text-label-sm text-green-400 bg-green-800/20 border border-green-700/40 rounded-none">
-              <MaterialIcon name="verified" className="w-4 h-4" />
-              CONFIRMADO
+            <span
+              className={`flex items-center justify-center gap-2 w-full py-2.5 px-4 font-mono text-label-sm rounded-none border ${
+                myStatus === "confirmed"
+                  ? "text-green-400 bg-green-800/20 border-green-700/40"
+                  : "text-tertiary bg-tertiary-container/30 border-tertiary/40"
+              }`}
+            >
+              <MaterialIcon name={myStatus === "confirmed" ? "verified" : "pending"} className="w-4 h-4" />
+              {myStatus === "confirmed" ? "CONFIRMADO" : "NA ESPERA"}
             </span>
             <button
               type="button"
