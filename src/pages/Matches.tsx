@@ -156,21 +156,21 @@ function ConfirmedPlayersList({ players, waitlist }: Readonly<{ players: MatchPl
           className={`flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 hover:border-primary/50 hover:bg-surface-container transition-colors group ${className}`}
         >
           <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-          <span
-            title={player.name}
-            className="font-mono text-label-sm text-on-surface group-hover:text-primary transition-colors max-w-[10rem] truncate"
-          >
+          <span title={player.name} className="font-mono text-label-sm text-on-surface group-hover:text-primary transition-colors max-w-40 truncate">
             {formatShortName(player.name)}
           </span>
         </Link>
       ) : (
-        <div key={player.id ?? player.name} className={`flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 ${className}`}>
+        <div
+          key={player.id ?? player.name}
+          className={`flex items-center gap-2 bg-surface-variant border border-outline-variant rounded-full pl-1 pr-3 py-1 ${className}`}
+        >
           <Avatar src={player.avatarUrl} alt={player.name} className="w-7 h-7 rounded-full" />
-          <span title={player.name} className="font-mono text-label-sm text-on-surface max-w-[10rem] truncate">
+          <span title={player.name} className="font-mono text-label-sm text-on-surface max-w-40 truncate">
             {formatShortName(player.name)}
           </span>
         </div>
-      )
+      ),
     );
 
   return (
@@ -212,6 +212,146 @@ function ConfirmedPlayersList({ players, waitlist }: Readonly<{ players: MatchPl
   );
 }
 
+function FeaturedCardHead({
+  match,
+  isAdmin,
+  isPlayableStatus,
+  busy,
+  onStart,
+  onCancel,
+}: Readonly<{
+  match: MatchWithMeta;
+  isAdmin: boolean;
+  isPlayableStatus: boolean;
+  busy: boolean;
+  onStart: () => void;
+  onCancel: () => void;
+}>) {
+  const statusMeta = STATUS_META[match.status];
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest ${statusMeta.className}`}>
+          {match.status === "in_progress" && <span className="w-2 h-2 rounded-full bg-error animate-pulse" />}
+          {statusMeta.label}
+        </span>
+        {match.gameTypeName && (
+          <span className="inline-flex px-3 py-1 font-mono text-label-sm uppercase tracking-widest bg-surface-variant text-on-surface-variant">
+            {match.gameTypeName}
+          </span>
+        )}
+      </div>
+
+      {isAdmin && isPlayableStatus && (
+        <div className="flex items-center justify-start sm:justify-end gap-2">
+          {match.status === "open" && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onStart}
+              className="inline-flex items-center justify-center gap-1 px-2.5 py-2.5 font-mono text-xs uppercase tracking-wider text-success bg-success/10 border border-success/40 hover:bg-success/20 transition-colors"
+            >
+              <MaterialIcon name="play_arrow" className="w-3.5 h-3.5" />
+              Preparação
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+            className="inline-flex items-center justify-center gap-1 px-2.5 py-2.5 font-mono text-xs uppercase tracking-wider text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 transition-colors"
+          >
+            <MaterialIcon name="close" className="w-3.5 h-3.5" />
+            Cancelar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FeaturedCardActions({
+  match,
+  myStatus,
+  busy,
+  isCreator,
+  canVote,
+  onConfirm,
+  onDesist,
+}: Readonly<{
+  match: MatchWithMeta;
+  myStatus: PlayerStatus | undefined;
+  busy: boolean;
+  isCreator: boolean;
+  canVote: boolean;
+  onConfirm: () => void;
+  onDesist: () => void;
+}>) {
+  const isPlayableStatus = match.status === "open" || match.status === "in_progress";
+  const canDesistInPreparing = match.status === "preparing" && (myStatus === "confirmed" || myStatus === "waitlist");
+  const progress = Math.min(100, Math.round((match.confirmedCount / match.maxPlayers) * 100));
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-mono text-label-sm text-on-surface-variant uppercase tracking-widest">Confirmados</span>
+          <span className="font-mono text-label-bold text-primary">
+            {match.confirmedCount}/{match.maxPlayers}
+          </span>
+        </div>
+        <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+          <div className="h-full bg-primary transition-[width] duration-700 stat-bar" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+
+      {match.status === "voting" && canVote && (
+        <Link
+          to={`/matches/${match.id}/vote`}
+          className="w-full py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+        >
+          <MaterialIcon name="how_to_vote" className="w-5 h-5" />
+          VOTAR NOS CRAQUES
+        </Link>
+      )}
+
+      {match.status === "preparing" &&
+        (isCreator ? (
+          <Link
+            to={`/matches/${match.id}/prepare`}
+            className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+          >
+            <MaterialIcon name="settings" className="w-5 h-5" />
+            CONFIGURAR PREPARAÇÃO
+          </Link>
+        ) : (
+          <Link
+            to={`/matches/${match.id}/tactics`}
+            className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
+          >
+            <MaterialIcon name="sports_soccer" className="w-5 h-5" />
+            CONFERIR ESCALAÇÃO
+          </Link>
+        ))}
+
+      {isPlayableStatus && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
+
+      {canDesistInPreparing && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onDesist}
+          className="w-full py-3 bg-error text-on-error font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <MaterialIcon name="close" className="w-5 h-5" />
+          DESISTIR DA PARTIDA
+        </button>
+      )}
+    </div>
+  );
+}
+
 function FeaturedCard({
   match,
   myStatus,
@@ -238,57 +378,15 @@ function FeaturedCard({
   const hour = new Date(match.dateTime).getHours();
   const photos = getCourtPhotos(match.sportName, hour);
   const imageSrc = photos[0] ?? null;
-  const statusMeta = STATUS_META[match.status];
-  const progress = Math.min(100, Math.round((match.confirmedCount / match.maxPlayers) * 100));
 
   const isPlayableStatus = match.status === "open" || match.status === "in_progress";
-  const canDesistInPreparing = match.status === "preparing" && (myStatus === "confirmed" || myStatus === "waitlist");
 
   return (
     <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-primary/30 flex flex-col md:flex-row transition-colors hover:border-primary/50">
       <div className="absolute left-0 top-0 w-1 h-full" />
       <div className="flex-1 p-6 md:p-8 flex flex-col justify-between gap-6">
         <div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 font-mono text-label-sm uppercase tracking-widest ${statusMeta.className}`}
-              >
-                {match.status === "in_progress" && <span className="w-2 h-2 rounded-full bg-error animate-pulse" />}
-                {statusMeta.label}
-              </span>
-              {match.gameTypeName && (
-                <span className="inline-flex px-3 py-1 font-mono text-label-sm uppercase tracking-widest bg-surface-variant text-on-surface-variant">
-                  {match.gameTypeName}
-                </span>
-              )}
-            </div>
-
-            {isAdmin && isPlayableStatus && (
-              <div className="flex items-center justify-start sm:justify-end gap-2">
-                {match.status === "open" && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={onStart}
-                    className="inline-flex items-center justify-center gap-1 px-2.5 py-2.5 font-mono text-xs uppercase tracking-wider text-success bg-success/10 border border-success/40 hover:bg-success/20 transition-colors"
-                  >
-                    <MaterialIcon name="play_arrow" className="w-3.5 h-3.5" />
-                    Preparação
-                  </button>
-                )}
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={onCancel}
-                  className="inline-flex items-center justify-center gap-1 px-2.5 py-2.5 font-mono text-xs uppercase tracking-wider text-error bg-surface-container-highest border border-error/40 hover:bg-error/10 transition-colors"
-                >
-                  <MaterialIcon name="close" className="w-3.5 h-3.5" />
-                  Cancelar
-                </button>
-              </div>
-            )}
-          </div>
+          <FeaturedCardHead match={match} isAdmin={isAdmin} isPlayableStatus={isPlayableStatus} busy={busy} onStart={onStart} onCancel={onCancel} />
 
           <h3 className="text-headline-md md:text-headline-lg font-display font-bold text-on-surface mb-stack-sm">{matchTitle(match)}</h3>
 
@@ -312,63 +410,15 @@ function FeaturedCard({
           <ConfirmedPlayersList players={match.confirmedPlayers} waitlist={match.waitlistPlayers} />
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-mono text-label-sm text-on-surface-variant uppercase tracking-widest">Confirmados</span>
-              <span className="font-mono text-label-bold text-primary">
-                {match.confirmedCount}/{match.maxPlayers}
-              </span>
-            </div>
-            <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
-              <div className="h-full bg-primary transition-[width] duration-700 stat-bar" style={{ width: `${progress}%` }} />
-            </div>
-          </div>
-
-          {match.status === "voting" && canVote && (
-            <Link
-              to={`/matches/${match.id}/vote`}
-              className="w-full py-3 bg-primary text-on-primary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
-            >
-              <MaterialIcon name="how_to_vote" className="w-5 h-5" />
-              VOTAR NOS CRAQUES
-            </Link>
-          )}
-
-          {match.status === "preparing" && (
-            isCreator ? (
-              <Link
-                to={`/matches/${match.id}/prepare`}
-                className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
-              >
-                <MaterialIcon name="settings" className="w-5 h-5" />
-                CONFIGURAR PREPARAÇÃO
-              </Link>
-            ) : (
-              <Link
-                to={`/matches/${match.id}/tactics`}
-                className="w-full py-3 bg-tertiary text-on-tertiary font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2"
-              >
-                <MaterialIcon name="sports_soccer" className="w-5 h-5" />
-                CONFERIR ESCALAÇÃO
-              </Link>
-            )
-          )}
-
-          {isPlayableStatus && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
-
-          {canDesistInPreparing && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onDesist}
-              className="w-full py-3 bg-error text-on-error font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <MaterialIcon name="close" className="w-5 h-5" />
-              DESISTIR DA PARTIDA
-            </button>
-          )}
-        </div>
+        <FeaturedCardActions
+          match={match}
+          myStatus={myStatus}
+          busy={busy}
+          isCreator={isCreator}
+          canVote={canVote}
+          onConfirm={onConfirm}
+          onDesist={onDesist}
+        />
       </div>
 
       {imageSrc && (

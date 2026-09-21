@@ -165,21 +165,13 @@ function resolveConfirmStatus(
   return "idle";
 }
 
-export function NextMatch() {
-  const { activeGroupId } = useActiveGroup();
-  const { match, loading, refetch } = useNextMatch(activeGroupId);
-  const { user } = useAuth();
-  const { isGroupAdmin } = useIsAdmin();
+function useNextMatchAttendance(
+  match: NextMatchData | null,
+  refetch: () => Promise<void>,
+  user: { id: string } | null,
+) {
   const [busyAction, setBusyAction] = useState<"confirming" | "desisting" | null>(null);
   const [hasError, setHasError] = useState(false);
-  const [photoIndex] = useState(() => {
-    const array = new Uint32Array(1);
-    window.crypto.getRandomValues(array);
-    return array[0] % Math.max(ATMOSPHERE_PHOTOS.length, 1);
-  });
-
-  const imageSrc = getImageSrc(match, photoIndex);
-  const { title, subtitle } = getCardMeta(loading, match);
 
   const status: ConfirmStatus = resolveConfirmStatus(busyAction, hasError, match?.myStatus ?? null);
 
@@ -194,7 +186,6 @@ export function NextMatch() {
 
       const insertPayload: MatchPlayerInsert = {
         match_id: match.id,
-        user_id: user.id,
         status: "confirmed",
         team: "A",
       };
@@ -251,6 +242,142 @@ export function NextMatch() {
     }
   }
 
+  const clearError = () => setHasError(false);
+
+  return { status, busyAction, handleConfirm, handleDesist, clearError };
+}
+
+interface NextMatchInfoProps {
+  loading: boolean;
+  match: NextMatchData | null;
+  title: string;
+  subtitle: string;
+}
+
+function NextMatchInfo({ loading, match, title, subtitle }: Readonly<NextMatchInfoProps>) {
+  return (
+    <div>
+      <span className="inline-block px-3 py-1 bg-secondary-container text-on-secondary-container font-mono text-label-sm mb-4 uppercase tracking-widest">
+        {subtitle}
+        {match?.status === "preparing" && (
+          <span className="ml-2 px-2 py-0.5 bg-tertiary-container text-on-tertiary-container font-mono text-[8px] uppercase">
+            Em preparação
+          </span>
+        )}
+      </span>
+      <h3 className="text-headline-md font-display text-on-surface mb-stack-sm">{title}</h3>
+
+      {loading && (
+        <div className="space-y-3 mt-4">
+          <div className="h-5 w-2/3 bg-surface-variant animate-pulse rounded" />
+          <div className="h-5 w-1/3 bg-surface-variant animate-pulse rounded" />
+        </div>
+      )}
+
+      {!loading && match && (
+        <div className="space-y-3 mt-4">
+          <div className="flex items-center gap-3 text-on-surface-variant">
+            <MaterialIcon name="calendar_today" className="w-5 h-5 text-primary" />
+            <span className="font-body">{match.date}</span>
+          </div>
+          <div className="flex items-center gap-3 text-on-surface-variant">
+            <MaterialIcon name="schedule" className="w-5 h-5 text-primary" />
+            <span className="font-body">{match.time}</span>
+          </div>
+          <div className="flex items-center gap-3 text-on-surface-variant">
+            <MaterialIcon name="location_on" className="w-5 h-5 text-primary" />
+            <span className="font-body">{match.location}</span>
+          </div>
+        </div>
+      )}
+
+      {!loading && !match && (
+        <p className="mt-4 text-on-surface-variant font-body max-w-sm">Assim que tiver um jogo marcado, ele aparece aqui.</p>
+      )}
+    </div>
+  );
+}
+
+interface NextMatchActionsProps {
+  match: NextMatchData | null;
+  status: ConfirmStatus;
+  loading: boolean;
+  busyAction: "confirming" | "desisting" | null;
+  isGroupAdmin: boolean;
+  onConfirm: () => void;
+  onDesist: () => void;
+  onRetry: () => void;
+}
+
+function NextMatchActions({ match, status, loading, busyAction, isGroupAdmin, onConfirm, onDesist, onRetry }: Readonly<NextMatchActionsProps>) {
+  if (match?.status === "preparing") {
+    return (
+      <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+        <Link
+          to="/tactics"
+          className="w-full sm:w-auto bg-tertiary text-on-tertiary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
+        >
+          <MaterialIcon name="sports_soccer" className="w-5 h-5" />
+          Conferir Escalação
+        </Link>
+        {(match.myStatus === "confirmed" || match.myStatus === "waitlist") && (
+          <button
+            type="button"
+            disabled={Boolean(busyAction)}
+            onClick={onDesist}
+            className="w-full sm:w-auto bg-error text-on-error px-8 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <MaterialIcon
+              name={busyAction === "desisting" ? "pending" : "close"}
+              className={`w-5 h-5 ${busyAction === "desisting" ? "animate-spin" : ""}`}
+            />
+            {busyAction === "desisting" ? "SAINDO..." : "DESISTIR"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <MatchActions
+        status={status}
+        loading={loading}
+        hasMatch={Boolean(match)}
+        isAdmin={isGroupAdmin}
+        onConfirm={onConfirm}
+        onDesist={onDesist}
+        onRetry={onRetry}
+      />
+
+      {isGroupAdmin && match?.status === "open" && (
+        <Link
+          to="/matches/new"
+          className="w-full md:w-auto bg-surface-variant text-on-surface px-10 py-4 font-mono text-label-bold border border-outline-variant transition-transform flex items-center justify-center gap-3"
+        >
+          <MaterialIcon name="add_circle" className="w-5 h-5" />
+          Nova Partida
+        </Link>
+      )}
+    </div>
+  );
+}
+
+export function NextMatch() {
+  const { activeGroupId } = useActiveGroup();
+  const { match, loading, refetch } = useNextMatch(activeGroupId);
+  const { user } = useAuth();
+  const { isGroupAdmin } = useIsAdmin();
+  const [photoIndex] = useState(() => {
+    const array = new Uint32Array(1);
+    window.crypto.getRandomValues(array);
+    return array[0] % Math.max(ATMOSPHERE_PHOTOS.length, 1);
+  });
+
+  const imageSrc = getImageSrc(match, photoIndex);
+  const { title, subtitle } = getCardMeta(loading, match);
+  const { status, busyAction, handleConfirm, handleDesist, clearError } = useNextMatchAttendance(match, refetch, user);
+
   return (
     <section className="md:col-span-8 group md:h-120">
       <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-outline-variant h-full md:h-full flex flex-col md:flex-row transition-colors hover:border-primary/50">
@@ -260,94 +387,19 @@ export function NextMatch() {
         </div>
 
         <div className="p-stack-lg flex flex-col justify-between flex-1 relative z-10 overflow-y-auto">
-          <div>
-            <span className="inline-block px-3 py-1 bg-secondary-container text-on-secondary-container font-mono text-label-sm mb-4 uppercase tracking-widest">
-              {subtitle}
-              {match?.status === "preparing" && (
-                <span className="ml-2 px-2 py-0.5 bg-tertiary-container text-on-tertiary-container font-mono text-[8px] uppercase">
-                  Em preparação
-                </span>
-              )}
-            </span>
-            <h3 className="text-headline-md font-display text-on-surface mb-stack-sm">{title}</h3>
+          <NextMatchInfo loading={loading} match={match} title={title} subtitle={subtitle} />
 
-            {loading && (
-              <div className="space-y-3 mt-4">
-                <div className="h-5 w-2/3 bg-surface-variant animate-pulse rounded" />
-                <div className="h-5 w-1/3 bg-surface-variant animate-pulse rounded" />
-              </div>
-            )}
-
-            {!loading && match && (
-              <div className="space-y-3 mt-4">
-                <div className="flex items-center gap-3 text-on-surface-variant">
-                  <MaterialIcon name="calendar_today" className="w-5 h-5 text-primary" />
-                  <span className="font-body">{match.date}</span>
-                </div>
-                <div className="flex items-center gap-3 text-on-surface-variant">
-                  <MaterialIcon name="schedule" className="w-5 h-5 text-primary" />
-                  <span className="font-body">{match.time}</span>
-                </div>
-                <div className="flex items-center gap-3 text-on-surface-variant">
-                  <MaterialIcon name="location_on" className="w-5 h-5 text-primary" />
-                  <span className="font-body">{match.location}</span>
-                </div>
-              </div>
-            )}
-
-            {!loading && !match && (
-              <p className="mt-4 text-on-surface-variant font-body max-w-sm">Assim que tiver um jogo marcado, ele aparece aqui.</p>
-            )}
-          </div>
-
-          <div className="mt-stack-lg flex flex-col gap-3">
-            {match?.status === "preparing" ? (
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <Link
-                  to="/tactics"
-                  className="w-full sm:w-auto bg-tertiary text-on-tertiary px-10 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-3"
-                >
-                  <MaterialIcon name="sports_soccer" className="w-5 h-5" />
-                  Conferir Escalação
-                </Link>
-                {(match.myStatus === "confirmed" || match.myStatus === "waitlist") && (
-                  <button
-                    type="button"
-                    disabled={Boolean(busyAction)}
-                    onClick={handleDesist}
-                    className="w-full sm:w-auto bg-error text-on-error px-8 py-4 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <MaterialIcon
-                      name={busyAction === "desisting" ? "pending" : "close"}
-                      className={`w-5 h-5 ${busyAction === "desisting" ? "animate-spin" : ""}`}
-                    />
-                    {busyAction === "desisting" ? "SAINDO..." : "DESISTIR"}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <MatchActions
-                  status={status}
-                  loading={loading}
-                  hasMatch={Boolean(match)}
-                  isAdmin={isGroupAdmin}
-                  onConfirm={handleConfirm}
-                  onDesist={handleDesist}
-                  onRetry={() => setHasError(false)}
-                />
-
-                {isGroupAdmin && match?.status === "open" && (
-                  <Link
-                    to="/matches/new"
-                    className="w-full md:w-auto bg-surface-variant text-on-surface px-10 py-4 font-mono text-label-bold border border-outline-variant transition-transform flex items-center justify-center gap-3"
-                  >
-                    <MaterialIcon name="add_circle" className="w-5 h-5" />
-                    Nova Partida
-                  </Link>
-                )}
-              </>
-            )}
+          <div className="mt-stack-lg">
+            <NextMatchActions
+              match={match}
+              status={status}
+              loading={loading}
+              busyAction={busyAction}
+              isGroupAdmin={isGroupAdmin}
+              onConfirm={handleConfirm}
+              onDesist={handleDesist}
+              onRetry={clearError}
+            />
           </div>
         </div>
       </div>

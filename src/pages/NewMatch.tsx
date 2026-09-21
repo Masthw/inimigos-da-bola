@@ -6,7 +6,7 @@ import { Dropdown } from "../components/ui/Dropdown";
 import { InputField } from "../components/ui/InputField";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { TimePicker } from "../components/ui/TimePicker";
-import { useAuth } from "../hooks/useAuth";
+
 import { useIsAdmin } from "../hooks/useIsAdmin";
 import { useActiveGroup } from "../hooks/useActiveGroup";
 import { supabase } from "../lib/supabaseClient";
@@ -185,7 +185,6 @@ function NewMatchTeamNamesSection({
 }
 
 export default function NewMatch() {
-  const { user } = useAuth();
   const { isGroupAdmin, loading: adminLoading } = useIsAdmin();
   const { activeGroupId } = useActiveGroup();
   const navigate = useNavigate();
@@ -329,7 +328,6 @@ export default function NewMatch() {
         game_type_id: Number(gameTypeId),
         max_players: maxP,
         max_waitlist: maxW,
-        organizer_id: user?.id ?? "",
         status: "open" as const,
         team_a_name: teamAName.trim() || null,
         team_b_name: teamBName.trim() || null,
