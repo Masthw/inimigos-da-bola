@@ -24,6 +24,7 @@ export interface MatchPlayerDetail {
   team: string;
   goals: number;
   assists: number;
+  ownGoals: number;
   awards: string[];
 }
 
@@ -162,7 +163,7 @@ async function fetchFinishedMatchDetails(finishedMatchIds: string[]) {
     supabase
       .from("match_players")
       .select(
-        "match_id, user_id, guest_name, goals_scored, assists, team, users(name)",
+        "match_id, user_id, guest_name, goals_scored, assists, own_goals_scored, team, users(name)",
       )
       .in("match_id", finishedMatchIds)
       .eq("status", "confirmed"),
@@ -192,6 +193,7 @@ async function fetchFinishedMatchDetails(finishedMatchIds: string[]) {
       team: row.team ?? "A",
       goals: row.goals_scored ?? 0,
       assists: row.assists ?? 0,
+      ownGoals: row.own_goals_scored ?? 0,
       awards,
     };
     const entry = finishedPlayerDetails.get(row.match_id) ??

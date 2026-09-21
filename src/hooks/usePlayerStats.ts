@@ -43,7 +43,8 @@ export function usePlayerStats(
         .select(
           "goals_scored, assists, team, matches!inner(status, team_a_score, team_b_score, group_id)",
         )
-        .eq("user_id", id);
+        .eq("user_id", id)
+        .eq("status", "confirmed");
 
       if (groupId) {
         matchQuery.eq("matches.group_id", groupId);

@@ -170,6 +170,7 @@ export async function fetchRankingData(
     supabase
       .from("match_players")
       .select("user_id, team, goals_scored, assists, matches!inner(status, team_a_score, team_b_score, date_time, group_id)")
+      .eq("status", "confirmed")
       .eq("matches.status", "finished")
       .is("matches.deleted_at", null)
       .eq("matches.group_id", groupId)

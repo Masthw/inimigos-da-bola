@@ -25,6 +25,25 @@ function VoteMatchLoading() {
   );
 }
 
+function VoteMatchRestricted() {
+  return (
+    <AppShell>
+      <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <MaterialIcon name="lock" className="w-10 h-10 text-on-surface-variant mx-auto mb-4" />
+          <h2 className="text-headline-md font-display font-black text-on-surface uppercase mb-2">Votação restrita</h2>
+          <p className="font-mono text-label-sm text-on-surface-variant mb-2">
+            A votação é exclusiva para os jogadores confirmados que participaram da partida.
+          </p>
+          <p className="font-mono text-[10px] text-on-surface-variant">
+            Os resultados aparecem em "Partidas" após o encerramento da votação.
+          </p>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
 function VotingHeaderScore({
   votingData,
   goalScorer,
@@ -248,6 +267,12 @@ export default function VoteMatch() {
 
   if (error || !votingData || !user) {
     return <MatchErrorState message={error || "Erro ao carregar votação"} />;
+  }
+
+  const isPlayer = votingData.players.some((p) => p.userId === user.id);
+
+  if (!isPlayer) {
+    return <VoteMatchRestricted />;
   }
 
   return (
