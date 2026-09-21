@@ -437,7 +437,7 @@ export type Database = {
           location: string
           max_players: number
           max_waitlist: number
-          organizer_id: string
+          organizer_id?: string
           status?: Database["public"]["Enums"]["match_status_enum"]
           team_a_color?: string | null
           team_a_name?: string | null

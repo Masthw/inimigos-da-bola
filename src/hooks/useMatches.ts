@@ -433,7 +433,6 @@ export function useMatches(groupId: string | null = null) {
       } else {
         const insertPayload: MatchPlayerInsert = {
           match_id: matchId,
-          user_id: userId,
           status: status,
           team: "A",
         };
