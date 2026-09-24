@@ -1,37 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import type { SyntheticEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppShell } from "../components/ui/AppShell";
 import { MaterialIcon } from "../components/ui/MaterialIcon";
 import { Avatar } from "../components/ui/Avatar";
 import { MatchErrorState } from "../components/match/MatchErrorState";
 import { useActiveGroup } from "../hooks/useActiveGroup";
-import { useAuth } from "../hooks/useAuth";
-import { validateMatchGroup } from "../lib/groupGuard";
-import { supabase } from "../lib/supabaseClient";
-import { performClientSideDraw } from "../lib/teamDrawer";
-
-interface MatchPlayerRow {
-  id: string;
-  user_id: string | null;
-  guest_name: string | null;
-  team: string;
-  is_sub: boolean;
-  status: string;
-  users: { name: string | null; avatar_url: string | null } | null;
-}
-
-interface MatchRow {
-  organizer_id: string | null;
-  team_a_name: string | null;
-  team_b_name: string | null;
-  max_players: number;
-  status: string;
-}
-
-interface GroupMemberRow {
-  user_id: string | null;
-  users: { id: string; name: string | null; avatar_url: string | null } | null;
-}
+import {
+  useMatchPlayersManagement,
+  type GroupMemberRow,
+  type MatchPlayerRow,
+} from "../hooks/useMatchPlayersManagement";
 
 function teamButtonClass(selected: string, team: string): string {
   if (selected !== team) {
@@ -231,7 +209,7 @@ function AddGuestSection({
   submitting: boolean;
   onGuestNameChange: (val: string) => void;
   onGuestTeamChange: (val: string) => void;
-  onAddGuest: (e: React.SyntheticEvent) => void;
+  onAddGuest: (e: SyntheticEvent) => void;
 }>) {
   return (
     <section className="p-4 bg-surface-container-high border border-outline-variant rounded-xl">
@@ -303,7 +281,7 @@ function CapacitySection({
   busy: boolean;
   error: string | null;
   onValueChange: (val: string) => void;
-  onSubmit: (e: React.SyntheticEvent) => void;
+  onSubmit: (e: SyntheticEvent) => void;
 }>) {
   return (
     <section className="p-4 bg-surface-container-high border border-outline-variant rounded-xl mb-8">
@@ -358,7 +336,7 @@ function AddMemberSection({
   selectedUserId: string;
   busy: boolean;
   onUserChange: (val: string) => void;
-  onSubmit: (e: React.SyntheticEvent) => void;
+  onSubmit: (e: SyntheticEvent) => void;
 }>) {
   return (
     <section className="p-4 bg-surface-container-high border border-outline-variant rounded-xl mb-8">
@@ -408,270 +386,104 @@ function AddMemberSection({
   );
 }
 
+function ManagementSections({
+  canManage,
+  isFull,
+  playersCount,
+  maxPlayers,
+  teamAName,
+  teamBName,
+  availableMembers,
+  capacity,
+  member,
+  guest,
+}: Readonly<{
+  canManage: boolean;
+  isFull: boolean;
+  playersCount: number;
+  maxPlayers: number | string;
+  teamAName: string;
+  teamBName: string;
+  availableMembers: GroupMemberRow[];
+  capacity: {
+    value: string;
+    busy: boolean;
+    error: string | null;
+    onValueChange: (val: string) => void;
+    onSubmit: (e: SyntheticEvent) => void;
+  };
+  member: {
+    selectedUserId: string;
+    busy: boolean;
+    onUserChange: (val: string) => void;
+    onSubmit: (e: SyntheticEvent) => void;
+  };
+  guest: {
+    guestName: string;
+    guestTeam: string;
+    submitting: boolean;
+    onGuestNameChange: (val: string) => void;
+    onGuestTeamChange: (val: string) => void;
+    onAddGuest: (e: SyntheticEvent) => void;
+  };
+}>) {
+  if (!canManage) {
+    return (
+      <p className="font-mono text-label-sm text-on-surface-variant text-center">
+        Apenas o criador da partida pode gerenciar os jogadores.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <CapacitySection
+        confirmedCount={playersCount}
+        maxPlayers={maxPlayers}
+        value={capacity.value}
+        busy={capacity.busy}
+        error={capacity.error}
+        onValueChange={capacity.onValueChange}
+        onSubmit={capacity.onSubmit}
+      />
+
+      <AddMemberSection
+        isFull={isFull}
+        members={availableMembers}
+        selectedUserId={member.selectedUserId}
+        busy={member.busy}
+        onUserChange={member.onUserChange}
+        onSubmit={member.onSubmit}
+      />
+
+      <AddGuestSection
+        isFull={isFull}
+        playerCount={playersCount}
+        maxPlayers={maxPlayers}
+        guestName={guest.guestName}
+        guestTeam={guest.guestTeam}
+        teamAName={teamAName}
+        teamBName={teamBName}
+        submitting={guest.submitting}
+        onGuestNameChange={guest.onGuestNameChange}
+        onGuestTeamChange={guest.onGuestTeamChange}
+        onAddGuest={guest.onAddGuest}
+      />
+    </>
+  );
+}
+
 export default function MatchPlayersManagement() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { activeGroupId } = useActiveGroup();
-  const { user } = useAuth();
-  const [players, setPlayers] = useState<MatchPlayerRow[]>([]);
-  const [waitlist, setWaitlist] = useState<MatchPlayerRow[]>([]);
-  const [groupMembers, setGroupMembers] = useState<GroupMemberRow[]>([]);
-  const [match, setMatch] = useState<MatchRow | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [guestName, setGuestName] = useState("");
-  const [guestTeam, setGuestTeam] = useState("A");
-  const [submitting, setSubmitting] = useState(false);
-  const [capacityInput, setCapacityInput] = useState("");
-  const [capacityBusy, setCapacityBusy] = useState(false);
-  const [capacityError, setCapacityError] = useState<string | null>(null);
-  const [memberUserId, setMemberUserId] = useState("");
-  const [memberBusy, setMemberBusy] = useState(false);
-  const [redrawing, setRedrawing] = useState(false);
-  const [swapSelected, setSwapSelected] = useState<string[]>([]);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const store = useMatchPlayersManagement(matchId, activeGroupId);
 
-  useEffect(() => {
-    if (!matchId || !activeGroupId) return;
-
-    validateMatchGroup(matchId, activeGroupId).then(({ valid, error: guardError }) => {
-      if (!valid) {
-        setError(guardError ?? "Acesso negado");
-        setLoading(false);
-      }
-    });
-  }, [matchId, activeGroupId]);
-
-  const fetchAll = useCallback(async () => {
-    if (!matchId) return;
-
-    const [matchRes, playersRes, membersRes] = await Promise.all([
-      supabase.from("matches").select("organizer_id, team_a_name, team_b_name, max_players, status").eq("id", matchId).maybeSingle(),
-      supabase
-        .from("match_players")
-        .select("id, user_id, guest_name, team, is_sub, status, users(name, avatar_url)")
-        .eq("match_id", matchId)
-        .in("status", ["confirmed", "waitlist"])
-        .order("team", { ascending: true }),
-      activeGroupId
-        ? supabase
-            .from("group_members")
-            .select("user_id, users(id, name, avatar_url)")
-            .eq("group_id", activeGroupId)
-            .eq("status", "approved")
-        : Promise.resolve({ data: null }),
-    ]);
-
-    if (matchRes.data) {
-      setMatch(matchRes.data as MatchRow);
-      setCapacityInput(String(matchRes.data.max_players));
-    }
-    const allPlayers = (playersRes.data ?? []) as MatchPlayerRow[];
-    setPlayers(allPlayers.filter((p) => p.status === "confirmed"));
-    setWaitlist(allPlayers.filter((p) => p.status === "waitlist"));
-    setGroupMembers((membersRes.data ?? []) as GroupMemberRow[]);
-    setLoading(false);
-  }, [matchId, activeGroupId]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchAll();
-  }, [fetchAll]);
-
-  const isCreator = user?.id != null && user.id === match?.organizer_id;
-  const isPreparing = match?.status === "preparing";
-  const canManage = isCreator;
-
-  async function handleRemove(playerId: string) {
-    if (!matchId || !activeGroupId) return;
-    const { valid, error: guardError } = await validateMatchGroup(matchId, activeGroupId);
-    if (!valid) {
-      setError(guardError ?? "Acesso negado");
-      return;
-    }
-    await supabase.from("match_players").delete().eq("id", playerId);
-    await supabase.rpc("promote_waitlist_player", { p_match_id: matchId });
-    fetchAll();
+  if (store.error) {
+    return <MatchErrorState message={store.error} />;
   }
 
-  async function handleAddGuest(e: React.SyntheticEvent) {
-    e.preventDefault();
-    if (!matchId || !guestName.trim() || !activeGroupId) return;
-
-    if (match && players.length >= match.max_players) {
-      setFeedback(`Partida cheia (${players.length}/${match.max_players}). Não é possível adicionar mais convidados.`);
-      return;
-    }
-
-    const { valid, error: guardError } = await validateMatchGroup(matchId, activeGroupId);
-    if (!valid) {
-      setError(guardError ?? "Acesso negado");
-      return;
-    }
-
-    setSubmitting(true);
-    setFeedback(null);
-    try {
-      const guestPayload = {
-        match_id: matchId,
-        guest_name: guestName.trim(),
-        team: guestTeam,
-        is_sub: false,
-        status: "confirmed" as const,
-      };
-      const { error: insertError } = await supabase.from("match_players").insert(guestPayload);
-      if (insertError) {
-        setFeedback("Erro ao adicionar convidado.");
-      } else {
-        setGuestName("");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-    fetchAll();
-  }
-
-  async function handleUpdateCapacity(e: React.SyntheticEvent) {
-    e.preventDefault();
-    if (!matchId || !canManage) return;
-
-    const num = Number(capacityInput);
-    if (!Number.isInteger(num) || num < players.length) {
-      setCapacityError(
-        `A capacidade deve ser um número inteiro maior ou igual ao nº de confirmados (${players.length}).`,
-      );
-      return;
-    }
-    if (num > 99) {
-      setCapacityError("A capacidade máxima é 99 jogadores.");
-      return;
-    }
-
-    setCapacityBusy(true);
-    setCapacityError(null);
-    setFeedback(null);
-
-    const { data, error } = await supabase.rpc("update_match_capacity", {
-      p_match_id: matchId,
-      p_max_players: num,
-    });
-    const result = data as { ok?: boolean; reason?: string; promotedCount?: number } | null;
-
-    if (error || !result?.ok) {
-      setCapacityError(
-        result?.reason === "capacidade menor que confirmados"
-          ? `Não é possível reduzir abaixo dos ${players.length} confirmados.`
-          : result?.reason === "sem permissao"
-            ? "Apenas o criador (ou administradores) pode alterar a capacidade."
-            : error?.message ?? "Não foi possível atualizar a capacidade.",
-      );
-    } else {
-      const promotedCount = Number(result.promotedCount ?? 0);
-      setFeedback(
-        promotedCount > 0
-          ? `Capacidade atualizada para ${num}. ${promotedCount} jogador(es) da espera entraram automaticamente.`
-          : `Capacidade atualizada para ${num}.`,
-      );
-    }
-
-    setCapacityBusy(false);
-    fetchAll();
-  }
-
-  async function handleAddMember(e: React.SyntheticEvent) {
-    e.preventDefault();
-    if (!matchId || !memberUserId) return;
-
-    const member = groupMembers.find((m) => m.user_id === memberUserId);
-    if (!member) return;
-    const full = match ? players.length >= match.max_players : false;
-
-    setMemberBusy(true);
-    setFeedback(null);
-
-    const memberPayload = {
-      match_id: matchId,
-      user_id: memberUserId,
-      team: "A",
-      is_sub: false,
-      status: (full ? "waitlist" : "confirmed") as "confirmed" | "waitlist",
-    };
-    const { error: insertError } = await supabase.from("match_players").insert(memberPayload);
-
-    if (insertError) {
-      setFeedback("Erro ao adicionar membro.");
-    } else {
-      setMemberUserId("");
-      const name = member.users?.name ?? "Membro";
-      setFeedback(full ? `${name} adicionado à lista de espera.` : `${name} confirmado na partida.`);
-    }
-
-    setMemberBusy(false);
-    fetchAll();
-  }
-
-  async function handleRedraw() {
-    if (!matchId || !activeGroupId || !canManage || !isPreparing) return;
-    setRedrawing(true);
-    setFeedback(null);
-    try {
-      const res = await supabase.functions.invoke("generate-lineup", { body: { matchId, groupId: activeGroupId } });
-      if (res.error) throw res.error;
-      setFeedback("Times sorteados novamente.");
-    } catch (drawErr) {
-      console.warn("Aviso: sorteio via edge function falhou, executando sorteio direto:", drawErr);
-      const { success, error: drawError } = await performClientSideDraw(matchId);
-      if (success) {
-        setFeedback("Times sorteados novamente.");
-      } else {
-        setFeedback(drawError ?? "Erro ao sortear times.");
-      }
-    } finally {
-      setRedrawing(false);
-      fetchAll();
-    }
-  }
-
-  async function handleAssignTeam(playerId: string, team: string) {
-    if (!canManage || !isPreparing) return;
-    const teamPayload = { team };
-    await supabase.from("match_players").update(teamPayload).eq("id", playerId);
-    fetchAll();
-  }
-
-  function handleSwapSelect(playerId: string) {
-    setSwapSelected((prev) => {
-      if (prev.includes(playerId)) return prev.filter((id) => id !== playerId);
-      if (prev.length >= 2) return prev;
-      return [...prev, playerId];
-    });
-  }
-
-  async function handleSwap() {
-    if (!canManage || !isPreparing || swapSelected.length !== 2) return;
-    const [a, b] = swapSelected;
-    const pa = players.find((p) => p.id === a);
-    const pb = players.find((p) => p.id === b);
-    if (!pa || !pb || pa.team === pb.team) {
-      setFeedback("Selecione dois jogadores de times diferentes para trocar.");
-      setSwapSelected([]);
-      return;
-    }
-    const teamPayloadA = { team: pb.team };
-    const teamPayloadB = { team: pa.team };
-    await Promise.all([
-      supabase.from("match_players").update(teamPayloadA).eq("id", pa.id),
-      supabase.from("match_players").update(teamPayloadB).eq("id", pb.id),
-    ]);
-    setSwapSelected([]);
-    fetchAll();
-  }
-
-  if (error) {
-    return <MatchErrorState message={error} />;
-  }
-
-  if (loading) {
+  if (store.loading) {
     return (
       <AppShell>
         <div className="min-h-[calc(100svh-4rem)] flex items-center justify-center">
@@ -681,14 +493,13 @@ export default function MatchPlayersManagement() {
     );
   }
 
-  const isFull = match ? players.length >= match.max_players : false;
-  const teamAName = match?.team_a_name ?? "Time A";
-  const teamBName = match?.team_b_name ?? "Time B";
-  const swapSelectedSet = new Set(swapSelected);
+  const teamAName = store.match?.team_a_name ?? "Time A";
+  const teamBName = store.match?.team_b_name ?? "Time B";
+  const swapSelectedSet = new Set(store.swap.swapSelected);
   const inMatchUserIds = new Set(
-    [...players, ...waitlist].map((p) => p.user_id).filter((id): id is string => Boolean(id)),
+    [...store.players, ...store.waitlist].map((p) => p.user_id).filter((id): id is string => Boolean(id)),
   );
-  const availableMembers = groupMembers.filter(
+  const availableMembers = store.groupMembers.filter(
     (m) => m.user_id != null && !inMatchUserIds.has(m.user_id),
   );
 
@@ -705,69 +516,64 @@ export default function MatchPlayersManagement() {
             <MaterialIcon name="arrow_back" className="w-5 h-5 text-on-surface-variant" />
           </button>
           <h1 className="text-headline-lg font-display font-black text-on-surface tracking-tighter">
-            {canManage ? "GERENCIAR JOGADORES" : "JOGADORES"}
+            {store.canManage ? "GERENCIAR JOGADORES" : "JOGADORES"}
           </h1>
         </div>
 
-        {feedback && <p className="mb-4 px-4 py-3 bg-warning/10 text-warning font-mono text-label-sm border border-warning/30">{feedback}</p>}
+        {store.feedback && <p className="mb-4 px-4 py-3 bg-warning/10 text-warning font-mono text-label-sm border border-warning/30">{store.feedback}</p>}
 
-        {canManage && isPreparing && <ActionsBar redrawing={redrawing} swapCount={swapSelected.length} onRedraw={handleRedraw} onSwap={handleSwap} />}
+        {store.canManage && store.isPreparing && (
+          <ActionsBar
+            redrawing={store.lineup.redrawing}
+            swapCount={store.swap.swapSelected.length}
+            onRedraw={store.lineup.handleRedraw}
+            onSwap={store.swap.handleSwap}
+          />
+        )}
 
         <ConfirmedPlayersList
-          players={players}
-          maxPlayers={match?.max_players ?? "?"}
-          canManage={canManage}
-          isPreparing={isPreparing}
+          players={store.players}
+          maxPlayers={store.match?.max_players ?? "?"}
+          canManage={store.canManage}
+          isPreparing={store.isPreparing}
           swapSelectedSet={swapSelectedSet}
           teamAName={teamAName}
           teamBName={teamBName}
-          onSwapSelect={handleSwapSelect}
-          onAssignTeam={handleAssignTeam}
-          onRemove={handleRemove}
+          onSwapSelect={store.swap.handleSwapSelect}
+          onAssignTeam={store.playerActions.handleAssignTeam}
+          onRemove={store.playerActions.handleRemove}
         />
 
-        {canManage && (
-          <CapacitySection
-            confirmedCount={players.length}
-            maxPlayers={match?.max_players ?? "?"}
-            value={capacityInput}
-            busy={capacityBusy}
-            error={capacityError}
-            onValueChange={setCapacityInput}
-            onSubmit={handleUpdateCapacity}
-          />
-        )}
-
-        {canManage && (
-          <AddMemberSection
-            isFull={isFull}
-            members={availableMembers}
-            selectedUserId={memberUserId}
-            busy={memberBusy}
-            onUserChange={setMemberUserId}
-            onSubmit={handleAddMember}
-          />
-        )}
-
-        {canManage && (
-          <AddGuestSection
-            isFull={isFull}
-            playerCount={players.length}
-            maxPlayers={match?.max_players ?? "?"}
-            guestName={guestName}
-            guestTeam={guestTeam}
-            teamAName={teamAName}
-            teamBName={teamBName}
-            submitting={submitting}
-            onGuestNameChange={setGuestName}
-            onGuestTeamChange={setGuestTeam}
-            onAddGuest={handleAddGuest}
-          />
-        )}
-
-        {!canManage && (
-          <p className="font-mono text-label-sm text-on-surface-variant text-center">Apenas o criador da partida pode gerenciar os jogadores.</p>
-        )}
+        <ManagementSections
+          canManage={store.canManage}
+          isFull={store.isFull}
+          playersCount={store.players.length}
+          maxPlayers={store.match?.max_players ?? "?"}
+          teamAName={teamAName}
+          teamBName={teamBName}
+          availableMembers={availableMembers}
+          capacity={{
+            value: store.capacity.capacityInput,
+            busy: store.capacity.capacityBusy,
+            error: store.capacity.capacityError,
+            onValueChange: store.capacity.setCapacityInput,
+            onSubmit: store.capacity.handleUpdateCapacity,
+          }}
+          member={{
+            selectedUserId: store.member.memberUserId,
+            busy: store.member.memberBusy,
+            onUserChange: store.member.setMemberUserId,
+            onSubmit: store.member.handleAddMember,
+          }}
+          guest={{
+            guestName: store.guest.guestName,
+            guestTeam: store.guest.guestTeam,
+            submitting: store.guest.submitting,
+            onGuestNameChange: store.guest.setGuestName,
+            onGuestTeamChange: store.guest.setGuestTeam,
+            onAddGuest: store.guest.handleAddGuest,
+          }}
+        />
       </div>
     </AppShell>
   );
