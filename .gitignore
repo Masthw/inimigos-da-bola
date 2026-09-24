@@ -34,3 +34,6 @@ CLAUDE.md
 session-*.md
 .env.local
 .env*.local
+
+# Supabase CLI (migrations por branch)
+supabase/.branches
