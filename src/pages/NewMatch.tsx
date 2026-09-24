@@ -15,7 +15,6 @@ interface GameType {
   id: number;
   name: string;
   default_max_players: number;
-  default_max_waitlist: number;
 }
 
 const inputClass =
@@ -99,26 +98,22 @@ function NewMatchScheduleSection({
 
 function NewMatchPlayersConfig({
   maxPlayers,
-  maxWaitlist,
   fieldError,
   hint,
   onMaxPlayersChange,
   onMaxPlayersBlur,
-  onMaxWaitlistChange,
 }: Readonly<{
   maxPlayers: string;
-  maxWaitlist: string;
   fieldError?: string;
   hint?: string;
   onMaxPlayersChange: (val: string) => void;
   onMaxPlayersBlur: () => void;
-  onMaxWaitlistChange: (val: string) => void;
 }>) {
   const perTeamLabel = Number(maxPlayers) > 0 ? `${Math.ceil(Number(maxPlayers) / 2)} por time` : "";
   const infoLabel = hint ? `${hint} — ${perTeamLabel}` : perTeamLabel;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
+    <div className="max-w-sm">
       <div className="flex flex-col gap-2">
         <label className={labelClass} htmlFor="max-players">
           Total de Jogadores
@@ -138,25 +133,13 @@ function NewMatchPlayersConfig({
         {fieldError ? (
           <span className="font-mono text-[10px] text-error">{fieldError}</span>
         ) : (
-          <span className="font-mono text-[10px] text-on-surface-variant">{infoLabel}</span>
+          <>
+            <span className="font-mono text-[10px] text-on-surface-variant">{infoLabel}</span>
+            <span className="font-mono text-[10px] text-on-surface-variant">
+              Lista de espera sem limite — quem chegar depois entra na fila automaticamente.
+            </span>
+          </>
         )}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className={labelClass} htmlFor="max-waitlist">
-          Lista de Espera
-        </label>
-        <div className={inputClass}>
-          <MaterialIcon name="pending" className="w-5 h-5 text-on-surface-variant" />
-          <input
-            id="max-waitlist"
-            type="number"
-            min={0}
-            value={maxWaitlist}
-            onChange={(event) => onMaxWaitlistChange(event.target.value)}
-            className="flex-1 bg-transparent text-on-surface font-body focus:outline-none"
-          />
-        </div>
       </div>
     </div>
   );
@@ -196,7 +179,6 @@ export default function NewMatch() {
   const [timeMinute, setTimeMinute] = useState("");
   const [location, setLocation] = useState("");
   const [maxPlayers, setMaxPlayers] = useState("12");
-  const [maxWaitlist, setMaxWaitlist] = useState("2");
   const [teamAName, setTeamAName] = useState("");
   const [teamBName, setTeamBName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -209,7 +191,7 @@ export default function NewMatch() {
 
     supabase
       .from("game_types")
-      .select("id, name, default_max_players, default_max_waitlist")
+      .select("id, name, default_max_players")
       .order("name")
       .then(({ data, error: loadError }) => {
         if (cancelled || loadError || !data) return;
@@ -218,7 +200,6 @@ export default function NewMatch() {
           const first = data[0];
           setGameTypeId(String(first.id));
           setMaxPlayers(String(first.default_max_players));
-          setMaxWaitlist(String(first.default_max_waitlist));
         }
       });
 
@@ -232,7 +213,6 @@ export default function NewMatch() {
     const selected = gameTypes.find((gameType) => String(gameType.id) === value);
     if (selected) {
       setMaxPlayers(String(selected.default_max_players));
-      setMaxWaitlist(String(selected.default_max_waitlist));
       setHints((prev) => ({
         ...prev,
         maxPlayers: `Limite de ${selected.default_max_players} para ${selected.name}`,
@@ -303,7 +283,6 @@ export default function NewMatch() {
       return;
     }
     const maxP = Math.min(rawMaxP, maxLimit);
-    const maxW = Math.max(0, Math.min(50, Number(maxWaitlist) || 0));
 
     setSubmitting(true);
 
@@ -327,7 +306,6 @@ export default function NewMatch() {
         location: location.trim(),
         game_type_id: Number(gameTypeId),
         max_players: maxP,
-        max_waitlist: maxW,
         status: "open" as const,
         team_a_name: teamAName.trim() || null,
         team_b_name: teamBName.trim() || null,
@@ -410,12 +388,10 @@ export default function NewMatch() {
 
             <NewMatchPlayersConfig
               maxPlayers={maxPlayers}
-              maxWaitlist={maxWaitlist}
               fieldError={fieldErrors.maxPlayers}
               hint={hints.maxPlayers}
               onMaxPlayersChange={handleMaxPlayersChange}
               onMaxPlayersBlur={handleMaxPlayersBlur}
-              onMaxWaitlistChange={setMaxWaitlist}
             />
 
             <NewMatchTeamNamesSection teamAName={teamAName} teamBName={teamBName} onTeamAChange={setTeamAName} onTeamBChange={setTeamBName} />

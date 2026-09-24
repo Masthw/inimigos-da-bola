@@ -34,7 +34,6 @@ export interface MatchWithMeta {
   location: string;
   status: "open" | "preparing" | "in_progress" | "finished" | "voting" | "cancelled";
   maxPlayers: number;
-  maxWaitlist: number;
   teamAName: string | null;
   teamBName: string | null;
   teamAScore: number | null;
@@ -64,7 +63,6 @@ interface MatchRow {
   location: string;
   status: MatchWithMeta["status"];
   max_players: number;
-  max_waitlist: number;
   team_a_name: string | null;
   team_b_name: string | null;
   team_a_score: number | null;
@@ -212,7 +210,7 @@ async function fetchMatchesData(userId: string | null, groupId: string | null) {
   const matchesQuery = supabase
     .from("matches")
     .select(
-      "id, date_time, location, status, max_players, max_waitlist, team_a_name, team_b_name, team_a_score, team_b_score, team_a_color, team_b_color, organizer_id, game_types(name, sports(name))",
+      "id, date_time, location, status, max_players, team_a_name, team_b_name, team_a_score, team_b_score, team_a_color, team_b_color, organizer_id, game_types(name, sports(name))",
     )
     .is("deleted_at", null)
     .neq("status", "cancelled")
@@ -268,7 +266,6 @@ async function fetchMatchesData(userId: string | null, groupId: string | null) {
         location: match.location,
         status: match.status,
         maxPlayers: match.max_players,
-        maxWaitlist: match.max_waitlist,
         teamAName: match.team_a_name,
         teamBName: match.team_b_name,
         teamAScore: match.team_a_score,

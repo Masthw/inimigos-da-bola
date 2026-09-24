@@ -415,7 +415,7 @@ export type Database = {
           id: string
           location: string
           max_players: number
-          max_waitlist: number
+          max_waitlist: number | null
           organizer_id: string
           status: Database["public"]["Enums"]["match_status_enum"]
           team_a_color: string | null
@@ -436,7 +436,7 @@ export type Database = {
           id?: string
           location: string
           max_players: number
-          max_waitlist: number
+          max_waitlist?: number | null
           organizer_id?: string
           status?: Database["public"]["Enums"]["match_status_enum"]
           team_a_color?: string | null
@@ -457,7 +457,7 @@ export type Database = {
           id?: string
           location?: string
           max_players?: number
-          max_waitlist?: number
+          max_waitlist?: number | null
           organizer_id?: string
           status?: Database["public"]["Enums"]["match_status_enum"]
           team_a_color?: string | null
@@ -718,6 +718,10 @@ export type Database = {
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
       join_group_by_code: { Args: { p_code: string }; Returns: string }
       promote_waitlist_player: { Args: { p_match_id: string }; Returns: Json }
+      update_match_capacity: {
+        Args: { p_match_id: string; p_max_players: number }
+        Returns: Json
+      }
       tally_match_votes: {
         Args: { p_group_id?: string; p_match_id: string }
         Returns: Json
