@@ -14,6 +14,7 @@ import { useAuth } from "../hooks/useAuth";
 import { formatShortName } from "../lib/profile";
 import { supabase } from "../lib/supabaseClient";
 import { getCourtPhotos } from "../lib/courts";
+import { confirmButtonState, confirmTargetStatus, isFull, isPlayableStatus } from "../lib/matchAttendance";
 
 const PT_BR = "pt-BR";
 
@@ -68,8 +69,7 @@ interface AttendanceButtonsProps {
 }
 
 function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Readonly<AttendanceButtonsProps>) {
-  const isFull = match.confirmedCount >= match.maxPlayers;
-  const waitlistFull = match.waitlistCount >= match.maxWaitlist;
+  const buttonState = confirmButtonState(match, busy);
   const buttonClassBase =
     "px-6 py-3 font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2";
 
@@ -113,19 +113,7 @@ function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Reado
     );
   }
 
-  const waiting = isFull || match.status === "in_progress";
-  const confirmDisabled = busy || (waiting && waitlistFull);
-
-  let iconName = "check_circle";
-  let buttonText = "EU VOU!";
-
-  if (busy) {
-    iconName = "pending";
-    buttonText = "ENVIANDO...";
-  } else if (waiting) {
-    iconName = "schedule";
-    buttonText = isFull ? "ENTRAR NA ESPERA" : "CONFIRMAR";
-  }
+  const confirmDisabled = buttonState.disabled;
 
   return (
     <button
@@ -134,8 +122,8 @@ function AttendanceButtons({ match, myStatus, busy, onConfirm, onDesist }: Reado
       onClick={onConfirm}
       className={`${buttonClassBase} bg-primary-container text-primary ${confirmDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
-      <MaterialIcon name={iconName} className="w-5 h-5" />
-      {buttonText}
+      <MaterialIcon name={buttonState.icon} className="w-5 h-5" />
+      {buttonState.label}
     </button>
   );
 }
@@ -288,8 +276,7 @@ function FeaturedCardActions({
   onConfirm: () => void;
   onDesist: () => void;
 }>) {
-  const isPlayableStatus = match.status === "open" || match.status === "in_progress";
-  const canDesistInPreparing = match.status === "preparing" && (myStatus === "confirmed" || myStatus === "waitlist");
+  const playable = isPlayableStatus(match.status);
   const progress = Math.min(100, Math.round((match.confirmedCount / match.maxPlayers) * 100));
 
   return (
@@ -335,19 +322,7 @@ function FeaturedCardActions({
           </Link>
         ))}
 
-      {isPlayableStatus && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
-
-      {canDesistInPreparing && (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onDesist}
-          className="w-full py-3 bg-error text-on-error font-mono text-label-bold brutal-shadow brutal-shadow-hover rounded-none transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          <MaterialIcon name="close" className="w-5 h-5" />
-          DESISTIR DA PARTIDA
-        </button>
-      )}
+      {playable && <AttendanceButtons match={match} myStatus={myStatus} busy={busy} onConfirm={onConfirm} onDesist={onDesist} />}
     </div>
   );
 }
@@ -379,14 +354,14 @@ function FeaturedCard({
   const photos = getCourtPhotos(match.sportName, hour);
   const imageSrc = photos[0] ?? null;
 
-  const isPlayableStatus = match.status === "open" || match.status === "in_progress";
+  const playable = isPlayableStatus(match.status);
 
   return (
     <div className="relative overflow-hidden bg-surface-container-high rounded-xl border border-primary/30 flex flex-col md:flex-row transition-colors hover:border-primary/50">
       <div className="absolute left-0 top-0 w-1 h-full" />
       <div className="flex-1 p-6 md:p-8 flex flex-col justify-between gap-6">
         <div>
-          <FeaturedCardHead match={match} isAdmin={isAdmin} isPlayableStatus={isPlayableStatus} busy={busy} onStart={onStart} onCancel={onCancel} />
+          <FeaturedCardHead match={match} isAdmin={isAdmin} isPlayableStatus={playable} busy={busy} onStart={onStart} onCancel={onCancel} />
 
           <h3 className="text-headline-md md:text-headline-lg font-display font-bold text-on-surface mb-stack-sm">{matchTitle(match)}</h3>
 
@@ -611,7 +586,7 @@ const UpcomingRow = React.memo(function UpcomingRow({
   onDesist: () => void;
 }>) {
   const date = new Date(match.dateTime);
-  const isFull = match.confirmedCount >= match.maxPlayers;
+  const full = isFull(match);
   const statusMeta = STATUS_META[match.status];
 
   let iconName = "check_circle";
@@ -657,7 +632,7 @@ const UpcomingRow = React.memo(function UpcomingRow({
           <span className="flex items-center gap-1.5">
             <MaterialIcon name="person" className="w-4 h-4 text-primary" />
             {match.confirmedCount}/{match.maxPlayers}
-            {isFull && match.status === "open" && <span className="text-tertiary">(lotado)</span>}
+            {full && (match.status === "open" || match.status === "preparing") && <span className="text-tertiary">(lotado)</span>}
           </span>
         </div>
       </div>
@@ -713,8 +688,7 @@ export default function Matches() {
   const [expandedFinished, setExpandedFinished] = useState<string | null>(null);
 
   const handleConfirm = (match: MatchWithMeta) => {
-    const waiting = match.status === "in_progress" || match.confirmedCount >= match.maxPlayers;
-    setAttendance(match.id, waiting ? "waitlist" : "confirmed");
+    setAttendance(match.id, confirmTargetStatus(match));
   };
 
   const handleDesist = async (match: MatchWithMeta) => {
